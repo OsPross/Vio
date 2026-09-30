@@ -1,0 +1,311 @@
+/* Resource monitor / task manager */
+
+.mx-overview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.mx-card {
+  padding: 12px 16px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+}
+
+.mx-card:nth-child(2n) {
+  border-right: 0;
+}
+
+.mx-card:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+.mx-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+
+.mx-card-head strong {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.02em;
+}
+
+.mx-sub {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--fg-3);
+}
+
+.mx-num {
+  display: inline-block;
+  transition: opacity 0.25s ease;
+}
+
+.mx-spark {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+}
+
+.mx-table-wrap {
+  overflow: auto;
+  max-height: min(52vh, 480px);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--fg) 22%, transparent) transparent;
+}
+
+.mx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.mx-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  background: var(--bg-elev);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.mx-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+
+.mx-table tr.is-sleep {
+  opacity: 0.5;
+}
+
+.mx-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mx-task img {
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.mx-task span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mx-task strong {
+  font-weight: 500;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.mx-task em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+.mx-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+  flex-shrink: 0;
+}
+
+.mx-actions {
+  display: flex;
+  gap: 2px;
+  justify-content: flex-end;
+}
+
+.mx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.mx-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: color-mix(in srgb, #000 45%, transparent);
+  cursor: default;
+}
+
+.mx-overlay-panel {
+  position: relative;
+  z-index: 1;
+  width: min(860px, 100%);
+  max-height: min(86vh, 720px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  background: var(--bg);
+  box-shadow: 0 24px 64px color-mix(in srgb, #000 40%, transparent);
+  overflow: hidden;
+}
+
+.mx-overlay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.mx-overlay-head strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.mx-overlay-head span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+
+.mx-overlay-body {
+  overflow: auto;
+  padding: 12px 16px 18px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--fg) 22%, transparent) transparent;
+}
+
+.mx-overlay-body::-webkit-scrollbar,
+.mx-table-wrap::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.mx-overlay-body::-webkit-scrollbar-track,
+.mx-table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mx-overlay-body::-webkit-scrollbar-thumb,
+.mx-table-wrap::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--fg) 18%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.mx-overlay-body::-webkit-scrollbar-thumb:hover,
+.mx-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--fg) 32%, transparent);
+  background-clip: padding-box;
+}
+
+.mx-overlay-body::-webkit-scrollbar-corner,
+.mx-table-wrap::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.mx-overlay-body .settings-stack {
+  gap: 20px;
+}
+
+.mx-home-widget {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+.mx-home-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+
+.mx-home-row strong {
+  color: var(--fg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 40px;
+}
+
+.mx-dot-btn {
+  position: relative;
+}
+
+.mx-status-dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg-3) 70%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+.mx-dot-btn.level-warn .mx-status-dot {
+  background: color-mix(in srgb, #e7a067 85%, transparent);
+}
+
+.mx-dot-btn.level-hot .mx-status-dot {
+  background: color-mix(in srgb, var(--danger) 85%, transparent);
+}
+
+.tab-cpu-hint {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  color: color-mix(in srgb, #e7a067 90%, var(--fg));
+  opacity: 0.9;
+}
+
+.tab-cpu-hint button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0 2px;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+@media (max-width: 720px) {
+  .mx-overview {
+    grid-template-columns: 1fr;
+  }
+  .mx-card {
+    border-right: 0;
+  }
+}

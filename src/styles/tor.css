@@ -1,0 +1,293 @@
+/* Tryb Tor — chrome markers + landing */
+
+.tor-tab {
+  box-shadow: inset 0 2px 0 0 #7c5cff;
+}
+
+.tor-tab .tab-onion {
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+.bar.tor-mode {
+  box-shadow: inset 0 2px 0 0 #7c5cff;
+}
+
+.omnibox.tor-mode {
+  border-color: color-mix(in srgb, #7c5cff 45%, var(--line));
+  background: color-mix(in srgb, #7c5cff 8%, var(--bg-elev, var(--bg)));
+}
+
+.tor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #ddd6fe;
+  background: color-mix(in srgb, #7c5cff 28%, transparent);
+  border: 1px solid color-mix(in srgb, #7c5cff 40%, transparent);
+  white-space: nowrap;
+}
+
+.tor-chip em {
+  font-style: normal;
+  font-weight: 500;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+
+.tor-chip-newid {
+  margin-left: 2px;
+  border: 0;
+  background: color-mix(in srgb, #fff 12%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.tor-chip-newid:hover {
+  background: color-mix(in srgb, #fff 22%, transparent);
+}
+
+.tor-boot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #7c5cff 25%, var(--line));
+  background: color-mix(in srgb, #7c5cff 6%, transparent);
+  font-size: 12.5px;
+}
+.tor-boot-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  overflow: hidden;
+}
+.tor-boot-bar i {
+  display: block;
+  height: 100%;
+  background: #7c5cff;
+}
+
+.tor-circuits {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+.tor-circuit-path {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tor-circuit-path li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  min-width: 72px;
+}
+.tor-circuit-path em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--fg-3);
+}
+.tor-circuit-path code {
+  font-size: 11px;
+}
+
+.tor-progress-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  max-width: min(560px, 92%);
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #7c5cff 22%, var(--bg-elev, #1a1c22));
+  border: 1px solid color-mix(in srgb, #7c5cff 45%, transparent);
+  color: var(--fg);
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.tor-error-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(560px, 92%);
+  padding: 10px 12px 10px 16px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--danger, #e85d5d) 18%, var(--bg-elev, #1a1c22));
+  border: 1px solid color-mix(in srgb, var(--danger, #e85d5d) 40%, transparent);
+  color: var(--fg);
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.tor-landing {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse 50% 40% at 50% 0%, color-mix(in srgb, #7c5cff 18%, transparent), transparent 70%),
+    var(--bg);
+  overflow: auto;
+}
+
+.tor-landing-inner {
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tor-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--fg);
+}
+
+.tor-badge strong {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+.tor-onion {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #7c5cff 22%, transparent);
+  color: #c4b5fd;
+  font-size: 18px;
+}
+
+.tor-disclaimer {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #7c5cff 35%, var(--line));
+  background: color-mix(in srgb, #7c5cff 10%, var(--bg-elev, var(--bg)));
+  color: var(--fg-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.tor-disclaimer p {
+  margin: 0 0 8px;
+}
+
+.tor-disclaimer svg {
+  flex-shrink: 0;
+  color: #a78bfa;
+  margin-top: 2px;
+}
+
+.tor-error {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--danger, #e85d5d) 14%, transparent);
+  color: var(--fg);
+  font-size: 13px;
+}
+
+.tor-exit {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  background: var(--bg-elev, color-mix(in srgb, var(--fg) 3%, var(--bg)));
+}
+
+.tor-exit > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tor-exit .muted {
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+.tor-exit strong {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+
+.tor-search {
+  display: flex;
+  gap: 8px;
+}
+
+.tor-search input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  background: var(--bg-elev, var(--bg));
+  color: var(--fg);
+}
+
+.tor-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tor-fineprint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg-3);
+}
+
+.tor-settings-note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #7c5cff 30%, var(--line));
+  background: color-mix(in srgb, #7c5cff 8%, transparent);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+
+.tor-settings-note strong {
+  color: var(--fg);
+}

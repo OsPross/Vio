@@ -1,0 +1,15 @@
+node_modules/
+dist/
+release/
+tmp-verify/
+.DS_Store
+*.log
+.env
+.env.*
+userData/
+**/Partitions/
+.vscode/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+Thumbs.db
+desktop.ini

@@ -1,0 +1,346 @@
+/* Motion foundation — tokens + interactive chrome */
+
+:root {
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Prefer CSS transitions only on transform / opacity / filter */
+.motion-on .nav-btn,
+.motion-on .icon-btn,
+.motion-on .tab,
+.motion-on .tab-add,
+.motion-on .side-rail-btn,
+.motion-on .home-bang,
+.motion-on .home-app,
+.motion-on .home-app-inline,
+.motion-on .home-dock-item,
+.motion-on .home-dock-ico,
+.motion-on .home-fab,
+.motion-on .omnibox,
+.motion-on .home-search-inner,
+.motion-on .settings-nav-item,
+.motion-on .toggle-row,
+.motion-on .btn,
+.motion-on .theme-card,
+.motion-on .hc-layout-card,
+.motion-on .hc-theme-swatch,
+.motion-on .hc-seg button,
+.motion-on .hc-row,
+.motion-on .hc-switch,
+.motion-on .pz-option,
+.motion-on .pz-swatch {
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    opacity var(--dur-base) var(--ease-out),
+    filter var(--dur-base) var(--ease-out);
+}
+
+.motion-on .icon-btn:hover:not(:disabled),
+.motion-on .nav-btn:hover,
+.motion-on .tab-add:hover,
+.motion-on .side-rail-btn:hover,
+.motion-on .home-fab:hover {
+  transform: translateY(-1px);
+}
+
+.motion-on .icon-btn:active:not(:disabled),
+.motion-on .nav-btn:active,
+.motion-on .tab-add:active,
+.motion-on .side-rail-btn:active,
+.motion-on .home-fab:active,
+.motion-on .btn:active,
+.motion-on .settings-nav-item:active,
+.motion-on .tab:active {
+  transform: scale(0.97);
+}
+
+.motion-on .home-dock-item:hover {
+  transform: translateY(-2px);
+  color: var(--fg);
+}
+
+.motion-on .home-dock-item:hover .home-dock-ico {
+  background: color-mix(in srgb, var(--fg) 8%, var(--bg-elev));
+}
+
+.motion-on .home-dock-item:active {
+  transform: scale(0.96);
+}
+
+/* Focus rings — keyboard only, quiet (no thick accent frames on click) */
+button:focus,
+a:focus,
+[role='button']:focus,
+.icon-btn:focus,
+.nav-btn:focus,
+.tab:focus,
+.tab-add:focus,
+.side-rail-btn:focus,
+.home-fab:focus,
+.home-dock-item:focus,
+.home-dock-add:focus,
+.settings-nav-item:focus,
+.settings-back:focus,
+.btn:focus,
+.toggle-row:focus,
+.pz-option:focus,
+.pz-swatch:focus,
+.hc-layout-card:focus,
+.hc-theme-swatch:focus,
+.hc-seg button:focus,
+.hc-row:focus,
+.home-customize-done:focus,
+.pz-done:focus,
+.pz-theme-card:focus,
+.pz-bg-card:focus,
+.pz-layout-card:focus,
+.pz-wstyle-card:focus,
+.pz-cstyle-card:focus,
+.pz-radius-tile:focus,
+.ui-seg button:focus,
+.ui-switch:focus,
+.ui-dd-trigger:focus,
+.ui-option-card:focus {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible,
+.icon-btn:focus-visible,
+.nav-btn:focus-visible,
+.tab:focus-visible,
+.tab-add:focus-visible,
+.side-rail-btn:focus-visible,
+.home-fab:focus-visible,
+.home-dock-item:focus-visible,
+.home-dock-add:focus-visible,
+.settings-nav-item:focus-visible,
+.settings-back:focus-visible,
+.btn:focus-visible,
+.toggle-row:focus-visible,
+.omnibox:focus-visible,
+.home-search-inner:focus-within,
+.pz-option:focus-visible,
+.pz-swatch:focus-visible,
+.hc-layout-card:focus-visible,
+.hc-theme-swatch:focus-visible,
+.hc-seg button:focus-visible,
+.hc-row:focus-visible,
+.hc-select:focus-visible,
+.field input:focus-visible,
+.field select:focus-visible,
+.home-customize-done:focus-visible,
+.pz-done:focus-visible,
+.pz-theme-card:focus-visible,
+.pz-bg-card:focus-visible,
+.pz-layout-card:focus-visible,
+.pz-wstyle-card:focus-visible,
+.pz-cstyle-card:focus-visible,
+.pz-radius-tile:focus-visible,
+.ui-seg button:focus-visible,
+.ui-switch:focus-visible,
+.ui-dd-trigger:focus-visible,
+.ui-option-card:focus-visible,
+.session-crash-actions .sbtn:focus-visible {
+  outline: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+/* Home search focus polish */
+.motion-on .home-search.is-focus .home-search-inner {
+  transform: scale(1.01);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 1px 0 color-mix(in srgb, var(--fg) 8%, transparent) inset;
+  filter: none;
+}
+
+/* Soft background drift */
+.home.home-bg-soft.home-drift {
+  background:
+    radial-gradient(ellipse 55% 45% at var(--drift-x, 18%) var(--drift-y, 12%), color-mix(in srgb, var(--accent) 14%, transparent), transparent 62%),
+    radial-gradient(ellipse 45% 40% at calc(100% - var(--drift-x, 18%)) calc(100% - var(--drift-y, 12%)), color-mix(in srgb, var(--accent) 8%, transparent), transparent 58%),
+    linear-gradient(165deg, color-mix(in srgb, var(--accent) 8%, var(--bg)) 0%, var(--bg) 42%, var(--bg) 100%);
+  background-size: 140% 140%, 140% 140%, 100% 100%;
+  animation: home-soft-drift 30s var(--ease-in-out) infinite alternate;
+}
+
+@keyframes home-soft-drift {
+  from {
+    background-position: 0% 20%, 100% 80%, 0 0;
+  }
+  to {
+    background-position: 30% 0%, 70% 100%, 0 0;
+  }
+}
+
+/* Tab chrome indicator slot */
+.tab {
+  position: relative;
+}
+
+.tab-indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.side-rail-btn {
+  position: relative;
+}
+
+.side-rail-indicator {
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  width: 3px;
+  height: 16px;
+  margin-top: -8px;
+  border-radius: 999px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.side-rail-btn[data-tip] {
+  position: relative;
+}
+
+.side-rail-btn[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  color: var(--fg-2);
+  font-size: 11.5px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 40;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.motion-on .side-rail-btn[data-tip]:hover::after,
+.motion-on .side-rail-btn[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+  transition-delay: 300ms;
+}
+
+.settings-nav-item {
+  position: relative;
+  z-index: 0;
+}
+
+.settings-nav-indicator {
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.settings-nav-item.active {
+  background: transparent;
+  border-color: transparent;
+}
+
+.settings-section-fade {
+  width: 100%;
+}
+
+/* Clock digit flip */
+.clock-digit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  height: 1em;
+  line-height: 1;
+}
+
+.clock-digit-inner {
+  display: inline-block;
+  line-height: 1;
+}
+
+/* Theme crossfade support */
+html.theme-fading,
+html.theme-fading body,
+html.theme-fading #root {
+  transition:
+    background-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-base);
+  animation-timing-function: var(--ease-out);
+}
+
+/* Reduced motion: short fade only, no travel */
+[data-reduce-motion='on'] *,
+[data-reduce-motion='on'] *::before,
+[data-reduce-motion='on'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-property: opacity, filter !important;
+  transition-duration: var(--dur-fast) !important;
+  transition-timing-function: linear !important;
+}
+
+[data-reduce-motion='on'] .home.home-bg-soft.home-drift {
+  animation: none !important;
+}
+
+[data-reduce-motion='on'] .motion-on .icon-btn:hover:not(:disabled),
+[data-reduce-motion='on'] .motion-on .nav-btn:hover,
+[data-reduce-motion='on'] .motion-on .home-dock-item:hover,
+[data-reduce-motion='on'] .motion-on .home-fab:hover,
+[data-reduce-motion='on'] .motion-on .home-search.is-focus .home-search-inner,
+[data-reduce-motion='on'] .motion-on .icon-btn:active:not(:disabled),
+[data-reduce-motion='on'] .motion-on .tab:active,
+[data-reduce-motion='on'] .motion-on .home-dock-item:active {
+  transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 80ms;
+    --dur-base: 100ms;
+    --dur-slow: 120ms;
+  }
+
+  .home.home-bg-soft.home-drift {
+    animation: none !important;
+  }
+
+  .motion-on .nav-btn:hover,
+  .motion-on .icon-btn:hover:not(:disabled),
+  .motion-on .home-dock-item:hover,
+  .motion-on .home-fab:hover,
+  .motion-on .home-search.is-focus .home-search-inner {
+    transform: none;
+  }
+}
