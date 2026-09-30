@@ -1581,12 +1581,17 @@ export const useStore = create<State>()(
       pushHistory: (q) => {
         const t = q.trim();
         if (!t || t.startsWith('http') || t === HOME_URL) return;
-        set((s) => ({
-          history: [{ q: t, at: Date.now() }, ...s.history.filter((h) => h.q !== t)].slice(0, 80),
-        }));
+        // Source of truth: electron/history.cjs via IPC (no Zustand mirror)
+        void window.shell?.historyRecordQuery?.(t, { tor: false });
       },
-      clearHistory: () => set({ history: [] }),
-      removeHistory: (q) => set((s) => ({ history: s.history.filter((h) => h.q !== q) })),
+      clearHistory: () => {
+        void window.shell?.historyClear?.({ range: 'all' });
+        set({ history: [] });
+      },
+      removeHistory: (q) => {
+        void window.shell?.historyRemoveQuery?.(q);
+        set((s) => ({ history: s.history.filter((h) => h.q !== q) }));
+      },
       addBang: (b) =>
         set((s) => ({
           bangs: [...s.bangs.filter((x) => x.key !== b.key), { ...b, key: b.key.replace(/^!/, '') }],
@@ -1766,7 +1771,7 @@ export const useStore = create<State>()(
         bangs: s.bangs,
         shortcuts: s.shortcuts,
         sideApps: s.sideApps,
-        history: s.history,
+        // history: ONLY electron/history.cjs (migrated out of localStorage)
         bookmarks: s.bookmarks,
         bookmarkFolders: s.bookmarkFolders,
       }),
@@ -1852,10 +1857,18 @@ export const useStore = create<State>()(
           bangs: p.bangs?.length ? p.bangs : current.bangs,
           shortcuts: p.shortcuts?.length ? p.shortcuts : current.shortcuts,
           sideApps: p.sideApps?.length ? p.sideApps : current.sideApps,
-          history: p.history ?? [],
+          // history lives in electron/history.cjs — keep ephemeral for one-shot migrate
+          history: Array.isArray(p.history) ? p.history : [],
           bookmarks: Array.isArray(p.bookmarks) ? p.bookmarks : current.bookmarks,
           bookmarkFolders: folders,
         };
+      },
+      onRehydrateStorage: () => (state) => {
+        const items = state?.history;
+        if (!Array.isArray(items) || !items.length) return;
+        void window.shell?.historyImportQueries?.(items).then(() => {
+          useStore.setState({ history: [] });
+        });
       },
     },
   ),

@@ -871,17 +871,15 @@ ipcMain.handle(
 );
 
 ipcMain.handle(
-
   'shell:history-record-query',
-
   wrapApp((_e, q, opts) => {
-
     if (opts && opts.tor) return { ok: false, reason: 'tor' };
-
     return history.recordQuery(String(q || ''), opts && typeof opts === 'object' ? opts : {});
-
   }),
-
+);
+ipcMain.handle(
+  'shell:history-import-queries',
+  wrapApp((_e, items) => history.importQueries(Array.isArray(items) ? items : [])),
 );
 
 ipcMain.handle(

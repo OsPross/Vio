@@ -1783,10 +1783,8 @@ export function App() {
     if (!tor) {
       if (query) {
         pushHistory(query);
-        void window.shell?.historyRecordQuery?.(query, { tor: false });
       } else if (!url.startsWith('http') && !url.startsWith('about:')) {
         pushHistory(url);
-        void window.shell?.historyRecordQuery?.(url, { tor: false });
       }
       if (opts?.typed && /^https?:/i.test(url)) markTypedUrl(url);
     }
@@ -1865,10 +1863,7 @@ export function App() {
     const typed = opts?.typed ?? (!isQuery && /^https?:/i.test(url));
     if (typed) markTypedUrl(url);
     if (settings.openSearchInNewTab && isQuery) {
-      if (raw.trim()) {
-        pushHistory(raw.trim());
-        void window.shell?.historyRecordQuery?.(raw.trim(), { tor: false });
-      }
+      if (raw.trim()) pushHistory(raw.trim());
       newTab(url);
       // Visit will be recorded when the new tab's webview finishes loading
       return;
@@ -3080,7 +3075,6 @@ export function App() {
                 }
                 if (settings.openSearchInNewTab && query) {
                   pushHistory(query);
-                  void window.shell?.historyRecordQuery?.(query, { tor: false });
                   newTab(url);
                   return;
                 }

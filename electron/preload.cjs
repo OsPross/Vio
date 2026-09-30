@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('shell', {
   historyStatus: () => ipcRenderer.invoke('shell:history-status'),
   historyRecordVisit: (opts) => ipcRenderer.invoke('shell:history-record-visit', opts || {}),
   historyRecordQuery: (q, opts) => ipcRenderer.invoke('shell:history-record-query', q, opts || {}),
+  historyImportQueries: (items) => ipcRenderer.invoke('shell:history-import-queries', items || []),
   historySuggest: (q, opts) => ipcRenderer.invoke('shell:history-suggest', q, opts || {}),
   historyList: (opts) => ipcRenderer.invoke('shell:history-list', opts || {}),
   historyDelete: (id) => ipcRenderer.invoke('shell:history-delete', id),

@@ -197,14 +197,13 @@ export function SearchWidget({
 }) {
   const settings = useStore((s) => s.settings);
   const bangs = useStore((s) => s.bangs);
-  const history = useStore((s) => s.history);
-  const removeHistory = useStore((s) => s.removeHistory);
   const patchSettings = useStore((s) => s.patchSettings);
 
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
   const [focused, setFocused] = useState(false);
   const [remoteSuggest, setRemoteSuggest] = useState<string[]>([]);
+  const [queryHistory, setQueryHistory] = useState<{ q: string; at: number }[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const [inPreviewDom, setInPreviewDom] = useState(false);
@@ -214,6 +213,25 @@ export function SearchWidget({
   }, []);
 
   const inPreview = inert || inPreviewDom;
+
+  useEffect(() => {
+    if (inPreview || !settings.suggestHistory) {
+      setQueryHistory([]);
+      return;
+    }
+    let cancelled = false;
+    void window.shell?.historyList?.({ limit: 1 }).then((res) => {
+      if (!cancelled && Array.isArray(res?.queries)) setQueryHistory(res.queries);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [inPreview, settings.suggestHistory, focused, q]);
+
+  const removeHistory = (query: string) => {
+    void window.shell?.historyRemoveQuery?.(query);
+    setQueryHistory((prev) => prev.filter((h) => h.q !== query));
+  };
 
   useEffect(() => {
     if (inPreview) {
@@ -248,7 +266,7 @@ export function SearchWidget({
     const t = q.trim().toLowerCase();
     if (!t) {
       if (!settings.suggestHistory) return [];
-      return history.slice(0, 5).map((h) => ({ kind: 'history' as const, title: h.q, subtitle: 'Historia' }));
+      return queryHistory.slice(0, 5).map((h) => ({ kind: 'history' as const, title: h.q, subtitle: 'Historia' }));
     }
     if (t.startsWith('!')) {
       if (!settings.suggestBangs) return [];
@@ -264,7 +282,7 @@ export function SearchWidget({
         }));
     }
     const hist = settings.suggestHistory
-      ? history
+      ? queryHistory
           .filter((h) => h.q.toLowerCase().includes(t))
           .slice(0, 4)
           .map((h) => ({ kind: 'history' as const, title: h.q, subtitle: 'Historia' }))
@@ -287,7 +305,7 @@ export function SearchWidget({
     ];
   }, [
     q,
-    history,
+    queryHistory,
     bangs,
     settings.searchEngine,
     settings.suggestHistory,

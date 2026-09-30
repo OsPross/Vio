@@ -278,6 +278,9 @@ declare global {
         tor?: boolean;
       }) => Promise<{ ok: boolean; reason?: string; soft?: boolean }>;
       historyRecordQuery: (q: string, opts?: { tor?: boolean }) => Promise<{ ok: boolean; reason?: string }>;
+      historyImportQueries: (
+        items: { q: string; at?: number }[],
+      ) => Promise<{ ok: boolean; imported?: number }>;
       historySuggest: (
         q: string,
         opts?: {

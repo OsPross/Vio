@@ -102,7 +102,6 @@ export function SettingsPage() {
   const bangs = useStore((s) => s.bangs);
   const shortcuts = useStore((s) => s.shortcuts);
   const sideApps = useStore((s) => s.sideApps);
-  const history = useStore((s) => s.history);
   const setView = useStore((s) => s.setView);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
   const patchSettings = useStore((s) => s.patchSettings);
@@ -122,6 +121,22 @@ export function SettingsPage() {
   const [scUrl, setScUrl] = useState('');
   const [saLabel, setSaLabel] = useState('');
   const [saUrl, setSaUrl] = useState('');
+  const [queryCount, setQueryCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      void window.shell?.historyStatus?.().then((st) => {
+        if (!cancelled && typeof st?.queries === 'number') setQueryCount(st.queries);
+      });
+    };
+    refresh();
+    const t = window.setInterval(refresh, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(t);
+    };
+  }, [settingsTab]);
 
   const engineMeta = SEARCH_ENGINES.find((e) => e.id === settings.searchEngine);
   const head = TITLES[settingsTab] ?? TITLES.general;
@@ -1131,7 +1146,7 @@ export function SettingsPage() {
                     </select>
                   </Row>
                   <Row label="Zapisane zapytania (omnibox)">
-                    <span className="sr-value">{history.length}</span>
+                    <span className="sr-value">{queryCount}</span>
                   </Row>
                   <Row label="Otwórz historię">
                     <button
@@ -1162,7 +1177,7 @@ export function SettingsPage() {
                       onClick={() => {
                         if (!confirm('Wyczyścić historię przeglądania i zapytania?')) return;
                         clearHistory();
-                        void window.shell?.historyClear?.({ range: 'all' });
+                        setQueryCount(0);
                       }}
                     >
                       Wyczyść historię

@@ -343,6 +343,34 @@ function recordQuery(q, opts) {
   return { ok: true };
 }
 
+/**
+ * One-shot migration from renderer Zustand localStorage queries.
+ * @param {{ q: string, at?: number }[]} items
+ */
+function importQueries(items) {
+  ensureLoaded();
+  if (!Array.isArray(items) || !items.length) return { ok: true, imported: 0 };
+  let imported = 0;
+  const existing = new Set(queries.map((x) => x.q.toLowerCase()));
+  const incoming = [];
+  for (const it of items) {
+    const q = String(it?.q || '').trim();
+    if (!q || q.length > 500) continue;
+    if (/^https?:/i.test(q) || q.startsWith('about:')) continue;
+    if (existing.has(q.toLowerCase())) continue;
+    existing.add(q.toLowerCase());
+    incoming.push({ q, at: typeof it.at === 'number' ? it.at : Date.now() });
+    imported += 1;
+  }
+  if (incoming.length) {
+    queries = [...incoming, ...queries]
+      .sort((a, b) => b.at - a.at)
+      .slice(0, MAX_QUERIES);
+    scheduleFlush();
+  }
+  return { ok: true, imported };
+}
+
 function matchText(hay, needle) {
   return String(hay || '')
     .toLowerCase()
@@ -673,6 +701,7 @@ module.exports = {
   getConfig,
   recordVisit,
   recordQuery,
+  importQueries,
   suggest,
   list,
   deleteById,
