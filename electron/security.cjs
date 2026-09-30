@@ -286,6 +286,10 @@ function isAllowedNavigation(url) {
 function attachNavigationGuards(wc, opts = {}) {
   const askExternal = opts.askExternal;
   const torMode = Boolean(opts.torMode);
+  const popups = require('./popups.cjs');
+
+  popups.attachGestureTracker(wc);
+  popups.attachDidCreateWindow(wc, opts.onPopupWindow);
 
   wc.on('will-navigate', (event, url) => {
     const r = isAllowedNavigation(url);
@@ -298,43 +302,20 @@ function attachNavigationGuards(wc, opts = {}) {
     }
   });
 
-  wc.setWindowOpenHandler(({ url, disposition, features }) => {
-    const r = isAllowedNavigation(url);
-    const background = disposition === 'background-tab' || disposition === 'new-background-tab';
-    const feat = String(features || '');
-    const wantsPopup =
-      disposition === 'new-window' ||
-      /(?:^|[,;\s])(width|height|popup)=/i.test(feat) ||
-      /noopener/i.test(feat);
-
-    // OAuth / SSO popups need a real BrowserWindow (Google, Microsoft, …)
-    if (
-      !torMode &&
-      wantsPopup &&
-      (url === '' || url === 'about:blank' || (r.ok === true && /^https?:/i.test(url)))
-    ) {
-      return {
-        action: 'allow',
-        overrideBrowserWindowOptions: {
-          autoHideMenuBar: true,
-          webPreferences: {
-            contextIsolation: true,
-            nodeIntegration: false,
-            sandbox: true,
-            webviewTag: false,
-          },
-        },
-      };
-    }
-
-    if (r.ok === true && (/^https?:/i.test(url) || /^file:\/\//i.test(url))) {
-      if (opts.onOpenUrl) opts.onOpenUrl(url, { background });
-      return { action: 'deny' };
-    }
-    if (!torMode && r.ok === 'prompt' && askExternal) {
-      void askExternal(url);
-    }
-    return { action: 'deny' };
+  wc.setWindowOpenHandler((details) => {
+    const hostWindow =
+      typeof opts.getHostWindow === 'function' ? opts.getHostWindow() : opts.hostWindow || null;
+    return popups.handleWindowOpen(wc, {
+      url: details.url,
+      disposition: details.disposition,
+      features: details.features,
+      torMode,
+      isAllowedNav: isAllowedNavigation,
+      onOpenUrl: opts.onOpenUrl,
+      onPopupBlocked: opts.onPopupBlocked,
+      askExternal,
+      hostWindow,
+    });
   });
 }
 

@@ -239,6 +239,14 @@ declare global {
             | string,
         ) => void,
       ) => () => void;
+      onPopupBlocked: (
+        cb: (payload: { url?: string; origin?: string; webContentsId?: number }) => void,
+      ) => () => void;
+      popupAllow: (origin: string) => Promise<{ ok: boolean; origin?: string }>;
+      popupOpenAllowed: (
+        url: string,
+        webContentsId?: number,
+      ) => Promise<{ ok: boolean; via?: string; reason?: string }>;
       onContextAction: (
         cb: (payload: { action?: string; url?: string; text?: string; tor?: boolean; private?: boolean }) => void,
       ) => () => void;

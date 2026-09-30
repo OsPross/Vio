@@ -133,20 +133,47 @@ function wireGuestNavigation(guestWc) {
   const torMode = tor.isTorWebContents(guestWc);
   let privateMode = false;
   try {
-    privateMode = !torMode && guestWc.session === session.fromPartition('persist:private');
+    const partName =
+      (typeof guestWc.session?.partitionName === 'string' && guestWc.session.partitionName) || '';
+    privateMode =
+      !torMode &&
+      (windowMode.isPrivatePartition(partName) ||
+        guestWc.session === session.fromPartition('persist:private'));
   } catch {
     /* */
   }
   security.attachNavigationGuards(guestWc, {
     askExternal: torMode ? null : askExternalProtocol,
     torMode,
+    getHostWindow: () => {
+      try {
+        return contextMenu.hostWindowForGuest(guestWc) || mainWindow;
+      } catch {
+        return mainWindow;
+      }
+    },
     onOpenUrl: (url, extra = {}) => {
-      mainWindow?.webContents.send('shell:open-url', {
+      const host = contextMenu.hostWindowForGuest(guestWc) || mainWindow;
+      host?.webContents.send('shell:open-url', {
         url,
         tor: torMode,
-        private: privateMode,
+        private: privateMode || windowMode.getWindowMeta(host).mode === 'private',
         background: Boolean(extra.background),
       });
+    },
+    onPopupBlocked: (info) => {
+      const host = contextMenu.hostWindowForGuest(guestWc) || mainWindow;
+      host?.webContents.send('shell:popup-blocked', info || {});
+    },
+    onPopupWindow: (childWin) => {
+      try {
+        certificate.attachCertificateHandler(childWin.webContents, {
+          getMainWindow: () => childWin,
+          torMode: false,
+        });
+      } catch (err) {
+        console.warn('[popup] cert attach', err);
+      }
     },
   });
   certificate.attachCertificateHandler(guestWc, {
@@ -671,6 +698,67 @@ ipcMain.handle(
     if (!win || win.isDestroyed()) return { ok: false };
     win.setFullScreen(!win.isFullScreen());
     return { ok: true, fullScreen: win.isFullScreen() };
+  }),
+);
+ipcMain.handle(
+  'shell:popup-allow',
+  wrapApp((_e, origin) => {
+    const popups = require('./popups.cjs');
+    const o = String(origin || '');
+    if (o) popups.allowPopupsForOrigin(o);
+    return { ok: true, origin: o };
+  }),
+);
+ipcMain.handle(
+  'shell:popup-open-allowed',
+  wrapApp((event, url, webContentsId) => {
+    const popups = require('./popups.cjs');
+    const u = String(url || '');
+    if (!/^https?:/i.test(u) && u !== 'about:blank') return { ok: false, reason: 'url' };
+    let opener = null;
+    try {
+      opener = electronWebContents.fromId(Number(webContentsId));
+    } catch {
+      opener = null;
+    }
+    if (!opener || opener.isDestroyed()) {
+      // fall back: open as tab in sender window
+      event.sender.send('shell:open-url', { url: u });
+      return { ok: true, via: 'tab' };
+    }
+    try {
+      const origin = (() => {
+        try {
+          return new URL(opener.getURL()).origin;
+        } catch {
+          return '';
+        }
+      })();
+      if (origin) popups.allowPopupsForOrigin(origin);
+      popups.noteGesture(opener);
+      const { BrowserWindow } = require('electron');
+      const child = new BrowserWindow({
+        width: 520,
+        height: 680,
+        autoHideMenuBar: true,
+        title: 'djxxr',
+        webPreferences: {
+          session: opener.session,
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+          webviewTag: false,
+          nativeWindowOpen: true,
+        },
+      });
+      void child.loadURL(u);
+      console.log('[popup] manual allow open', u.slice(0, 120));
+      return { ok: true, via: 'window' };
+    } catch (err) {
+      console.warn('[popup] open-allowed', err);
+      event.sender.send('shell:open-url', { url: u });
+      return { ok: true, via: 'tab-fallback' };
+    }
   }),
 );
 ipcMain.handle(

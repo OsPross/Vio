@@ -3,6 +3,7 @@ import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'motion/react
 import {
   ArrowLeft,
   ArrowRight,
+  AppWindow,
   Fingerprint,
   Globe,
   KeyRound,
@@ -682,6 +683,11 @@ export function App() {
   const [torProgress, setTorProgress] = useState<string | null>(null);
   const [shieldOpen, setShieldOpen] = useState(false);
   const [httpsWarn, setHttpsWarn] = useState<{ httpUrl: string; httpsUrl: string } | null>(null);
+  const [popupBlocked, setPopupBlocked] = useState<{
+    url: string;
+    origin: string;
+    webContentsId: number;
+  } | null>(null);
   const [permRemember, setPermRemember] = useState(true);
   const [crashOffer, setCrashOffer] = useState(false);
   const [tabMenu, setTabMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
@@ -1103,6 +1109,18 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    const off = window.shell?.onPopupBlocked?.((payload) => {
+      if (!payload?.url) return;
+      setPopupBlocked({
+        url: String(payload.url),
+        origin: String(payload.origin || ''),
+        webContentsId: Number(payload.webContentsId) || 0,
+      });
+    });
+    return () => off?.();
+  }, []);
+
+  useEffect(() => {
     // Re-apply optional Tor daemon autostart after migration removed Startup shortcuts
     if (settings.torDaemonAutostart) {
       void window.shell?.torDaemonAutostart?.(true);
@@ -1240,6 +1258,11 @@ export function App() {
       void window.shell?.torStop?.().then((st) => setTorInfo(st || null));
     }
   }, [tabs, torInfo?.active]);
+
+  // Clear blocked-popup badge when navigating away
+  useEffect(() => {
+    setPopupBlocked(null);
+  }, [activeId, active?.url]);
 
   useEffect(() => {
     if (isHome || isTorHome || isInternalAbout) setDraft('');
@@ -2263,6 +2286,21 @@ export function App() {
                 <span className="omnibox-zoom-badge" aria-live="polite">
                   {zoomFlash}%
                 </span>
+              ) : null}
+              {popupBlocked && !isHome && !isTorHome && !isInternalAbout ? (
+                <button
+                  type="button"
+                  className="icon-btn on"
+                  title={`Zablokowano wyskakujące okno — kliknij, aby pozwolić\n${popupBlocked.url}`}
+                  onClick={() => {
+                    const blocked = popupBlocked;
+                    setPopupBlocked(null);
+                    if (blocked.origin) void window.shell?.popupAllow?.(blocked.origin);
+                    void window.shell?.popupOpenAllowed?.(blocked.url, blocked.webContentsId);
+                  }}
+                >
+                  <AppWindow size={16} strokeWidth={1.75} />
+                </button>
               ) : null}
               {(mediaFlags.mic || mediaFlags.cam) && (
                 <span className="media-use-badges" title="Strona ma dostęp do mediów">

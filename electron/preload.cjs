@@ -157,6 +157,14 @@ contextBridge.exposeInMainWorld('shell', {
     ipcRenderer.on('shell:open-url', handler);
     return () => ipcRenderer.removeListener('shell:open-url', handler);
   },
+  onPopupBlocked: (cb) => {
+    const handler = (_e, payload) => cb(payload);
+    ipcRenderer.on('shell:popup-blocked', handler);
+    return () => ipcRenderer.removeListener('shell:popup-blocked', handler);
+  },
+  popupAllow: (origin) => ipcRenderer.invoke('shell:popup-allow', origin),
+  popupOpenAllowed: (url, webContentsId) =>
+    ipcRenderer.invoke('shell:popup-open-allowed', url, webContentsId),
   onContextAction: (cb) => {
     const handler = (_e, payload) => cb(payload || {});
     ipcRenderer.on('shell:context-action', handler);
