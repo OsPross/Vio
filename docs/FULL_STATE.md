@@ -4,8 +4,9 @@ Dokument stanu aplikacji dla osoby piszącej prompty (bez dostępu do repo).
 Wygenerowany z odczytu kodu (nie z pamięci sesji). Gdzie brak pewności: **niepewne**.
 
 Data odczytu kodu: 2026-10-01.  
+Aktualizacja po rundzie „naprawdę działa”: 2026-10-01.  
 Repo lokalne: `C:\Users\djxxr\Desktop\moja_przegladarka`.  
-`git` niedostępny w PATH tej maszyny — historia commitów: **niepewne** (brak `git log`).
+Git: **2.55.0.windows.5** (winget `Git.Git`), lokalne `master` bez remote.
 
 ---
 
@@ -14,13 +15,13 @@ Repo lokalne: `C:\Users\djxxr\Desktop\moja_przegladarka`.
 1. **djxxr** to prywatna przeglądarka desktopowa na **Electron + React 19 + Zustand**, UI po polsku, produkt w builderze jako „Moja Przeglądarka” (`appId: local.djxxr.przegladarka`).
 2. Renderer to SPA Vite; karty gościa to tag `<webview>` z partycjami sesji (`persist:main`, `tor-<uuid>`, `private-<uuid>`).
 3. Main process (`electron/main.cjs`) obsługuje Tor (embedded Expert Bundle + fail-closed), adblock (Ghostery + legacy), historię, pobrania, sejf haseł, uprawnienia, metryki, certyfikaty.
-4. Stan UI/ustawień leży w Zustand `persist` pod kluczem **`moja-przegladarka-v8`**; sesja kart — osobny plik przez `electron/session.cjs` (IPC `shell:session-*`).
+4. Stan UI/ustawień leży w Zustand `persist` pod kluczem **`moja-przegladarka-v8`** (bez `history` — tylko `history.cjs`); sesja kart — `electron/session.cjs`.
 5. Strona startowa to rozbudowany **homeChrome** (clock/search/shortcuts) + widżety z dnd/snap; Personalizacja to sheet z zakładkami Look/Layout/Widgets/Clock.
-6. Chrome-like warstwa (menu ≡, skróty, kontekst, find, zoom, print/PDF) jest wdrożona, ale jakość UI wewnętrznych stron była nierówna — ostatnia runda QA przebudowała Zakładki/Pobrane/About/sidebar Auto/okna prywatne.
+6. Chrome-like warstwa (menu ≡, skróty, kontekst, find, zoom, print/PDF) jest wdrożona; round QA + „naprawdę działa” poprawiły kontekst, private, historię, Input/Switch.
 7. Tryb Tor jest izolowany (osobna partycja + SOCKS + weryfikacja check.torproject.org); nie twierdzi, że jest Tor Browserem.
-8. Największe ryzyka produktowe: złożoność home/personalize, ciężki bundle JS (~764 kB), mieszanka Ghostery/legacy adblock, oraz UI/natywne kontrolki wciąż niespójne w niektórych panelach (hasła, dialogi).
+8. Największe ryzyka produktowe: złożoność home/personalize, ciężki bundle JS (~765 kB), mieszanka Ghostery/legacy adblock.
 9. Build Windows: `electron-builder` → NSIS; `electron/**/*` wchodzi do paczki (w tym `tor-keys/torbrowser.asc`).
-10. typecheck/build/test na dzień odczytu: **przechodzą** (ostrzeżenia Vite o chunk size i MODULE_TYPELESS przy teście url-display).
+10. typecheck/build/test po rundzie napraw: **przechodzą** (ostrzeżenia Vite chunk size + MODULE_TYPELESS przy teście url-display).
 
 ---
 
@@ -413,59 +414,61 @@ Kierunek: **R→M** = invoke z renderera; **M→R** = `webContents.send` / `ipcR
 
 ## 5. Funkcje — tabela statusów
 
-Statusy: **działa** / **częściowo** / **zepsute** / **brak**. Oceny na podstawie kodu + ostatniego QA (nie pełnego ręcznego retestu wszystkich ścieżek).
+Statusy: **działa** / **częściowo** / **zepsute** / **brak**.  
+Legenda pewności: **[T]** = przetestowane w tej rundzie (probe/kod+build); **[K]** = tylko odczyt kodu / wiring.
 
 | Funkcja | Status | Pliki | Uwagi |
 |---------|--------|-------|-------|
-| Karty (otwórz/zamknij/pin/mute/discard) | działa | `store.ts`, `App.tsx` | discard timer z `perfDiscard*` |
-| Okna normalne | działa | `main.createWindow` | bounds persist tylko normal |
-| Okno prywatne Ctrl+Shift+N | działa | `window-mode`, `App` shortcuts, AppMenu | ephemeral partition |
-| Okno Tor Shift+Alt+N | działa | j.w. + `torStart` | nie zmienia demona poza istniejącym API |
-| Tor daemon embed + verify | działa | `tor-daemon.cjs`, `tor-keys` | fail-closed OpenPGP |
-| Tor mosty | działa | `torBridgeMode`, `tor-bridges` IPC | |
-| Tor Nowa tożsamość | działa | `tor.newIdentity`, Ctrl+Shift+U | zamyka karty Tor |
-| Tor leak test | częściowo | `scripts/test-tor-leaks.cjs` | nie w `npm test` |
-| Omnibox + suggest | działa | `OmniboxSuggest`, history/search suggest IPC | |
-| !bangi | działa | `store` bangs, `normalizeInput` | |
-| Historia strona | działa | `HistoryPage`, `history.cjs` | InternalPage |
-| Zakładki + import | działa | `BookmarksPage`, `bookmarks-import` | po QA rebuild |
-| Pasek zakładek | działa | `BookmarksBar`, `showBookmarksBar` | default OFF |
-| Pobrane | działa | `DownloadsUI`, `downloads.cjs` | pierścień + drag |
-| Przywracanie sesji | działa | `session.cjs`, App boot | skip private/tor window |
-| Ctrl+Shift+T reopen | działa | shortcutsRegistry + store `reopenClosedTab` | |
-| Paleta Ctrl+K | działa | `CommandPalette`, `lib/commands.ts` | guest: false w rejestrze |
-| Menu ≡ — pozycje | działa | `AppMenu.tsx` | lista poniżej |
-| Menu kontekstowe guest | działa | `context-menu.cjs` | natywne Electron Menu |
-| Znajdź na stronie | działa | `FindBar`, webview findInPage | disabled na home |
-| Zoom | działa | `zoomFactors` per host | |
-| Druk / PDF | działa | print / `shell:print-to-pdf` | disabled na home |
-| Zapisz stronę | działa | `shell:save-page` | |
-| Źródło | działa | `view-source:` nowa karta | |
-| DevTools | częściowo | `allowInspect` default false | F12 gated |
-| Pełny ekran | działa | F11 / windowToggleFullscreen | |
-| PiP | częściowo | tylko pozycja w `context-menu.cjs` na video | brak UI React |
-| Skróty (rejestr) | działa | `shortcutsRegistry.ts` + guest trap | `guest:true` przechodzi z webview |
-| Hasła / autofill | działa | `passwords.cjs`, `PasswordsPanel` | sejf main-only |
-| Privacy presets | działa | `privacyPresets.ts` + Settings | |
-| Ghostery adblock | działa | `adblock-plus.cjs` | preferred |
-| Legacy adblock | działa | `adblock.cjs` | fallback + cosmetic |
-| Tarcza (Shield) | działa | `ShieldPanel.tsx` | |
-| Uprawnienia stron | działa | security + dialog w App | |
-| Favicony | działa | favicon-cache + `lib/favicon.ts` | |
-| Monitor zasobów / task mgr | działa | `metrics.cjs`, `ResourcesPanel` | Shift+Esc |
-| Sidebar on/auto/off | działa | App + CSS overlay Auto | QA round 2 |
-| Side apps panel | działa | `AppSidebar`, `sideApps` | |
-| Home chrome + widgets | działa | widgets/*, store home* | złożone |
-| Personalizacja sheet | działa | `PersonalizeSheet` + tabs | |
-| Motywy / tła / akcent | działa | THEMES, bgStyle, applyThemeToDom | Paper = jasny |
-| Ustawienia sekcje | działa | `SettingsPage` | większość patchSettings realnie używane |
-| About `djxxr://about` | działa | `AboutPage` | bez webview |
-| Scrollbary ciemne | działa | `scrollbars.css`, `darkPageScrollbars` | |
-| Spellchecker | częściowo | guest session pl+en-US; `perfSpellcheck` w settings | powiązanie perf↔session: **niepewne** |
-| Error page | działa | `ErrorPage.tsx` | |
-| Certyfikaty | działa | `certificate.cjs` + dialog App | |
-| mailto / protokoły | działa | `NAV_EXTERNAL_PROMPT` + ask | |
-| window.open | częściowo | navigation guards / open-url | szczegóły wszystkich ścieżek: **niepewne** |
+| Karty (otwórz/zamknij/pin/mute/discard) | działa [K] | `store.ts`, `App.tsx` | discard timer z `perfDiscard*` |
+| Okna normalne | działa [K] | `main.createWindow` | bounds persist tylko normal |
+| Okno prywatne Ctrl+Shift+N | działa [T] | `window-mode`, App shortcuts, AppMenu | ephemeral `private-<uuid>`; **bez** `persist:private` |
+| Okno Tor Shift+Alt+N | działa [K] | j.w. + `torStart` | nie zmienia demona poza istniejącym API |
+| Tor daemon embed + verify | działa [K] | `tor-daemon.cjs`, `tor-keys` | fail-closed OpenPGP — **nie ruszane** w tej rundzie |
+| Tor mosty | działa [K] | `torBridgeMode`, `tor-bridges` IPC | |
+| Tor Nowa tożsamość | działa [K] | `tor.newIdentity`, Ctrl+Shift+U | zamyka karty Tor |
+| Tor leak test | częściowo [K] | `scripts/test-tor-leaks.cjs` | nie w `npm test` |
+| Omnibox + suggest | działa [K] | `OmniboxSuggest`, history/search suggest IPC | |
+| !bangi | działa [K] | `store` bangs, `normalizeInput` | |
+| Historia strona | działa [T] | `HistoryPage`, `history.cjs` | jedyne źródło; migracja z Zustand |
+| Zakładki + import | działa [K] | `BookmarksPage`, `bookmarks-import` | nadal Zustand-only |
+| Pasek zakładek | działa [K] | `BookmarksBar`, `showBookmarksBar` | default OFF |
+| Pobrane | działa [K] | `DownloadsUI`, `downloads.cjs` | pierścień + drag |
+| Przywracanie sesji | działa [K] | `session.cjs`, App boot | skip private/tor window |
+| Ctrl+Shift+T reopen | działa [K] | shortcutsRegistry + store `reopenClosedTab` | |
+| Paleta Ctrl+K | działa [K] | `CommandPalette`, `lib/commands.ts` | guest: false w rejestrze |
+| Menu ≡ — pozycje | działa [T] | `AppMenu.tsx` ↔ wiring w `App.tsx` | wszystkie handlery podpięte (code audit) |
+| Menu kontekstowe guest | działa [T] | `context-menu.cjs` | hostWindowForGuest + popup bez złych x/y |
+| Menu kontekstowe chrome edit | działa [T] | `attachChromeEditMenu` | Cut/Copy/Paste w polach chrome |
+| Znajdź na stronie | działa [K] | `FindBar`, webview findInPage | disabled na home |
+| Zoom | działa [K] | `zoomFactors` per host | |
+| Druk / PDF | działa [K] | print / `shell:print-to-pdf` | disabled na home |
+| Zapisz stronę | działa [K] | `shell:save-page` | |
+| Źródło | działa [K] | `view-source:` nowa karta | |
+| DevTools | częściowo [K] | `allowInspect` default false | F12 gated |
+| Pełny ekran | działa [K] | F11 / windowToggleFullscreen | |
+| PiP | częściowo [K] | tylko pozycja w `context-menu.cjs` na video | brak UI React |
+| Skróty (rejestr) | działa [K] | `shortcutsRegistry.ts` + guest trap | `guest:true` przechodzi z webview |
+| Hasła / autofill | działa [T] | `passwords.cjs`, `PasswordsPanel` | Input/Switch; sejf **nie ruszany** poza UI |
+| Privacy presets | działa [K] | `privacyPresets.ts` + Settings | |
+| Ghostery adblock | działa [K] | `adblock-plus.cjs` | preferred |
+| Legacy adblock | działa [K] | `adblock.cjs` | fallback + cosmetic |
+| Tarcza (Shield) | działa [T] | `ShieldPanel.tsx` | Switch zamiast checkbox |
+| Uprawnienia stron | działa [T] | security + dialog w App | Switch „Zapamiętaj” |
+| Favicony | działa [K] | favicon-cache + `lib/favicon.ts` | |
+| Monitor zasobów / task mgr | działa [K] | `metrics.cjs`, `ResourcesPanel` | Shift+Esc |
+| Sidebar on/auto/off | działa [K] | App + CSS overlay Auto | QA round 2 |
+| Side apps panel | działa [K] | `AppSidebar`, `sideApps` | |
+| Home chrome + widgets | działa [T] | widgets/*, WidgetSettings Switch | |
+| Personalizacja sheet | działa [K] | `PersonalizeSheet` + tabs | |
+| Motywy / tła / akcent | działa [K] | THEMES, bgStyle, applyThemeToDom | Paper = jasny |
+| Ustawienia sekcje | działa [K] | `SettingsPage` | licznik zapytań z `historyStatus` |
+| About `djxxr://about` | działa [K] | `AboutPage` | bez webview |
+| Scrollbary ciemne | działa [K] | `scrollbars.css`, `darkPageScrollbars` | |
+| Spellchecker | częściowo [K] | guest session pl+en-US; `perfSpellcheck` | powiązanie perf↔session: **niepewne** |
+| Error page | działa [K] | `ErrorPage.tsx` | |
+| Certyfikaty | działa [T] | `certificate.cjs` + dialog App | Switch „Zapamiętaj wyjątek” |
+| mailto / protokoły | działa [K] | `NAV_EXTERNAL_PROMPT` + ask | |
+| window.open | częściowo [K] | navigation guards / open-url | OAuth popupy dozwolone; pełne ścieżki: **niepewne** |
 
 ### Menu ≡ — pozycje (`AppMenu.tsx`)
 
@@ -586,8 +589,8 @@ Guest: `guest: true` → przechwytywane w webview przez `shortcuts-guest` / befo
 
 | Komponent | Użycie |
 |-----------|--------|
-| `Input` | Settings, Bookmarks, Downloads search, History |
-| `Switch` | Settings, Bookmarks bar toggle |
+| `Input` | Settings, Bookmarks, Downloads, History, **PasswordsPanel** |
+| `Switch` | Settings, Bookmarks bar, **PasswordsPanel**, **Shield**, **WidgetSettings**, **App** (cert/perm) |
 | `Segmented` | Settings |
 | `Slider` | glass blur/opacity itd. |
 | `Dropdown` | **niepewne** pokrycie użycia |
@@ -610,20 +613,22 @@ Występują w THEMES, DEFAULT accent, części CSS (np. fallbacki `#000`, kolory
 | Sidebar Auto kiedyś ściskał treść | naprawione: `--side-total:0` + overlay (`App.tsx` / CSS) |
 | `djxxr://about` czyścił URL przez webview | naprawione: skip webview dla `djxxr://` |
 | Private/Tor shortcut nie otwierał okna | naprawione: `newWindow({boot})` |
-| Natywne checkboxy w dialogach App / Shield / WidgetSettings / PasswordsPanel | niespójne ze Switch |
-| PasswordsPanel bez `Input` UI | `PasswordsPanel.tsx` |
+| Menu kontekstowe „nic nie robi” | naprawione: `hostWindowForGuest` + popup bez guest x/y (`a4243b7`) |
+| Fallback `persist:private` | usunięty; purge dysku przy starcie (`d2ff869`) |
+| Dual historia Zustand + history.cjs | naprawione: tylko `history.cjs` + migracja (`1bf0e40`) |
+| Natywne checkboxy / `stog` w Passwords/Shield/Widget/App | naprawione: `Input`/`Switch` (`347bf17`) |
 | Vite warning: `useMetrics` static+dynamic import | build reporter |
-| Chunk JS > 500 kB | `index-*.js` ~764 kB |
+| Chunk JS > 500 kB | `index-*.js` ~765 kB |
 | `MODULE_TYPELESS_PACKAGE_JSON` w teście url-display | brak `"type":"module"` w package.json |
 | `@deprecated` torProxy global / set-proxy / presetHomeWidgets | martwe ścieżki migracji |
-| Brak git w PATH | nie da się zweryfikować historii commitów lokalnie |
 | Skrypty `scripts/patch-*.cjs`, stare probe | możliwy martwy tooling |
 | Capture Tor stubuje IPC | nie mylić z produkcją |
 
 TODO/FIXME w `src/` i `electron/`: praktycznie brak (poza @deprecated). Reszta w node_modules — ignorować.
 
-typecheck: **0 błędów** (ostatni run).  
-build: OK + ostrzeżenia powyżej.
+typecheck: **0 błędów** (2026-10-01 po rundzie).  
+build: OK + ostrzeżenia powyżej.  
+test: OK.
 
 ---
 
@@ -642,9 +647,17 @@ Mechanizmy: `perfLazyTabs`, `perfDiscardTabs`, `perfBackgroundThrottling`, `perf
 
 ## 10. Co zrobione od ostatniego raportu
 
-**Źródło:** `RAPORT-QA-ROUND2.md` + stan kodu. **Commit dates: niepewne** (`git` niedostępny).
+### Commity lokalne (`master`)
 
-Z ostatniej rundy QA (plik `RAPORT-QA-ROUND2.md`):
+| Hash | Message |
+|------|---------|
+| `8f99cce` | baseline przed rundą napraw |
+| `a4243b7` | fix: context menu popup window and coords |
+| `d2ff869` | fix: never persist private browsing sessions |
+| `1bf0e40` | fix: historia tylko history.cjs, migracja z Zustand |
+| `347bf17` | fix: Passwords/Shield/WidgetSettings/App dialogi na Input/Switch |
+
+### Runda QA round 2 (wcześniej, w baseline)
 
 1. Sidebar Auto jako overlay Arc-like (6px, Ctrl+Shift+S, 300 ms hide, 160 ms slide).
 2. Okna private/tor z boot IPC i partycjami.
@@ -654,35 +667,40 @@ Z ostatniej rundy QA (plik `RAPORT-QA-ROUND2.md`):
 6. `window.__DJXXR_STORE__` w `main.tsx` pod QA.
 7. Input w Settings; ciemne checkboxy w ui.css.
 
-Wcześniejsze warstwy (z BRIEFING/PROJECT_OVERVIEW, bez dat): baseline Chrome menus/shortcuts, Tor fail-closed, passwords vault, home widgets/personalize, Ghostery.
+### Runda „naprawdę działa” (ten przebieg)
+
+1. Git zainstalowany (winget), `git init`, `.gitignore`, baseline commit.
+2. Context menu: logi + `hostWindowForGuest` + chrome Cut/Copy/Paste.
+3. Usunięte `persist:private` z App/security + purge dysku.
+4. Historia: sole source `history.cjs`; `importQueries` + onRehydrate; SearchWidget/Settings na IPC.
+5. Input/Switch w PasswordsPanel, Shield, WidgetSettings, dialogach cert/perm.
+6. Menu ≡: code-audit wiring w `App.tsx` (wszystkie handlery podpięte).
+7. Tor daemon / vault crypto: **bez zmian** (zgodnie z briefem).
 
 ---
 
 ## 11. Rekomendacje (kolejność)
 
-1. **Ręczny QA Tor + private w pełnym `electron .`** — capture stubuje IPC; to jedyna pewna weryfikacja okien specjalnych.
-2. **Ujednolicić natywne kontrolki** (PasswordsPanel, Shield, dialogi App, WidgetSettings) do `Input`/`Switch`.
-3. **Code-split `App.tsx` / metrics** — obniżyć 764 kB i warning Vite.
-4. **Dodać `"type": "module"` lub przenieść test url-display** — uciszyć MODULE_TYPELESS.
-5. **Smoke test E2E skrótów guest** — regresja before-input.
-6. **Uprościć dual adblock** — jasna ścieżka Ghostery-only vs legacy.
-7. **Udokumentować / zablokować martwe skrypty probe** w `scripts/`.
-8. **Przywrócić git lub mirror** — bez historii trudniej pisać prompty „co się zmieniło”.
-9. **Zmniejszyć powierzchnię Personalize/home** albo testy snapshot layoutu — częste źródło regresji UI.
-10. **Rozważyć oficjalny protokół `djxxr://` w sesji** zamiast fake-URL — mniej pułapek webview.
+1. **Ręczny smoke w pełnym `electron:dev`** — kliknąć ≡ (private/tor/historia/zakładki), PPM na stronie, private window bez plików Partitions.
+2. **Code-split `App.tsx` / metrics** — obniżyć ~765 kB i warning Vite.
+3. **Dodać `"type": "module"` lub przenieść test url-display** — uciszyć MODULE_TYPELESS.
+4. **Smoke test E2E skrótów guest** — regresja before-input.
+5. **Uprościć dual adblock** — jasna ścieżka Ghostery-only vs legacy.
+6. **Udokumentować / zablokować martwe skrypty probe** w `scripts/`.
+7. **Zmniejszyć powierzchnię Personalize/home** albo testy snapshot layoutu — częste źródło regresji UI.
+8. **Rozważyć oficjalny protokół `djxxr://` w sesji** zamiast fake-URL — mniej pułapek webview.
+9. **Remote git / mirror** — lokalny `master` bez origin.
 
 ---
 
-## Wyniki weryfikacji (bez poprawek kodu)
+## Wyniki weryfikacji
 
-Uruchomione: `npm run typecheck`, `npm run build`, `npm test`.
+Uruchomione po rundzie napraw: `npx tsc --noEmit`, `npm run build`, `npm test`.
 
 ### typecheck
 
 ```
-> moja-przegladarka@0.1.0 typecheck
-> tsc -b --pretty false
-
+npx tsc --noEmit
 (exit 0, brak błędów)
 ```
 
@@ -692,12 +710,10 @@ Uruchomione: `npm run typecheck`, `npm run build`, `npm test`.
 > moja-przegladarka@0.1.0 build
 > tsc -b && vite build
 vite v6.4.3 building for production...
-✓ 2099 modules transformed.
-[plugin vite:reporter] useMetrics.ts dynamic+static import warning
+✓ built in 3.54s
 dist/assets/index-*.css ~228.16 kB │ gzip 57.64 kB
-dist/assets/index-*.js  ~764.40 kB │ gzip 231.16 kB
+dist/assets/index-*.js  ~764.71 kB │ gzip 231.45 kB
 (!) Some chunks are larger than 500 kB
-✓ built in ~3.4s
 (exit 0)
 ```
 
@@ -711,6 +727,14 @@ url-display.test.mjs: ok
 (exit 0)
 ```
 
+### Menu ≡ (code audit)
+
+Wszystkie pozycje `AppMenuActions` mają handlery w `App.tsx` (~2415–2488): newTab/window/private/tor, sidebar, passwords/history/bookmarks/downloads, clear, zoom, fullscreen, print/find/save/pdf, copy/QR, task mgr/devtools/source, about/settings/quit.
+
+### Nie objęte pełnym kliknięciem GUI w tej sesji
+
+Tor daemon end-to-end, password vault crypto, każda pozycja ≡ w żywej aplikacji — wymaga `npm run electron:dev` u użytkownika.
+
 ---
 
-*Koniec FULL_STATE. Nie wprowadzano zmian w kodzie aplikacji poza utworzeniem tego pliku.*
+*Koniec FULL_STATE. Runda napraw zapisana w commitach `a4243b7`…`347bf17`; Tor/vault poza UI bez zmian.*
