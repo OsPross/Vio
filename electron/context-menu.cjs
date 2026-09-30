@@ -6,6 +6,12 @@ const { Menu, clipboard, nativeImage, dialog, BrowserWindow } = require('electro
 const path = require('path');
 const fs = require('fs');
 
+const CTX_LOG = process.env.DJXXR_CTX_LOG !== '0';
+
+function ctxLog(...args) {
+  if (CTX_LOG) console.log('[ctx-menu]', ...args);
+}
+
 /** @typedef {{
  *   getMainWindow: () => import('electron').BrowserWindow | null,
  *   isTor: (wc: Electron.WebContents) => boolean,
@@ -15,14 +21,42 @@ const fs = require('fs');
  *   canInspect?: () => boolean,
  * }} CtxDeps */
 
+function hostWindowForGuest(wc) {
+  try {
+    const host = typeof wc.getOwnerBrowserWindow === 'function' ? wc.getOwnerBrowserWindow() : null;
+    if (host && !host.isDestroyed()) return host;
+  } catch {
+    /* */
+  }
+  try {
+    if (wc.hostWebContents && !wc.hostWebContents.isDestroyed()) {
+      const w = BrowserWindow.fromWebContents(wc.hostWebContents);
+      if (w && !w.isDestroyed()) return w;
+    }
+  } catch {
+    /* */
+  }
+  try {
+    const w = BrowserWindow.fromWebContents(wc);
+    if (w && !w.isDestroyed()) return w;
+  } catch {
+    /* */
+  }
+  return BrowserWindow.getFocusedWindow();
+}
+
 /**
  * @param {Electron.WebContents} wc
  * @param {CtxDeps} deps
  */
 function attachContextMenu(wc, deps) {
   if (!wc || wc.isDestroyed()) return;
-  if (wc.__djxxrCtxMenu) return;
+  if (wc.__djxxrCtxMenu) {
+    ctxLog('skip attach — already wired', wc.id);
+    return;
+  }
   wc.__djxxrCtxMenu = true;
+  ctxLog('attach', { id: wc.id, url: (() => { try { return wc.getURL(); } catch { return ''; } })() });
 
   // Spellcheck for guest editing (pl + en). Do not alter privacy preset flags.
   try {
@@ -38,12 +72,70 @@ function attachContextMenu(wc, deps) {
   }
 
   wc.on('context-menu', (event, params) => {
+    ctxLog('handler fire', {
+      id: wc.id,
+      mediaType: params?.mediaType,
+      hasLink: Boolean(params?.linkURL),
+      hasImg: Boolean(params?.hasImageContents || params?.srcURL),
+      editable: Boolean(params?.isEditable),
+      selection: Boolean(params?.selectionText),
+      x: params?.x,
+      y: params?.y,
+    });
     try {
       event.preventDefault();
     } catch {
       /* */
     }
     showGuestContextMenu(wc, params, deps);
+  });
+}
+
+/**
+ * Edit menu for chrome UI inputs (omnibox fallback / settings / passwords fields).
+ * @param {Electron.WebContents} wc
+ */
+function attachChromeEditMenu(wc) {
+  if (!wc || wc.isDestroyed() || wc.__djxxrChromeEditMenu) return;
+  wc.__djxxrChromeEditMenu = true;
+  wc.on('context-menu', (event, params) => {
+    // Guest webviews have their own menu; chrome page only.
+    if (wc.getType && wc.getType() === 'webview') return;
+    const editable = Boolean(params.isEditable);
+    const hasSelection = Boolean(params.selectionText && params.selectionText.trim());
+    if (!editable && !hasSelection) return;
+    try {
+      event.preventDefault();
+    } catch {
+      /* */
+    }
+    ctxLog('chrome edit menu', { editable, hasSelection });
+    const template = [];
+    if (editable) {
+      template.push(
+        { role: 'cut', label: 'Wytnij', enabled: hasSelection },
+        { role: 'copy', label: 'Kopiuj', enabled: hasSelection },
+        { role: 'paste', label: 'Wklej' },
+        { type: 'separator' },
+        { role: 'selectAll', label: 'Zaznacz wszystko' },
+      );
+    } else if (hasSelection) {
+      template.push({ role: 'copy', label: 'Kopiuj' });
+    }
+    if (params.dictionarySuggestions?.length) {
+      template.push({ type: 'separator' });
+      for (const s of params.dictionarySuggestions.slice(0, 5)) {
+        template.push({
+          label: s,
+          click: () => wc.replaceMisspelling(s),
+        });
+      }
+    }
+    if (!template.length) return;
+    const win = BrowserWindow.fromWebContents(wc);
+    Menu.buildFromTemplate(template).popup({
+      window: win && !win.isDestroyed() ? win : undefined,
+    });
   });
 }
 
@@ -56,7 +148,12 @@ function showGuestContextMenu(wc, params, deps) {
   if (!wc || wc.isDestroyed()) return;
   const tor = Boolean(deps.isTor(wc));
   const priv = !tor && Boolean(deps.isPrivate?.(wc));
-  const win = deps.getMainWindow?.();
+  const win = hostWindowForGuest(wc) || deps.getMainWindow?.();
+  ctxLog('popup', {
+    winId: win && !win.isDestroyed() ? win.id : null,
+    tor,
+    priv,
+  });
   const openSame = (url, extra = {}) =>
     deps.openUrl(url, { tor, private: priv, ...extra });
   const hasLink = Boolean(params.linkURL);
@@ -414,14 +511,20 @@ function showGuestContextMenu(wc, params, deps) {
   }
 
   const menu = Menu.buildFromTemplate(template);
-  menu.popup({
-    window: win && !win.isDestroyed() ? win : undefined,
-    x: typeof params.x === 'number' ? Math.round(params.x) : undefined,
-    y: typeof params.y === 'number' ? Math.round(params.y) : undefined,
-  });
+  const popupWin = win && !win.isDestroyed() ? win : undefined;
+  // Do NOT pass guest-relative x/y as window coordinates — menu lands off-screen.
+  // Electron defaults to current cursor position when x/y omitted.
+  ctxLog('Menu.popup', { items: template.length, winId: popupWin?.id });
+  try {
+    menu.popup({ window: popupWin });
+  } catch (err) {
+    console.error('[ctx-menu] popup failed', err);
+  }
 }
 
 module.exports = {
   attachContextMenu,
+  attachChromeEditMenu,
   showGuestContextMenu,
+  hostWindowForGuest,
 };

@@ -298,9 +298,35 @@ function attachNavigationGuards(wc, opts = {}) {
     }
   });
 
-  wc.setWindowOpenHandler(({ url, disposition }) => {
+  wc.setWindowOpenHandler(({ url, disposition, features }) => {
     const r = isAllowedNavigation(url);
     const background = disposition === 'background-tab' || disposition === 'new-background-tab';
+    const feat = String(features || '');
+    const wantsPopup =
+      disposition === 'new-window' ||
+      /(?:^|[,;\s])(width|height|popup)=/i.test(feat) ||
+      /noopener/i.test(feat);
+
+    // OAuth / SSO popups need a real BrowserWindow (Google, Microsoft, …)
+    if (
+      !torMode &&
+      wantsPopup &&
+      (url === '' || url === 'about:blank' || (r.ok === true && /^https?:/i.test(url)))
+    ) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          autoHideMenuBar: true,
+          webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true,
+            webviewTag: false,
+          },
+        },
+      };
+    }
+
     if (r.ok === true && (/^https?:/i.test(url) || /^file:\/\//i.test(url))) {
       if (opts.onOpenUrl) opts.onOpenUrl(url, { background });
       return { action: 'deny' };

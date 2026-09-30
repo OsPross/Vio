@@ -234,17 +234,31 @@ function wireGuestNavigation(guestWc) {
   }
 
   contextMenu.attachContextMenu(guestWc, {
-    getMainWindow: () => mainWindow,
+    getMainWindow: () => {
+      try {
+        return contextMenu.hostWindowForGuest(guestWc) || mainWindow;
+      } catch {
+        return mainWindow;
+      }
+    },
     isTor: (wc) => tor.isTorWebContents(wc),
     isPrivate: (wc) => {
       try {
-        return wc.session === session.fromPartition('persist:private');
+        const name =
+          (typeof wc.session?.partitionName === 'string' && wc.session.partitionName) ||
+          (typeof wc.session?.getStoragePath === 'function' ? '' : '');
+        // partitionName may be empty on some Electron builds — fall back to window meta
+        if (windowMode.isPrivatePartition(name)) return true;
+        const win = contextMenu.hostWindowForGuest(wc);
+        const meta = windowMode.getWindowMeta(win);
+        return meta.mode === 'private' || windowMode.isPrivatePartition(meta.partition);
       } catch {
         return false;
       }
     },
     openUrl: (url, opts = {}) => {
-      mainWindow?.webContents.send('shell:open-url', {
+      const win = contextMenu.hostWindowForGuest(guestWc) || mainWindow;
+      win?.webContents.send('shell:open-url', {
         url,
         tor: Boolean(opts.tor),
         private: Boolean(opts.private),
@@ -252,7 +266,8 @@ function wireGuestNavigation(guestWc) {
       });
     },
     askRenderer: (action, payload = {}) => {
-      mainWindow?.webContents.send('shell:context-action', { action, ...payload });
+      const win = contextMenu.hostWindowForGuest(guestWc) || mainWindow;
+      win?.webContents.send('shell:context-action', { action, ...payload });
     },
     canInspect: () => Boolean(global.__djxxrAllowInspect),
   });
@@ -415,6 +430,8 @@ function createWindow(optsExtra = {}) {
     wireGuestNavigation(guestContents);
   });
 
+  contextMenu.attachChromeEditMenu(bw.webContents);
+
   security.attachNavigationGuards(bw.webContents, {
     askExternal: askExternalProtocol,
     onOpenUrl: (url) => {
@@ -455,6 +472,18 @@ function guestWebContentsById(id) {
 app.whenReady().then(async () => {
   security.init();
   certificate.init();
+
+  // Backup: any webview webContents gets context menu + navigation wiring
+  app.on('web-contents-created', (_e, contents) => {
+    try {
+      if (typeof contents.getType === 'function' && contents.getType() === 'webview') {
+        console.log('[ctx-menu] web-contents-created webview', contents.id);
+        wireGuestNavigation(contents);
+      }
+    } catch (err) {
+      console.warn('[ctx-menu] web-contents-created', err);
+    }
+  });
 
   // Migration: never leave Tor daemon in Windows Startup by default
   try {
