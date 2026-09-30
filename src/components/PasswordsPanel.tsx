@@ -13,6 +13,8 @@ import {
   Upload,
 } from 'lucide-react';
 import { useStore } from '../store';
+import { Input } from './ui/Input';
+import { Switch } from './ui/Switch';
 
 type PwPublic = {
   id: string;
@@ -309,8 +311,7 @@ export function PasswordsPanel() {
       <>
         <SettingsGroup title="Utwórz sejf">
           <SettingsRow label="Hasło główne" hint="Minimum 8 znaków. Nie da się odzyskać — zapamiętaj je.">
-            <input
-              className="sr-input"
+            <Input
               type="password"
               autoComplete="new-password"
               value={master}
@@ -318,8 +319,7 @@ export function PasswordsPanel() {
             />
           </SettingsRow>
           <SettingsRow label="Powtórz hasło">
-            <input
-              className="sr-input"
+            <Input
               type="password"
               autoComplete="new-password"
               value={master2}
@@ -330,11 +330,10 @@ export function PasswordsPanel() {
             label="Zapamiętaj na tym urządzeniu"
             hint="Klucz chroniony przez Windows DPAPI (safeStorage). Każdy z dostępem do tego konta Windows może wtedy otworzyć sejf bez hasła głównego."
           >
-            <button
-              type="button"
-              className={`stog ${remember && status.rememberAvailable ? 'on' : ''}`}
+            <Switch
+              on={remember && !!status.rememberAvailable}
               disabled={!status.rememberAvailable}
-              onClick={() => setRemember((v) => !v)}
+              onChange={(v) => setRemember(v)}
               aria-label="Zapamiętaj"
             />
           </SettingsRow>
@@ -354,8 +353,7 @@ export function PasswordsPanel() {
       <>
         <SettingsGroup title="Odblokuj sejf">
           <SettingsRow label="Hasło główne" hint={`${status.entryCount} zapisanych kont`}>
-            <input
-              className="sr-input"
+            <Input
               type="password"
               autoComplete="current-password"
               value={master}
@@ -366,11 +364,10 @@ export function PasswordsPanel() {
             />
           </SettingsRow>
           <SettingsRow label="Zapamiętaj na tym urządzeniu" hint="DPAPI — każdy z dostępem do konta Windows może otworzyć sejf.">
-            <button
-              type="button"
-              className={`stog ${remember && status.rememberAvailable ? 'on' : ''}`}
+            <Switch
+              on={remember && !!status.rememberAvailable}
               disabled={!status.rememberAvailable}
-              onClick={() => setRemember((v) => !v)}
+              onChange={(v) => setRemember(v)}
               aria-label="Zapamiętaj"
             />
           </SettingsRow>
@@ -389,24 +386,24 @@ export function PasswordsPanel() {
     <>
       <SettingsGroup title="Preferencje">
         <SettingsRow label="Menedżer haseł" hint="Wykrywanie logowań i ikona w omniboxie.">
-          <button
-            type="button"
-            className={`stog ${settings.passwordsEnabled ? 'on' : ''}`}
-            onClick={() => patchSettings({ passwordsEnabled: !settings.passwordsEnabled })}
+          <Switch
+            on={!!settings.passwordsEnabled}
+            onChange={(v) => patchSettings({ passwordsEnabled: v })}
+            aria-label="Menedżer haseł"
           />
         </SettingsRow>
         <SettingsRow label="Autouzupełnianie" hint="Tylko HTTPS, ścisły origin, bez cross-origin iframe.">
-          <button
-            type="button"
-            className={`stog ${settings.passwordsAutofill ? 'on' : ''}`}
-            onClick={() => patchSettings({ passwordsAutofill: !settings.passwordsAutofill })}
+          <Switch
+            on={!!settings.passwordsAutofill}
+            onChange={(v) => patchSettings({ passwordsAutofill: v })}
+            aria-label="Autouzupełnianie"
           />
         </SettingsRow>
         <SettingsRow label="Proponuj zapis" hint="Pasek po wysłaniu formularza logowania.">
-          <button
-            type="button"
-            className={`stog ${settings.passwordsOfferSave ? 'on' : ''}`}
-            onClick={() => patchSettings({ passwordsOfferSave: !settings.passwordsOfferSave })}
+          <Switch
+            on={!!settings.passwordsOfferSave}
+            onChange={(v) => patchSettings({ passwordsOfferSave: v })}
+            aria-label="Proponuj zapis"
           />
         </SettingsRow>
         <SettingsRow label="Auto-blokada" hint="Po bezczynności i przy uśpieniu systemu.">
@@ -466,7 +463,7 @@ export function PasswordsPanel() {
           <SettingsGroup title="Zapisane konta">
             <div className="pw-search">
               <Search size={14} strokeWidth={1.75} />
-              <input
+              <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Szukaj domeny lub loginu…"
@@ -546,38 +543,33 @@ export function PasswordsPanel() {
 
           <SettingsGroup title="Dodaj ręcznie">
             <SettingsRow label="Origin (https://…)">
-              <input
-                className="sr-input"
+              <Input
                 value={draft.origin}
                 onChange={(e) => setDraft((d) => ({ ...d, origin: e.target.value }))}
                 placeholder="https://example.com"
               />
             </SettingsRow>
             <SettingsRow label="Login">
-              <input
-                className="sr-input"
+              <Input
                 value={draft.username}
                 onChange={(e) => setDraft((d) => ({ ...d, username: e.target.value }))}
               />
             </SettingsRow>
             <SettingsRow label="Hasło">
-              <input
-                className="sr-input"
+              <Input
                 type="password"
                 value={draft.password}
                 onChange={(e) => setDraft((d) => ({ ...d, password: e.target.value }))}
               />
             </SettingsRow>
             <SettingsRow label="Notatka">
-              <input
-                className="sr-input"
+              <Input
                 value={draft.note}
                 onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))}
               />
             </SettingsRow>
             <SettingsRow label="TOTP (opcjonalnie)" hint="Sekret base32">
-              <input
-                className="sr-input"
+              <Input
                 value={draft.totpSecret}
                 onChange={(e) => setDraft((d) => ({ ...d, totpSecret: e.target.value }))}
               />
@@ -595,11 +587,7 @@ export function PasswordsPanel() {
       {panel === 'generator' && (
         <SettingsGroup title="Generator">
           <SettingsRow label="Fraza słowna">
-            <button
-              type="button"
-              className={`stog ${genPassphrase ? 'on' : ''}`}
-              onClick={() => setGenPassphrase((v) => !v)}
-            />
+            <Switch on={genPassphrase} onChange={setGenPassphrase} aria-label="Fraza słowna" />
           </SettingsRow>
           {!genPassphrase && (
             <>
@@ -616,11 +604,7 @@ export function PasswordsPanel() {
                 </div>
               </SettingsRow>
               <SettingsRow label="Symbole">
-                <button
-                  type="button"
-                  className={`stog ${genSymbols ? 'on' : ''}`}
-                  onClick={() => setGenSymbols((v) => !v)}
-                />
+                <Switch on={genSymbols} onChange={setGenSymbols} aria-label="Symbole" />
               </SettingsRow>
             </>
           )}
@@ -708,8 +692,7 @@ export function PasswordsPanel() {
           </SettingsGroup>
           <SettingsGroup title="Eksport CSV">
             <SettingsRow label="Potwierdź hasłem głównym" hint="Wymagane przed eksportem.">
-              <input
-                className="sr-input"
+              <Input
                 type="password"
                 value={exportMaster}
                 onChange={(e) => setExportMaster(e.target.value)}

@@ -62,6 +62,7 @@ import { pageScrollbarCss } from './lib/page-scrollbars';
 import { buildSessionSnapshot } from './lib/sessionSnapshot';
 import { TorLanding, type TorStatusInfo } from './components/TorLanding';
 import { ShieldPanel } from './components/ShieldPanel';
+import { Switch } from './components/ui/Switch';
 import { letterFavicon } from './lib/favicon';
 import { formatUrlPlain } from './lib/url-display';
 import {
@@ -2522,10 +2523,10 @@ export function App() {
               <code className="cert-warn-url">{certWarn.url}</code>
               {!certWarn.tor ? (
                 <label className="perm-remember">
-                  <input
-                    type="checkbox"
-                    checked={certRemember}
-                    onChange={(e) => setCertRemember(e.target.checked)}
+                  <Switch
+                    on={certRemember}
+                    onChange={setCertRemember}
+                    aria-label={`Zapamiętaj wyjątek dla ${certWarn.host || 'tej domeny'}`}
                   />
                   Zapamiętaj wyjątek dla {certWarn.host || 'tej domeny'}
                 </label>
@@ -2945,7 +2946,7 @@ export function App() {
                           : permAsk.permission}
               </span>
               <label className="perm-remember">
-                <input type="checkbox" checked={permRemember} onChange={(e) => setPermRemember(e.target.checked)} />
+                <Switch on={permRemember} onChange={setPermRemember} aria-label="Zapamiętaj" />
                 Zapamiętaj
               </label>
               <div className="pw-save-actions">

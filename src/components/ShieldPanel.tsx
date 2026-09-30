@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Shield, ShieldOff, Trash2, X } from 'lucide-react';
+import { Switch } from './ui/Switch';
 
 type Props = {
   open: boolean;
@@ -61,10 +62,10 @@ export function ShieldPanel({
       </div>
 
       <label className="shield-toggle">
-        <input
-          type="checkbox"
-          checked={protectionOn}
-          onChange={(e) => onToggleProtection(e.target.checked)}
+        <Switch
+          on={protectionOn}
+          onChange={onToggleProtection}
+          aria-label="Ochrona dla tej strony"
         />
         <span>Ochrona dla tej strony</span>
       </label>

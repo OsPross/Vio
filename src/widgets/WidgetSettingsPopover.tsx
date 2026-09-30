@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { HomeChromeId, HomeClockStyle, HomeWidgetSize, HomeWidgetStyle } from '../store';
+import { Switch } from '../components/ui/Switch';
 
 export type SettingsTarget =
   | {
@@ -231,27 +232,15 @@ export function WidgetSettingsPopover({
             </div>
           </label>
           <label className="hw-settings-check">
-            <input
-              type="checkbox"
-              checked={showClock}
-              onChange={(e) => onToggleClock?.(e.target.checked)}
-            />
+            <Switch on={showClock} onChange={(v) => onToggleClock?.(v)} aria-label="Pokaż zegar" />
             Pokaż zegar
           </label>
           <label className="hw-settings-check">
-            <input
-              type="checkbox"
-              checked={showDate}
-              onChange={(e) => onToggleDate?.(e.target.checked)}
-            />
+            <Switch on={showDate} onChange={(v) => onToggleDate?.(v)} aria-label="Pokaż datę" />
             Pokaż datę
           </label>
           <label className="hw-settings-check">
-            <input
-              type="checkbox"
-              checked={showSeconds}
-              onChange={(e) => onToggleSeconds?.(e.target.checked)}
-            />
+            <Switch on={showSeconds} onChange={(v) => onToggleSeconds?.(v)} aria-label="Sekundy" />
             Sekundy
           </label>
         </>
@@ -265,11 +254,7 @@ export function WidgetSettingsPopover({
 
       {target.kind === 'chrome' && target.id === 'shortcuts' && (
         <label className="hw-settings-check">
-          <input
-            type="checkbox"
-            checked={showApps}
-            onChange={(e) => onToggleApps?.(e.target.checked)}
-          />
+          <Switch on={showApps} onChange={(v) => onToggleApps?.(v)} aria-label="Pokaż skróty" />
           Pokaż skróty
         </label>
       )}
