@@ -317,15 +317,7 @@ export function AppMenu({ actions }: Props) {
           label: 'Narzędzia deweloperskie',
           shortcut: acceleratorForMenuId('devtools'),
           icon: <Code2 size={16} strokeWidth={1.75} />,
-          run: () => {
-            if (!actions.allowInspect) {
-              actions.openDevtoolsSettings?.();
-              return;
-            }
-            actions.openDevtools();
-          },
-          disabled: false,
-          hint: actions.allowInspect ? undefined : 'Włącz w Ustawienia → Zaawansowane',
+          run: () => actions.openDevtools(),
         },
         {
           kind: 'action',

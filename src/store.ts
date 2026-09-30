@@ -697,7 +697,7 @@ export const DEFAULT_SETTINGS: Settings = {
   passwordsIdleMinutes: 15,
   passwordsAutofill: true,
   passwordsOfferSave: true,
-  allowInspect: false,
+  allowInspect: true,
   zoomFactors: {},
   showBookmarksBar: false,
   darkPageScrollbars: true,
@@ -1834,7 +1834,18 @@ export const useStore = create<State>()(
           mergedSettings.showSidebar = mergedSettings.sidebarMode !== 'off';
         }
         if (typeof mergedSettings.allowInspect !== 'boolean') {
-          mergedSettings.allowInspect = false;
+          mergedSettings.allowInspect = true;
+        }
+        try {
+          if (
+            typeof localStorage !== 'undefined' &&
+            !localStorage.getItem('djxxr-allow-inspect-default-v1')
+          ) {
+            mergedSettings.allowInspect = true;
+            localStorage.setItem('djxxr-allow-inspect-default-v1', '1');
+          }
+        } catch {
+          /* */
         }
         // Round 4: spellcheck is a user toggle, not an off-by-default perf cut
         if (typeof mergedSettings.perfSpellcheck !== 'boolean') {

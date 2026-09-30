@@ -1231,8 +1231,8 @@ export function SettingsPage() {
                 </SettingsGroup>
                 <SettingsGroup title="Narzędzia deweloperskie">
                   <Toggle
-                    label="Zbadaj element / DevTools na stronach"
-                    hint="Pokazuje „Zbadaj element” w menu kontekstowym strony (F12 w Paczce D)"
+                    label="„Zbadaj element” w menu kontekstowym"
+                    hint="F12 / Ctrl+Shift+I zawsze otwierają DevTools. Ten przełącznik steruje tylko pozycją „Zbadaj” w PPM."
                     on={settings.allowInspect}
                     onChange={(v) => patchSettings({ allowInspect: v })}
                   />

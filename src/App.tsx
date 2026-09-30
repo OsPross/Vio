@@ -1686,7 +1686,6 @@ export function App() {
             void window.shell?.windowToggleFullscreen?.();
             return true;
           case 'devtools':
-            if (!settings.allowInspect) return true;
             try {
               currentView()?.openDevTools?.();
             } catch {
@@ -2553,7 +2552,6 @@ export function App() {
                 },
                 openTaskManager: () => setTaskMgrOpen(true),
                 openDevtools: () => {
-                  if (!settings.allowInspect) return;
                   try {
                     currentView()?.openDevTools?.();
                   } catch {
