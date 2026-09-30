@@ -237,6 +237,14 @@ function hardenTorSession(ses) {
   const downloads = require('./downloads.cjs');
   downloads.attachToSession(ses, { tor: true });
 
+  // No spellcheck on Tor: Hunspell may download dictionaries outside the circuit
+  try {
+    const spellcheck = require('./spellcheck.cjs');
+    spellcheck.applyToSession(ses, { tor: true });
+  } catch (err) {
+    console.warn('[tor] spellcheck off', err);
+  }
+
   // Ghostery/legacy attach — in-memory rules only (list fetch is clearnet at app init, not per Tor nav)
   if (typeof attachAdblock === 'function') {
     try {

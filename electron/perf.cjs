@@ -83,15 +83,11 @@ function applyBootSwitches() {
 async function applySessionPerf(ses, opts = {}) {
   const mb = Math.max(32, Number(opts.cacheMb) || 256);
   try {
-    // Electron: limit dyskowego cache (bajty)
+    // Disk cache size only — spellcheck is owned by electron/spellcheck.cjs
+    // (historically this always called setSpellCheckerEnabled(false) and killed dictionaries).
     if (typeof ses.setCacheSize === 'function') {
       ses.setCacheSize(mb * 1024 * 1024);
     }
-  } catch {
-    /* */
-  }
-  try {
-    ses.setSpellCheckerEnabled?.(false);
   } catch {
     /* */
   }

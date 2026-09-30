@@ -19,6 +19,7 @@ const windowMode = require('./window-mode.cjs');
 const certificate = require('./certificate.cjs');
 const shortcutsGuest = require('./shortcuts-guest.cjs');
 const bookmarksImport = require('./bookmarks-import.cjs');
+const spellcheck = require('./spellcheck.cjs');
 const { webContents: electronWebContents } = require('electron');
 
 /** Boot switches MUST run before ready */
@@ -115,8 +116,7 @@ function ensurePrivateSession(ses) {
         }
       },
     });
-    if (typeof ses.setSpellCheckerEnabled === 'function') ses.setSpellCheckerEnabled(true);
-    if (typeof ses.setSpellCheckerLanguages === 'function') ses.setSpellCheckerLanguages(['pl', 'en-US']);
+    spellcheck.applyToSession(ses, { tor: false });
   } catch (err) {
     console.warn('[private] ensurePrivateSession', err);
   }
@@ -155,8 +155,10 @@ function wireGuestNavigation(guestWc) {
   });
   if (torMode) {
     tor.hardenGuestWebContents(guestWc);
+    spellcheck.applyToWebContents(guestWc, { tor: true });
   } else {
     privacy.hardenGuest(guestWc);
+    spellcheck.applyToWebContents(guestWc, { tor: false });
     guestWc.__djxxrHttpsUpgrade = null;
 
     const recordGuestVisit = (url, title, soft) => {
@@ -343,7 +345,7 @@ function createWindow(optsExtra = {}) {
       sandbox: true,
       webviewTag: true,
       backgroundThrottling: boot.backgroundThrottling !== false,
-      spellcheck: false,
+      spellcheck: true,
       v8CacheOptions: 'code',
       additionalArguments: [
         `--djxxr-boot=${bootMode}`,
@@ -531,13 +533,8 @@ app.whenReady().then(async () => {
       }
     },
   });
-  // Page editing spellcheck (baseline browser). Privacy fingerprinting stays untouched.
-  try {
-    if (typeof ses.setSpellCheckerEnabled === 'function') ses.setSpellCheckerEnabled(true);
-    if (typeof ses.setSpellCheckerLanguages === 'function') ses.setSpellCheckerLanguages(['pl', 'en-US']);
-  } catch {
-    /* */
-  }
+  // Page editing spellcheck — must run AFTER privacy/perf (they must not disable it)
+  spellcheck.applyToSession(ses, { tor: false });
   adblock.setBlockedListener((n) => {
     mainWindow?.webContents.send('shell:adblock-blocked', n);
   });
@@ -545,6 +542,7 @@ app.whenReady().then(async () => {
     console.log('[adblock+]', r);
   });
   await perf.applySessionPerf(ses, { cacheMb: boot.cacheMb });
+  spellcheck.applyToSession(ses, { tor: false });
 
   try {
     if (typeof ses.registerPreloadScript === 'function') {
@@ -1087,6 +1085,10 @@ ipcMain.handle(
   wrapApp(async (_e, opts) => {
     const ses = session.fromPartition('persist:main');
     await perf.applySessionPerf(ses, opts && typeof opts === 'object' ? opts : {});
+    if (opts && typeof opts.spellcheck === 'boolean') {
+      spellcheck.setUserEnabled(opts.spellcheck);
+    }
+    spellcheck.applyToSession(ses, { tor: false });
     if (mainWindow && opts && typeof opts.backgroundThrottling === 'boolean') {
       try {
         mainWindow.webContents.setBackgroundThrottling(opts.backgroundThrottling);
@@ -1094,7 +1096,18 @@ ipcMain.handle(
         /* */
       }
     }
-    return { ok: true };
+    return { ok: true, spellcheck: spellcheck.getUserEnabled() };
+  }),
+);
+ipcMain.handle(
+  'shell:spellcheck-config',
+  wrapApp((_e, next) => {
+    if (next && typeof next.enabled === 'boolean') {
+      spellcheck.setUserEnabled(next.enabled);
+    }
+    const ses = session.fromPartition('persist:main');
+    spellcheck.applyToSession(ses, { tor: false });
+    return { ok: true, enabled: spellcheck.getUserEnabled(), langs: spellcheck.LANGS };
   }),
 );
 

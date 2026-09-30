@@ -8,6 +8,7 @@ const security = require('./security.cjs');
 const privacy = require('./privacy.cjs');
 const downloads = require('./downloads.cjs');
 const adblock = require('./adblock-plus.cjs');
+const spellcheck = require('./spellcheck.cjs');
 
 /** @type {WeakMap<import('electron').BrowserWindow, { mode: string, partition: string|null }>} */
 const windowMeta = new WeakMap();
@@ -62,8 +63,7 @@ function ensurePrivateSession(ses) {
         }
       },
     });
-    if (typeof ses.setSpellCheckerEnabled === 'function') ses.setSpellCheckerEnabled(true);
-    if (typeof ses.setSpellCheckerLanguages === 'function') ses.setSpellCheckerLanguages(['pl', 'en-US']);
+    spellcheck.applyToSession(ses, { tor: false });
   } catch (err) {
     console.warn('[window-mode] ensurePrivateSession', err);
   }

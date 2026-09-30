@@ -232,9 +232,7 @@ function attachToSession(ses, opts) {
   try {
     if (cfg.chromeUa) ses.setUserAgent(CHROME_UA);
   } catch {}
-  try {
-    if (typeof ses.setSpellCheckerEnabled === 'function') ses.setSpellCheckerEnabled(false);
-  } catch {}
+  // Spellcheck is NOT disabled here — owned by electron/spellcheck.cjs + perfSpellcheck.
 }
 
 const FINGERPRINT_NOISE = "(function(){try{Object.defineProperty(navigator,'hardwareConcurrency',{get:function(){return 4}});Object.defineProperty(navigator,'deviceMemory',{get:function(){return 8}});}catch(e){}try{var toDataURL=HTMLCanvasElement.prototype.toDataURL;HTMLCanvasElement.prototype.toDataURL=function(){try{var ctx=this.getContext('2d');if(ctx){var img=ctx.getImageData(0,0,Math.min(this.width,8),Math.min(this.height,8));for(var i=0;i<img.data.length;i+=4){img.data[i]=Math.max(0,Math.min(255,img.data[i]+((Math.random()*2)|0)-1));}ctx.putImageData(img,0,0);}}catch(e){}return toDataURL.apply(this,arguments);};}catch(e){}})();";

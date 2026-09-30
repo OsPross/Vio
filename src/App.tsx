@@ -603,7 +603,7 @@ function TabWebview({
       src={tab.url}
       partition={partition}
       allowpopups={'true' as unknown as boolean}
-      webpreferences="contextIsolation=yes,nativeWindowOpen=yes"
+      webpreferences="contextIsolation=yes,nativeWindowOpen=yes,spellcheck=yes"
     />
   );
 }
@@ -788,13 +788,16 @@ export function App() {
     void window.shell?.perfApplySession?.({
       cacheMb: settings.perfCacheMb,
       backgroundThrottling: settings.perfBackgroundThrottling,
+      spellcheck: settings.perfSpellcheck !== false,
     });
+    void window.shell?.spellcheckConfig?.({ enabled: settings.perfSpellcheck !== false });
   }, [
     settings.perfHardwareAcceleration,
     settings.perfSmoothScrolling,
     settings.perfBackgroundThrottling,
     settings.perfCacheMb,
     settings.perfMode,
+    settings.perfSpellcheck,
   ]);
 
   // Wyrzucanie nieaktywnych kart z pamięci (odmontowanie webview)

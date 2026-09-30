@@ -1546,6 +1546,7 @@ function PerformanceSection({
         />
         <Toggle
           label="Sprawdzanie pisowni"
+          hint="pl + en-US (wyłączone w oknach Tor — słowniki nie pobierają się poza siecią Tor)"
           on={settings.perfSpellcheck}
           onChange={(v) => patchSettings({ perfSpellcheck: v })}
         />

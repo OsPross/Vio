@@ -124,7 +124,8 @@ declare global {
       perfApplySession: (opts?: {
         cacheMb?: number;
         backgroundThrottling?: boolean;
-      }) => Promise<{ ok: boolean }>;
+        spellcheck?: boolean;
+      }) => Promise<{ ok: boolean; spellcheck?: boolean }>;
       perfClearCache: () => Promise<{ ok: boolean }>;
       perfMemory: () => Promise<{
         processes: number;
@@ -333,6 +334,11 @@ declare global {
       historyDeleteDomain: (host: string) => Promise<{ ok: boolean; removed?: number }>;
       historyClear: (opts?: { range?: 'hour' | 'day' | 'week' | 'all' | number }) => Promise<{ ok: boolean }>;
       historyRemoveQuery: (q: string) => Promise<{ ok: boolean }>;
+      spellcheckConfig: (next?: { enabled?: boolean }) => Promise<{
+        ok: boolean;
+        enabled?: boolean;
+        langs?: string[];
+      }>;
       sessionLoad: () => Promise<{
         version: number;
         dirtyExit: boolean;

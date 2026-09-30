@@ -689,7 +689,7 @@ export const DEFAULT_SETTINGS: Settings = {
   perfDiscardMinutes: 15,
   perfReduceMotion: false,
   perfSmoothScrolling: true,
-  perfSpellcheck: false,
+  perfSpellcheck: true,
   perfBlockHeavyMedia: false,
   perfCacheMb: 256,
   perfLowPowerClock: false,
@@ -1079,7 +1079,7 @@ export function applyPerfPreset(mode: PerfMode): Partial<Settings> {
     perfDiscardMinutes: 15,
     perfReduceMotion: false,
     perfSmoothScrolling: true,
-    perfSpellcheck: false,
+    perfSpellcheck: true,
     perfBlockHeavyMedia: false,
     perfCacheMb: 256,
     perfLowPowerClock: false,
@@ -1835,6 +1835,22 @@ export const useStore = create<State>()(
         }
         if (typeof mergedSettings.allowInspect !== 'boolean') {
           mergedSettings.allowInspect = false;
+        }
+        // Round 4: spellcheck is a user toggle, not an off-by-default perf cut
+        if (typeof mergedSettings.perfSpellcheck !== 'boolean') {
+          mergedSettings.perfSpellcheck = true;
+        }
+        // One-shot: old DEFAULT was false; flip to true once unless user already on
+        try {
+          if (
+            typeof localStorage !== 'undefined' &&
+            !localStorage.getItem('djxxr-spellcheck-default-v1')
+          ) {
+            mergedSettings.perfSpellcheck = true;
+            localStorage.setItem('djxxr-spellcheck-default-v1', '1');
+          }
+        } catch {
+          /* */
         }
         if (!mergedSettings.zoomFactors || typeof mergedSettings.zoomFactors !== 'object') {
           mergedSettings.zoomFactors = {};

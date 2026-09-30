@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('shell', {
   historyDeleteDomain: (host) => ipcRenderer.invoke('shell:history-delete-domain', host),
   historyClear: (opts) => ipcRenderer.invoke('shell:history-clear', opts || { range: 'all' }),
   historyRemoveQuery: (q) => ipcRenderer.invoke('shell:history-remove-query', q),
+  spellcheckConfig: (next) => ipcRenderer.invoke('shell:spellcheck-config', next || {}),
   sessionLoad: () => ipcRenderer.invoke('shell:session-load'),
   sessionStatus: () => ipcRenderer.invoke('shell:session-status'),
   sessionSave: (snapshot) => ipcRenderer.invoke('shell:session-save', snapshot || {}),

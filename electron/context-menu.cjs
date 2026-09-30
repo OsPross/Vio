@@ -58,15 +58,11 @@ function attachContextMenu(wc, deps) {
   wc.__djxxrCtxMenu = true;
   ctxLog('attach', { id: wc.id, url: (() => { try { return wc.getURL(); } catch { return ''; } })() });
 
-  // Spellcheck for guest editing (pl + en). Do not alter privacy preset flags.
+  // Spellcheck for guest editing — Tor stays off (dictionary download risk)
   try {
-    const ses = wc.session;
-    if (ses && typeof ses.setSpellCheckerLanguages === 'function') {
-      ses.setSpellCheckerLanguages(['pl', 'en-US']);
-    }
-    if (ses && typeof ses.setSpellCheckerEnabled === 'function') {
-      ses.setSpellCheckerEnabled(true);
-    }
+    const spellcheck = require('./spellcheck.cjs');
+    const tor = Boolean(typeof deps?.isTor === 'function' && deps.isTor(wc));
+    spellcheck.applyToWebContents(wc, { tor });
   } catch {
     /* */
   }
