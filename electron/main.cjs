@@ -492,6 +492,20 @@ app.whenReady().then(async () => {
     console.warn('[tor] autostart migrate', e);
   }
 
+  // Purge legacy persist:private if it ever existed on disk
+  try {
+    const legacy = session.fromPartition('persist:private');
+    await legacy.clearStorageData();
+    await legacy.clearCache();
+    const partDir = path.join(app.getPath('userData'), 'Partitions', 'private');
+    if (fs.existsSync(partDir)) {
+      fs.rmSync(partDir, { recursive: true, force: true });
+      console.log('[window-mode] removed legacy Partitions/private');
+    }
+  } catch (err) {
+    console.warn('[window-mode] purge persist:private', err);
+  }
+
   const ses = session.fromPartition('persist:main');
   security.attachCsp(session.defaultSession, isDev);
   security.attachCsp(ses, false);

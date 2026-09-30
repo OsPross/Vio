@@ -1313,6 +1313,13 @@ export const useStore = create<State>()(
       },
       newPrivateTab: (url) => {
         const part = getWindowPartition();
+        if (!part || !/^private-/i.test(part)) {
+          console.error(
+            '[store] newPrivateTab refused — no window private partition; open a private window instead',
+          );
+          void window.shell?.newWindow?.({ boot: 'private' });
+          return;
+        }
         const id = uid();
         const s = get().settings;
         const u = url ?? (s.newTabIsSearch ? HOME_URL : s.homepage);
@@ -1326,7 +1333,7 @@ export const useStore = create<State>()(
               lastActiveAt: Date.now(),
               discarded: false,
               mode: 'private' as const,
-              partition: part || undefined,
+              partition: part,
               pinned: false,
               muted: false,
             },

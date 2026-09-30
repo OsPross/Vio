@@ -589,8 +589,11 @@ function TabWebview({
     tab.mode === 'tor' && tab.partition
       ? tab.partition
       : tab.mode === 'private'
-        ? tab.partition || getWindowPartition() || 'persist:private'
+        ? tab.partition || getWindowPartition() || ''
         : 'persist:main';
+
+  // Never mount a private webview on a missing/ephemeral-less partition
+  if (tab.mode === 'private' && !partition) return null;
 
   return (
     <webview

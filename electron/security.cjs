@@ -7,10 +7,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { session, app } = require('electron');
 
-const ALLOWED_PARTITIONS = new Set(['persist:main', 'persist:side', 'persist:private']);
+const ALLOWED_PARTITIONS = new Set(['persist:main', 'persist:side']);
 /** Ephemeral Tor sessions: tor-<uuid> (no persist: prefix) */
 const TOR_PARTITION_RE = /^tor-[0-9a-f-]{8,}$/i;
-/** Ephemeral private windows: private-<uuid> */
+/** Ephemeral private windows: private-<uuid> — never persist:private */
 const PRIVATE_PARTITION_RE = /^private-[0-9a-f-]{8,}$/i;
 const NAV_OK = /^(https?:|about:home$)/i;
 const NAV_EXTERNAL_PROMPT = /^(mailto:|tel:|sms:|zoommtg:|slack:|spotify:|discord:|steam:|ms-)/i;
