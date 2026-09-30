@@ -595,6 +595,14 @@ app.whenReady().then(async () => {
   metrics.attachNetwork(ses);
 
   createWindow();
+  if (process.env.SMOKE_ROUND4 === '1') {
+    try {
+      const smoke = require('../scripts/smoke-round4-live.cjs');
+      void smoke.run(() => mainWindow);
+    } catch (err) {
+      console.error('[smoke4] failed to start', err);
+    }
+  }
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
