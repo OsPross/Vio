@@ -43,7 +43,8 @@ export type ShortcutHandlerKey =
   | 'toggleSidebar'
   | 'commandPalette'
   | 'torNewIdentity'
-  | 'taskManager';
+  | 'taskManager'
+  | 'pictureInPicture';
 
 export type ShortcutInput = {
   key: string;
@@ -304,6 +305,22 @@ export const CHROME_SHORTCUTS: ChromeShortcutDef[] = [
     description: 'Narzędzia deweloperskie',
     guest: true,
     match: (i) => !isMod(i) && !i.shift && !i.alt && i.key === 'F12',
+  },
+  {
+    id: 'devtools-chrome',
+    handlerKey: 'devtools',
+    accelerator: 'Ctrl+Shift+I',
+    description: 'Narzędzia deweloperskie',
+    guest: true,
+    match: (i) => ctrlShift(i) && keyEq(i, 'i'),
+  },
+  {
+    id: 'picture-in-picture',
+    handlerKey: 'pictureInPicture',
+    accelerator: 'Alt+P',
+    description: 'Obraz w obrazie',
+    guest: true,
+    match: (i) => i.alt && !i.ctrl && !i.meta && !i.shift && keyEq(i, 'p'),
   },
   {
     id: 'clear-data',

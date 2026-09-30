@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   AppWindow,
+  PictureInPicture2,
   Fingerprint,
   Globe,
   KeyRound,
@@ -219,6 +220,7 @@ function TabWebview({
   onHtmlFullscreen,
   darkPageScrollbars,
   appTheme,
+  onMediaState,
 }: {
   tab: Tab;
   active: boolean;
@@ -235,6 +237,7 @@ function TabWebview({
   onHtmlFullscreen?: (active: boolean) => void;
   darkPageScrollbars: boolean;
   appTheme: ThemeId;
+  onMediaState?: (state: { hasVideo: boolean; playing: boolean }) => void;
 }) {
   const ref = useRef<WebviewEl | null>(null);
   const scrollbarCssKeyRef = useRef<string | null>(null);
@@ -413,8 +416,16 @@ function TabWebview({
     };
 
     const onIpc = (raw: unknown) => {
-      if (tab.mode === 'tor') return; // no password IPC in Tor
       const e = raw as { channel?: string; args?: unknown[] };
+      if (e.channel === 'djxxr-media') {
+        const msg = e.args?.[0] as { hasVideo?: boolean; playing?: boolean } | undefined;
+        onMediaState?.({
+          hasVideo: Boolean(msg?.hasVideo),
+          playing: Boolean(msg?.playing),
+        });
+        return;
+      }
+      if (tab.mode === 'tor') return; // no password IPC in Tor
       if (e.channel !== 'djxxr-pw') return;
       const msg = e.args?.[0] as { type?: string; payload?: Record<string, unknown> } | undefined;
       if (!msg?.type) return;
@@ -547,6 +558,7 @@ function TabWebview({
     onFoundInPage,
     onLoadFailed,
     onHtmlFullscreen,
+    onMediaState,
     applyPageScrollbars,
   ]);
 
@@ -688,6 +700,7 @@ export function App() {
     origin: string;
     webContentsId: number;
   } | null>(null);
+  const [pageHasVideo, setPageHasVideo] = useState(false);
   const [permRemember, setPermRemember] = useState(true);
   const [crashOffer, setCrashOffer] = useState(false);
   const [tabMenu, setTabMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
@@ -1262,7 +1275,32 @@ export function App() {
   // Clear blocked-popup badge when navigating away
   useEffect(() => {
     setPopupBlocked(null);
+    setPageHasVideo(false);
   }, [activeId, active?.url]);
+
+  const togglePictureInPicture = useCallback(() => {
+    const el = currentView();
+    if (!el) return;
+    try {
+      el.send?.('djxxr-pip-toggle');
+    } catch {
+      void el
+        .executeJavaScript?.(
+          `(() => {
+            if (!document.pictureInPictureEnabled) return false;
+            if (document.pictureInPictureElement) {
+              document.exitPictureInPicture();
+              return 'exit';
+            }
+            const videos = Array.from(document.querySelectorAll('video'));
+            const v = videos.find((x) => !x.paused && !x.ended) || videos.find((x) => x.readyState > 1) || videos[0];
+            if (!v) return false;
+            return v.requestPictureInPicture().then(() => 'enter').catch(() => false);
+          })()`,
+        )
+        .catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (isHome || isTorHome || isInternalAbout) setDraft('');
@@ -1655,6 +1693,9 @@ export function App() {
               /* */
             }
             return true;
+          case 'pictureInPicture':
+            togglePictureInPicture();
+            return true;
           case 'clearBrowsingData':
             setClearDataOpen(true);
             return true;
@@ -1770,6 +1811,7 @@ export function App() {
       sidebarMenu,
       tabMenu,
       taskMgrOpen,
+      togglePictureInPicture,
       view,
     ],
   );
@@ -2300,6 +2342,16 @@ export function App() {
                   }}
                 >
                   <AppWindow size={16} strokeWidth={1.75} />
+                </button>
+              ) : null}
+              {pageHasVideo && !isHome && !isTorHome && !isInternalAbout ? (
+                <button
+                  type="button"
+                  className="icon-btn"
+                  title="Obraz w obrazie (Alt+P)"
+                  onClick={() => togglePictureInPicture()}
+                >
+                  <PictureInPicture2 size={16} strokeWidth={1.75} />
                 </button>
               ) : null}
               {(mediaFlags.mic || mediaFlags.cam) && (
@@ -3178,6 +3230,9 @@ export function App() {
                 }}
                 onHtmlFullscreen={(on) => {
                   if (t.id === activeId) setHtmlFullscreen(on);
+                }}
+                onMediaState={(st) => {
+                  if (t.id === activeId) setPageHasVideo(Boolean(st.hasVideo || st.playing));
                 }}
                 onNav={(b, f, u, title) => onNav(b, f, u, title)}
                 onSaveOffer={setSaveOffer}
