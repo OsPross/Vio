@@ -60,7 +60,14 @@ check('session isTorLike rejects tor/onion', (() => {
 })());
 check('buildSessionSnapshot filters Tor', fs.existsSync(path.join(root, 'src', 'lib', 'sessionSnapshot.ts')) && fs.readFileSync(path.join(root, 'src', 'lib', 'sessionSnapshot.ts'), 'utf8').includes('isTorTab'));
 check('closeTab skips Tor closed stack', store.includes('toClosedTab') && store.includes('isTorTab(closing)'));
-check('Ctrl+Shift+T reopenClosedTab', appTsx.includes('reopenClosedTab') && appTsx.includes("e.key === 'T'") && appTsx.includes('e.shiftKey'));
+check('Ctrl+Shift+T reopenClosedTab', (() => {
+  const reg = fs.readFileSync(path.join(root, 'src', 'lib', 'shortcutsRegistry.ts'), 'utf8');
+  return (
+    appTsx.includes('reopenClosedTab') &&
+    reg.includes("handlerKey: 'reopenClosedTab'") &&
+    reg.includes("accelerator: 'Ctrl+Shift+T'")
+  );
+})());
 
 (() => {
   // Runtime without electron app path: mock via temp by requiring after patching getPath is hard;

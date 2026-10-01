@@ -680,7 +680,14 @@ app.whenReady().then(async () => {
 
   createWindow();
   // Smoke hooks: unpackaged (dev) only — never in built/installed app
-  if (!app.isPackaged && process.env.SMOKE_ROUND5 === '1') {
+  if (!app.isPackaged && process.env.SMOKE_ROUND7 === '1') {
+    try {
+      const smoke = require('../scripts/smoke-round7-live.cjs');
+      void smoke.run(() => mainWindow);
+    } catch (err) {
+      console.error('[smoke7] failed to start', err);
+    }
+  } else if (!app.isPackaged && process.env.SMOKE_ROUND5 === '1') {
     try {
       const smoke = require('../scripts/smoke-round5-live.cjs');
       void smoke.run(() => mainWindow);
