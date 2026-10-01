@@ -27,6 +27,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { HistoryPage } from './components/HistoryPage';
 import { ClearDataDialog } from './components/ClearDataDialog';
 import { BookmarksPage } from './components/BookmarksPage';
+import { ExtensionsPage } from './components/ExtensionsPage';
 import { BookmarksBar } from './components/BookmarksBar';
 import { BookmarkPopover } from './components/BookmarkPopover';
 import { AppMenu, type SidebarMode } from './components/AppMenu';
@@ -49,6 +50,7 @@ import {
   HISTORY_URL,
   DOWNLOADS_URL,
   BOOKMARKS_URL,
+  EXTENSIONS_URL,
   ABOUT_URL,
   TOR_HOME_URL,
   isBookmarkableUrl,
@@ -683,6 +685,7 @@ export function App() {
   const isHistoryPage = !!active && !activeIsTor && active.url === HISTORY_URL;
   const isDownloadsPage = !!active && !activeIsTor && active.url === DOWNLOADS_URL;
   const isBookmarksPage = !!active && !activeIsTor && active.url === BOOKMARKS_URL;
+  const isExtensionsPage = !!active && !activeIsTor && active.url === EXTENSIONS_URL;
   const isAboutPage =
     !!active &&
     !activeIsTor &&
@@ -690,7 +693,8 @@ export function App() {
       active.url === 'about:about' ||
       active.url === 'djxxr://about' ||
       /^https?:\/\/djxxr\/about\/?$/i.test(active.url));
-  const isInternalAbout = isHistoryPage || isDownloadsPage || isBookmarksPage || isAboutPage;
+  const isInternalAbout =
+    isHistoryPage || isDownloadsPage || isBookmarksPage || isExtensionsPage || isAboutPage;
   const isHome =
     !!active &&
     !isInternalAbout &&
@@ -2053,13 +2057,15 @@ export function App() {
           ? 'Pobrania'
           : nextUrl === BOOKMARKS_URL
             ? 'Zakładki'
-            : nextUrl === ABOUT_URL || nextUrl === 'about:about'
-              ? 'O djxxr'
-        : nextUrl === HOME_URL || nextUrl === TOR_HOME_URL
-          ? tor
-            ? 'Tor'
-            : 'Nowa karta'
-          : '…';
+            : nextUrl === EXTENSIONS_URL
+              ? 'Rozszerzenia'
+              : nextUrl === ABOUT_URL || nextUrl === 'about:about'
+                ? 'O djxxr'
+                : nextUrl === HOME_URL || nextUrl === TOR_HOME_URL
+                  ? tor
+                    ? 'Tor'
+                    : 'Nowa karta'
+                  : '…';
     if (!tor && /^https?:/i.test(nextUrl)) {
       recordVisitFromTab(active, nextUrl, '', { typed: !!opts?.typed });
     }
@@ -2074,6 +2080,7 @@ export function App() {
       nextUrl === HISTORY_URL ||
       nextUrl === DOWNLOADS_URL ||
       nextUrl === BOOKMARKS_URL ||
+      nextUrl === EXTENSIONS_URL ||
       nextUrl === ABOUT_URL ||
       nextUrl === 'about:about' ||
       nextUrl.startsWith('about:');
@@ -2089,6 +2096,7 @@ export function App() {
         nextUrl === HISTORY_URL ||
         nextUrl === DOWNLOADS_URL ||
         nextUrl === BOOKMARKS_URL ||
+        nextUrl === EXTENSIONS_URL ||
         nextUrl === ABOUT_URL ||
         nextUrl === 'about:about'
         ? ''
@@ -2773,6 +2781,10 @@ export function App() {
                   if (activeIsTor) return;
                   navigateActive(DOWNLOADS_URL);
                 },
+                openExtensions: () => {
+                  if (activeIsTor) return;
+                  navigateActive(EXTENSIONS_URL);
+                },
                 clearBrowsingData: () => setClearDataOpen(true),
                 zoomOut: () => bumpZoom(-0.1),
                 zoomIn: () => bumpZoom(0.1),
@@ -3437,6 +3449,7 @@ export function App() {
               onEditBookmark={(b) => openBookmarkDialog(b.url, b.title)}
             />
           )}
+          {isExtensionsPage && active && <ExtensionsPage />}
           {isAboutPage && <AboutPage />}
           {isTorHome && active && (
             <TorLanding

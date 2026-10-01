@@ -11,6 +11,7 @@ import {
   PanelLeft,
   Plus,
   Printer,
+  Puzzle,
   RefreshCw,
   Search,
   Settings2,
@@ -22,7 +23,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { BOOKMARKS_URL, DOWNLOADS_URL, HISTORY_URL, HOME_URL, THEMES, type ThemeId } from '../store';
+import { BOOKMARKS_URL, DOWNLOADS_URL, EXTENSIONS_URL, HISTORY_URL, HOME_URL, THEMES, type ThemeId } from '../store';
 
 export type CommandContext = {
   tor: boolean;
@@ -169,6 +170,14 @@ export function getCommands(): CommandDef[] {
       group: 'command',
       when: (c) => !c.tor,
       run: () => host?.navigate(BOOKMARKS_URL),
+    },
+    {
+      id: 'extensions',
+      title: 'Rozszerzenia',
+      icon: Puzzle,
+      group: 'command',
+      when: (c) => !c.tor,
+      run: () => host?.navigate(EXTENSIONS_URL),
     },
     {
       id: 'task-mgr',

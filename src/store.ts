@@ -506,6 +506,7 @@ export const TOR_HOME_URL = 'about:tor';
 export const HISTORY_URL = 'about:history';
 export const DOWNLOADS_URL = 'about:downloads';
 export const BOOKMARKS_URL = 'about:bookmarks';
+export const EXTENSIONS_URL = 'about:extensions';
 export const ABOUT_URL = 'djxxr://about';
 export const ABOUT_URL_ALT = 'about:about';
 
@@ -521,7 +522,7 @@ export const DEFAULT_BOOKMARK_FOLDERS: BookmarkFolder[] = [
 export function isBookmarkableUrl(url: string | undefined | null): boolean {
   if (!url) return false;
   if (url === HOME_URL || url === TOR_HOME_URL) return false;
-  if (url === HISTORY_URL || url === DOWNLOADS_URL || url === BOOKMARKS_URL || url === ABOUT_URL || url === ABOUT_URL_ALT) return false;
+  if (url === HISTORY_URL || url === DOWNLOADS_URL || url === BOOKMARKS_URL || url === EXTENSIONS_URL || url === ABOUT_URL || url === ABOUT_URL_ALT) return false;
   if (url.startsWith('about:') || url.startsWith('view-source:')) return false;
   return /^https?:\/\//i.test(url) || /\.onion\b/i.test(url);
 }

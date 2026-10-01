@@ -16,6 +16,7 @@ const INTERNAL_LABELS: Record<string, string> = {
   'about:history': 'Historia',
   'about:downloads': 'Pobrania',
   'about:bookmarks': 'Zakładki',
+  'about:extensions': 'Rozszerzenia',
   'djxxr://about': 'O aplikacji',
   'about:about': 'O aplikacji',
   'about:tor': 'Tor',

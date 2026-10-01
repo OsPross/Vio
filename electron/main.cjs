@@ -21,6 +21,7 @@ const certificate = require('./certificate.cjs');
 const shortcutsGuest = require('./shortcuts-guest.cjs');
 const pip = require('./pip.cjs');
 const bookmarksImport = require('./bookmarks-import.cjs');
+const extensions = require('./extensions.cjs');
 const spellcheck = require('./spellcheck.cjs');
 const { webContents: electronWebContents } = require('electron');
 
@@ -29,6 +30,7 @@ privacy.applyBootSwitches();
 const boot = perf.applyBootSwitches();
 history.init();
 notes.init();
+void extensions.init();
 downloads.init();
 
 /** @type {BrowserWindow | null} */
@@ -402,7 +404,9 @@ function createWindow(optsExtra = {}) {
   });
   if (privatePartition) {
     try {
-      windowMode.ensurePrivateSession(session.fromPartition(privatePartition));
+      const privSes = session.fromPartition(privatePartition);
+      windowMode.ensurePrivateSession(privSes);
+      void extensions.attachToPrivateSession(privSes);
     } catch (err) {
       console.warn('[window] private session', err);
     }
@@ -939,6 +943,7 @@ ipcMain.handle('shell:bookmarks-read-profile', wrapApp((_e, profilePath) => {
 
 homeBg.register(ipcMain, wrapApp);
 notes.register(ipcMain, wrapApp);
+extensions.register(ipcMain, wrapApp);
 
 ipcMain.handle('shell:session-load', wrapApp(() => appSession.load()));
 ipcMain.handle('shell:session-status', wrapApp(() => appSession.getStatus()));

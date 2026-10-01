@@ -29,6 +29,7 @@ import {
   Settings2,
   Shield,
   PanelLeft,
+  Puzzle,
   TerminalSquare,
   Trash2,
   Wrench,
@@ -48,6 +49,7 @@ export type AppMenuActions = {
   openHistory: () => void;
   openBookmarks: () => void;
   openDownloads: () => void;
+  openExtensions: () => void;
   clearBrowsingData: () => void;
   zoomOut: () => void;
   zoomIn: () => void;
@@ -215,6 +217,13 @@ export function AppMenu({ actions }: Props) {
       shortcut: acceleratorForMenuId('downloads'),
       icon: <Download size={16} strokeWidth={1.75} />,
       run: () => actions.openDownloads(),
+    },
+    {
+      kind: 'action',
+      id: 'extensions',
+      label: 'Rozszerzenia',
+      icon: <Puzzle size={16} strokeWidth={1.75} />,
+      run: () => actions.openExtensions(),
     },
     {
       kind: 'action',

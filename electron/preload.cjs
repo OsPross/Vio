@@ -88,6 +88,13 @@ contextBridge.exposeInMainWorld('shell', {
   notesUpdate: (id, patch) => ipcRenderer.invoke('shell:notes-update', id, patch || {}),
   notesDelete: (id) => ipcRenderer.invoke('shell:notes-delete', id),
   notesMigrateLegacy: (text) => ipcRenderer.invoke('shell:notes-migrate-legacy', text),
+  extensionsList: () => ipcRenderer.invoke('shell:extensions-list'),
+  extensionsInstallFolder: () => ipcRenderer.invoke('shell:extensions-install-folder'),
+  extensionsInstallStore: (input) => ipcRenderer.invoke('shell:extensions-install-store', input),
+  extensionsSetEnabled: (id, enabled) => ipcRenderer.invoke('shell:extensions-set-enabled', id, enabled),
+  extensionsSetPrivate: (id, allow) => ipcRenderer.invoke('shell:extensions-set-private', id, allow),
+  extensionsSetPinned: (id, pinned) => ipcRenderer.invoke('shell:extensions-set-pinned', id, pinned),
+  extensionsRemove: (id) => ipcRenderer.invoke('shell:extensions-remove', id),
   onHttpsWarn: (cb) => {
     const handler = (_e, payload) => cb(payload);
     ipcRenderer.on('shell:https-warn', handler);

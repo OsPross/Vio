@@ -539,6 +539,38 @@ declare global {
         }[];
         error?: string;
       }>;
+      extensionsList: () => Promise<{
+        ok: boolean;
+        extensions?: {
+          id: string;
+          name: string;
+          version: string;
+          enabled: boolean;
+          allowPrivate: boolean;
+          pinned?: boolean;
+          permissions?: string[];
+          loaded?: boolean;
+          manifestVersion?: number;
+          path?: string;
+          source?: string;
+          electronId?: string | null;
+        }[];
+      }>;
+      extensionsInstallFolder: () => Promise<{
+        ok: boolean;
+        canceled?: boolean;
+        error?: string;
+        extension?: unknown;
+      }>;
+      extensionsInstallStore: (input: string) => Promise<{
+        ok: boolean;
+        error?: string;
+        extension?: unknown;
+      }>;
+      extensionsSetEnabled: (id: string, enabled: boolean) => Promise<{ ok: boolean; error?: string }>;
+      extensionsSetPrivate: (id: string, allow: boolean) => Promise<{ ok: boolean; error?: string }>;
+      extensionsSetPinned: (id: string, pinned: boolean) => Promise<{ ok: boolean; error?: string }>;
+      extensionsRemove: (id: string) => Promise<{ ok: boolean; error?: string }>;
       onHttpsWarn: (cb: (payload: { httpUrl: string; httpsUrl?: string; errorCode?: number }) => void) => () => void;
       pictureInPicture: (
         webContentsId: number,
