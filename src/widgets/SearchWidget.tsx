@@ -192,7 +192,7 @@ export function SearchWidget({
   onGo: (url: string, query?: string) => void;
   reduced: boolean;
   size?: 'S' | 'M' | 'L';
-  /** Personalize live preview — no focus, suggestions, or history */
+  /** Personalize live preview or home edit mode — no focus, suggestions, or history */
   inert?: boolean;
 }) {
   const settings = useStore((s) => s.settings);

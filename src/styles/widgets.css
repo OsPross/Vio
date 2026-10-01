@@ -254,7 +254,24 @@
   outline: 1px dashed color-mix(in srgb, var(--accent) 40%, transparent);
   outline-offset: 4px;
   border-radius: var(--hw-radius, 14px);
-  padding: 8px;
+  padding: 28px 8px 8px;
+  position: relative;
+  box-sizing: border-box;
+}
+/* Section labels sit in reserved padding — never cover clock/search content */
+.hw-bare-edit > .hw-frame-head {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  right: 8px;
+  margin-bottom: 0;
+  z-index: 2;
+  pointer-events: auto;
+}
+/* In edit mode, nudge chrome blocks down so labels clear siblings (e.g. greeting) */
+.home.is-editing-widgets .hw-canvas > .hw-chrome.hw-place {
+  top: calc(var(--hw-y) + 28px);
+  height: calc(var(--hw-h) + 20px);
 }
 .hw-bare-edit .hw-frame-edit-chrome {
   display: flex;

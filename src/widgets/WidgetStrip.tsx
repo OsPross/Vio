@@ -636,7 +636,7 @@ export function WidgetStrip({
               >
                 {c.id === 'clock' && <ClockWidget reduced={reduced} />}
                 {c.id === 'search' && (
-                  <SearchWidget onGo={onGo} reduced={reduced} inert={preview} />
+                  <SearchWidget onGo={onGo} reduced={reduced} inert={preview || editMode} />
                 )}
                 {c.id === 'shortcuts' && <ShortcutsWidget onGo={onGo} />}
               </WidgetFrame>
