@@ -18,6 +18,8 @@
   pointer-events: none;
   min-height: 0;
   flex: none;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .home-widgets-band .hw-zone,
 .home-widgets-band .hw-canvas,
@@ -198,8 +200,10 @@
   align-items: flex-start;
   justify-content: center;
   width: 100%;
-  max-width: 960px;
+  max-width: min(960px, 100%);
   margin: 0 auto;
+  padding-top: 24px;
+  box-sizing: border-box;
 }
 
 .hw-canvas {
@@ -208,6 +212,9 @@
   height: 100%;
   min-height: 100%;
   touch-action: none;
+  overflow-x: hidden;
+  overflow-y: visible;
+  box-sizing: border-box;
 }
 
 .home.is-editing-widgets .hw-canvas,
@@ -296,23 +303,36 @@
   z-index: 1;
 }
 
-/* CSS anchor placement — browser recalculates on resize in the same frame */
+/* CSS anchor placement — clamped to content canvas so resize never h-scrolls */
 .hw-canvas > .hw-card.hw-place {
   position: absolute;
-  width: var(--hw-w);
+  width: min(var(--hw-w), calc(100% - 16px));
+  max-width: calc(100% - 16px);
   height: var(--hw-h);
   top: var(--hw-y);
   margin: 0;
   box-sizing: border-box;
 }
 .hw-canvas > .hw-card.hw-place-center {
-  left: calc(50% + var(--hw-x) - var(--hw-w) / 2);
+  left: clamp(
+    8px,
+    calc(50% + var(--hw-x) - var(--hw-w) / 2),
+    calc(100% - min(var(--hw-w), calc(100% - 16px)) - 8px)
+  );
 }
 .hw-canvas > .hw-card.hw-place-left {
-  left: calc(10% + var(--hw-x) - var(--hw-w) / 2);
+  left: clamp(
+    8px,
+    calc(10% + var(--hw-x) - var(--hw-w) / 2),
+    calc(100% - min(var(--hw-w), calc(100% - 16px)) - 8px)
+  );
 }
 .hw-canvas > .hw-card.hw-place-right {
-  left: calc(90% + var(--hw-x) - var(--hw-w) / 2);
+  left: clamp(
+    8px,
+    calc(90% + var(--hw-x) - var(--hw-w) / 2),
+    calc(100% - min(var(--hw-w), calc(100% - 16px)) - 8px)
+  );
 }
 .hw-canvas > .hw-card.hw-place.is-dragging {
   left: var(--hw-drag-left) !important;

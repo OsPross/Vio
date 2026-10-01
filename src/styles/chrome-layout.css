@@ -265,7 +265,7 @@
 .home-shell {
   justify-content: center;
   align-items: center;
-  width: clamp(420px, 42vw, 720px);
+  width: min(720px, 42vw, 100%);
   max-width: calc(100% - 48px);
   min-height: 0;
   padding: 0;
