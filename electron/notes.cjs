@@ -7,6 +7,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { writeAtomicSync } = require('./lib/atomic-write.cjs');
 const crypto = require('node:crypto');
 const os = require('node:os');
 
@@ -115,19 +116,11 @@ function flushNow() {
   if (!dirty || !store) return { ok: true };
   dirty = false;
   const file = notesPath();
-  const tmp = `${file}.${process.pid}.tmp`;
   try {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(tmp, JSON.stringify(store, null, 2), 'utf8');
-    fs.renameSync(tmp, file);
+    writeAtomicSync(file, JSON.stringify(store, null, 2), 'utf8');
     return { ok: true };
   } catch (err) {
     dirty = true;
-    try {
-      fs.unlinkSync(tmp);
-    } catch {
-      /* */
-    }
     return { ok: false, error: String(err?.message || err) };
   }
 }

@@ -7,6 +7,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { writeAtomicSync } = require('./lib/atomic-write.cjs');
 const crypto = require('node:crypto');
 const os = require('node:os');
 
@@ -206,8 +207,8 @@ function flushSync() {
   for (const v of visits.values()) {
     lines.push(JSON.stringify(v));
   }
-  fs.writeFileSync(visitsPath(), lines.length ? `${lines.join('\n')}\n` : '', 'utf8');
-  fs.writeFileSync(queriesPath(), JSON.stringify(queries, null, 0), 'utf8');
+  writeAtomicSync(visitsPath(), lines.length ? `${lines.join('\n')}\n` : '', 'utf8');
+  writeAtomicSync(queriesPath(), JSON.stringify(queries, null, 0), 'utf8');
 }
 
 function pruneExpired(persist = true) {
