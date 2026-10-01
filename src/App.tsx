@@ -35,7 +35,7 @@ import { setWindowBoot, getWindowPartition } from './lib/windowBoot';
 import { bindCommandHost } from './lib/commands';
 import { OmniboxSuggest } from './components/OmniboxSuggest';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { MetricsDot } from './components/metrics/ResourcesPanel';
+import { MetricsDot } from './components/metrics/MetricsDot';
 import { useMetrics, useMetricsGuests } from './lib/useMetrics';
 import type { MetricsGuest } from './lib/metricsTypes';
 import {
