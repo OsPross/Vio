@@ -27,6 +27,7 @@ declare global {
     shell?: {
       platform: () => Promise<string>;
       debugMouse?: boolean;
+      perfBench?: boolean;
       appInfo: () => Promise<{
         appVersion: string;
         electron: string;

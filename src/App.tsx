@@ -35,6 +35,7 @@ import { AppMenu, type SidebarMode } from './components/AppMenu';
 import { AboutDialog, QrShareDialog } from './components/AppDialogs';
 import { FindBar } from './components/FindBar';
 import { ErrorPage } from './components/ErrorPage';
+import { PerfGate } from './components/PerfGate';
 import { hostFromPageUrl, zoomFactorForHost } from './lib/pageHost';
 import { setWindowBoot, getWindowPartition } from './lib/windowBoot';
 import { bindCommandHost } from './lib/commands';
@@ -2504,6 +2505,7 @@ export function App() {
                           : undefined
                   }
                 >
+                  <PerfGate id={`Tab:${t.id}`}>
                   {t.id === activeId && !motionOff && (
                     <motion.span
                       className="tab-indicator"
@@ -2558,6 +2560,7 @@ export function App() {
                   >
                     <X size={12} />
                   </span>
+                  </PerfGate>
                 </motion.button>
               ))}
             </AnimatePresence>

@@ -1,6 +1,8 @@
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { useStore } from './store';
+import { PerfGate } from './components/PerfGate';
+import { installPerfGlobals } from './lib/perfProbe';
 import '@fontsource/instrument-sans/400.css';
 import '@fontsource/instrument-sans/500.css';
 import '@fontsource/instrument-sans/600.css';
@@ -31,5 +33,26 @@ declare global {
   }
 }
 window.__DJXXR_STORE__ = useStore;
+installPerfGlobals();
+try {
+  performance.mark('djxxr-react-mount');
+} catch {
+  /* */
+}
 
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(
+  <PerfGate id="App">
+    <App />
+  </PerfGate>,
+);
+try {
+  requestAnimationFrame(() => {
+    try {
+      performance.mark('djxxr-first-raf');
+    } catch {
+      /* */
+    }
+  });
+} catch {
+  /* */
+}

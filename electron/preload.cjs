@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('shell', {
   platform: () => ipcRenderer.invoke('shell:platform'),
   debugMouse: process.env.DJXXR_DEBUG_MOUSE === '1' || process.env.DJXXR_DEBUG_MOUSE === 'true',
+  perfBench: process.env.PERF_BENCH === '1' || process.argv.some((a) => String(a).includes('djxxr-perf-bench=1')),
   appInfo: () => ipcRenderer.invoke('shell:app-info'),
   openUserData: () => ipcRenderer.invoke('shell:open-user-data'),
   openLogsFolder: () => ipcRenderer.invoke('shell:open-logs-folder'),

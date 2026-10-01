@@ -1,6 +1,10 @@
 const { app, BrowserWindow, ipcMain, shell, session, dialog, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
+
+/** Perf bench wall-clock (measurement only). */
+global.__DJXXR_PERF_T0 = Date.now();
+
 const adblock = require('./adblock-plus.cjs');
 const perf = require('./perf.cjs');
 const passwords = require('./passwords.cjs');
@@ -431,6 +435,7 @@ function createWindow(optsExtra = {}) {
       additionalArguments: [
         `--djxxr-boot=${bootMode}`,
         privatePartition ? `--djxxr-partition=${privatePartition}` : '',
+        !app.isPackaged && process.env.PERF_BENCH === '1' ? '--djxxr-perf-bench=1' : '',
       ].filter(Boolean),
     },
   };
@@ -698,7 +703,15 @@ app.whenReady().then(async () => {
 
   createWindow();
   // Smoke hooks: unpackaged (dev) only — never in built/installed app
-  if (!app.isPackaged && process.env.CAPTURE_NOTES === '1') {
+  if (!app.isPackaged && process.env.PERF_BENCH === '1') {
+    try {
+      global.__DJXXR_PERF_READY_AT = Date.now();
+      const bench = require('../scripts/perf-bench.cjs');
+      void bench.run(() => mainWindow);
+    } catch (err) {
+      console.error('[perf-bench] failed to start', err);
+    }
+  } else if (!app.isPackaged && process.env.CAPTURE_NOTES === '1') {
     try {
       const cap = require('../scripts/capture-notes-layout.cjs');
       void cap.run(() => mainWindow);
