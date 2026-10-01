@@ -10,7 +10,6 @@ import {
   EXTENSIONS_URL,
   ABOUT_URL,
   TOR_HOME_URL,
-  isBookmarkableUrl,
   isTorTab,
   useStore,
 } from './store';
@@ -22,6 +21,7 @@ import { AppChrome } from './features/shell';
 import {
   ShellOverlays,
   type AboutInfo,
+  useBookmarkHandlers,
 } from './features/dialogs';
 import { useIpcEvents } from './hooks/useIpcEvents';
 import { useShortcuts } from './hooks/useShortcuts';
@@ -50,8 +50,6 @@ export function App() {
   const activeId = useStore((s) => s.activeId);
   const settings = useStore((s) => s.settings);
   const view = useStore((s) => s.view);
-  const newTab = useStore((s) => s.newTab);
-  const newTorTab = useStore((s) => s.newTorTab);
   const patchSettings = useStore((s) => s.patchSettings);
 
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
@@ -147,8 +145,6 @@ export function App() {
   const [qrOpen, setQrOpen] = useState(false);
   const [clearDataOpen, setClearDataOpen] = useState(false);
   const [aboutInfo, setAboutInfo] = useState<AboutInfo | null>(null);
-  const [bookmarkPop, setBookmarkPop] = useState<{ url: string; title: string } | null>(null);
-  const bookmarkStarRef = useRef<HTMLButtonElement>(null);
   const [htmlFullscreen, setHtmlFullscreen] = useState(false);
   const [fsToast, setFsToast] = useState(false);
   const [certRemember, setCertRemember] = useState(false);
@@ -357,27 +353,14 @@ export function App() {
     }
   }, [guestWc]);
 
-  const openBookmarkDialog = useCallback(
-    (url?: string, title?: string) => {
-      const u = url ?? active?.url ?? '';
-      const t = title ?? active?.title ?? u;
-      if (!isBookmarkableUrl(u)) return;
-      setBookmarkPop({ url: u, title: t });
-    },
-    [active?.url, active?.title],
-  );
+  const { bookmarkPop, setBookmarkPop, bookmarkStarRef, openBookmarkDialog, openBookmarkUrl } =
+    useBookmarkHandlers({ active, activeIsTor, navigateActive });
 
   useEffect(() => {
     const onSave = () => saveActivePage();
     window.addEventListener('djxxr-save-page', onSave);
     return () => window.removeEventListener('djxxr-save-page', onSave);
   }, [saveActivePage]);
-
-  useEffect(() => {
-    const onBookmark = () => openBookmarkDialog();
-    window.addEventListener('djxxr-bookmark-page', onBookmark);
-    return () => window.removeEventListener('djxxr-bookmark-page', onBookmark);
-  }, [openBookmarkDialog]);
 
   useEffect(() => {
     if (!htmlFullscreen) {
@@ -421,19 +404,6 @@ export function App() {
     applyZoom,
     closeFind,
   });
-
-  const openBookmarkUrl = (url: string, opts?: { newTab?: boolean }) => {
-    if (activeIsTor && active?.partition) {
-      if (opts?.newTab) {
-        newTorTab({ url, partition: active.partition, background: true });
-      } else {
-        navigateActive(url);
-      }
-      return;
-    }
-    if (opts?.newTab) newTab(url);
-    else navigateActive(url);
-  };
 
   const toggleSidebar = () => patchSettings({ showSidebar: !settings.showSidebar });
 

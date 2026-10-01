@@ -20,3 +20,8 @@ export {
   QrShareDialog,
   TaskManagerOverlay,
 } from './lazy';
+export { useBookmarkHandlers } from './useBookmarkHandlers';
+export type {
+  UseBookmarkHandlersArgs,
+  UseBookmarkHandlersResult,
+} from './useBookmarkHandlers';
