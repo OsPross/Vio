@@ -32,24 +32,7 @@ uaChrome.applyBootFallback();
 const boot = perf.applyBootSwitches();
 history.init();
 notes.init();
-void extensions.init().then(() => {
-  try {
-    extensions.initChromeApi({
-      getMainWindow: () => mainWindow,
-      onOpenUrl: (url, extra = {}) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('shell:open-url', {
-            url,
-            background: Boolean(extra.background),
-          });
-        }
-      },
-      createWindow: () => createWindow({ secondary: true }),
-    });
-  } catch (err) {
-    console.warn('[ext] initChromeApi', err);
-  }
-});
+void extensions.init();
 downloads.init();
 
 /** @type {ReturnType<typeof createWindow> | null} */
@@ -73,6 +56,24 @@ function assertFromApp(event) {
   if (!isAppWebContents(wc)) {
     throw new Error('Odrzucono IPC spoza okna aplikacji');
   }
+}
+
+function isGuestWebview(wc) {
+  try {
+    return Boolean(wc && !wc.isDestroyed() && typeof wc.getType === 'function' && wc.getType() === 'webview');
+  } catch {
+    return false;
+  }
+}
+
+function wrapAppOrGuest(fn) {
+  return async (event, ...args) => {
+    const wc = event?.sender;
+    if (!isAppWebContents(wc) && !isGuestWebview(wc)) {
+      throw new Error('Odrzucono IPC spoza okna aplikacji');
+    }
+    return fn(event, ...args);
+  };
 }
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER);
@@ -624,6 +625,22 @@ app.whenReady().then(async () => {
   }
 
   const ses = session.fromPartition('persist:main');
+  try {
+    extensions.initChromeApi({
+      getMainWindow: () => mainWindow,
+      onOpenUrl: (url, extra = {}) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('shell:open-url', {
+            url,
+            background: Boolean(extra.background),
+          });
+        }
+      },
+      createWindow: () => createWindow({ secondary: true }),
+    });
+  } catch (err) {
+    console.warn('[ext] initChromeApi', err);
+  }
   security.attachCsp(session.defaultSession, isDev);
   security.attachCsp(ses, false);
   security.attachPermissionHandlers(ses);
@@ -1290,10 +1307,10 @@ ipcMain.handle(
 );
 
 ipcMain.handle('shell:adblock-status', wrapApp(() => adblock.getStatus()));
-ipcMain.handle('shell:adblock-cosmetic', wrapApp(() => adblock.getCosmeticCss()));
+ipcMain.handle('shell:adblock-cosmetic', wrapAppOrGuest(() => adblock.getCosmeticCss()));
 ipcMain.handle(
   'shell:adblock-page-script',
-  wrapApp((_e, pageUrl) => adblock.getPageScript(typeof pageUrl === 'string' ? pageUrl : '')),
+  wrapAppOrGuest((_e, pageUrl) => adblock.getPageScript(typeof pageUrl === 'string' ? pageUrl : '')),
 );
 
 ipcMain.handle(
