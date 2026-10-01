@@ -36,9 +36,42 @@ declare global {
         v8?: string;
         platform: string;
         userData?: string;
+        packaged?: boolean;
       }>;
       openUserData: () => Promise<{ ok: boolean }>;
       openLogsFolder: () => Promise<{ ok: boolean }>;
+      /** Dev-only git sync (undefined / unavailable when packaged) */
+      devSyncAvailable?: () => Promise<{ ok: boolean; available: boolean }>;
+      devSyncCheck?: () => Promise<{
+        ok: boolean;
+        error?: string;
+        dirty?: boolean;
+        dirtyFiles?: string[];
+        behind?: number;
+        ahead?: number;
+        canFastForward?: boolean;
+        message?: string;
+        commits?: { hash: string; author: string; subject: string }[];
+        upstream?: string;
+      }>;
+      devSyncApply?: () => Promise<{
+        ok: boolean;
+        error?: string;
+        pulled?: boolean;
+        npmCi?: boolean;
+        message?: string;
+      }>;
+      updateCheck?: () => Promise<{ ok: boolean; error?: string; status?: string }>;
+      updateInstall?: () => Promise<{ ok: boolean; error?: string }>;
+      updateStatus?: () => Promise<{
+        ok: boolean;
+        status: string;
+        info?: unknown;
+        error?: string;
+      }>;
+      onUpdateStatus?: (
+        cb: (payload: { status: string; info?: unknown; error?: string }) => void,
+      ) => () => void;
       newWindow: (opts?: {
         boot?: 'private' | 'tor';
         restoreTabs?: {

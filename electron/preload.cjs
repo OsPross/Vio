@@ -247,6 +247,19 @@ contextBridge.exposeInMainWorld('shell', {
     ipcRenderer.on('shell:extensions-close-tab', handler);
     return () => ipcRenderer.removeListener('shell:extensions-close-tab', handler);
   },
+  // Dev collaboration (hidden when packaged)
+  devSyncAvailable: () => ipcRenderer.invoke('shell:dev-sync-available'),
+  devSyncCheck: () => ipcRenderer.invoke('shell:dev-sync-check'),
+  devSyncApply: () => ipcRenderer.invoke('shell:dev-sync-apply'),
+  // Packaged auto-update (GitHub public releases repo)
+  updateCheck: () => ipcRenderer.invoke('shell:update-check'),
+  updateInstall: () => ipcRenderer.invoke('shell:update-install'),
+  updateStatus: () => ipcRenderer.invoke('shell:update-status'),
+  onUpdateStatus: (cb) => {
+    const handler = (_e, payload) => cb(payload);
+    ipcRenderer.on('shell:update-status', handler);
+    return () => ipcRenderer.removeListener('shell:update-status', handler);
+  },
 });
 
 try {

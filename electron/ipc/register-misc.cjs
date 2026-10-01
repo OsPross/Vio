@@ -49,6 +49,7 @@ function register(deps) {
       v8: process.versions.v8,
       platform: process.platform,
       userData: app.getPath('userData'),
+      packaged: app.isPackaged,
     })),
   );
   ipcMain.handle(

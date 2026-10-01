@@ -548,3 +548,4 @@ require('./ipc/register-history.cjs').register(ipcDeps);
 require('./ipc/register-adblock.cjs').register(ipcDeps);
 require('./ipc/register-passwords.cjs').register(ipcDeps);
 require('./ipc/register-metrics.cjs').register(ipcDeps);
+require('./ipc/register-dev-sync.cjs').register(ipcDeps);
