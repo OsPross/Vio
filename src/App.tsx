@@ -31,7 +31,7 @@ import { FindBar } from './components/FindBar';
 import { ErrorPage } from './components/ErrorPage';
 import { PerfGate } from './components/PerfGate';
 import { hostFromPageUrl, zoomFactorForHost } from './lib/pageHost';
-import { setWindowBoot, getWindowPartition } from './lib/windowBoot';
+import { getWindowPartition } from './lib/windowBoot';
 import { bindCommandHost } from './lib/commands';
 import { OmniboxSuggest } from './components/OmniboxSuggest';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -51,7 +51,6 @@ import {
   isTorTab,
   isPrivateTab,
   normalizeInput,
-  searchUrl,
   useStore,
   type Tab,
   type ThemeId,
@@ -76,6 +75,7 @@ import {
   resolveTorHomeUrl,
   titleForInternalUrl,
 } from './lib/tabNavigate';
+import { useIpcEvents } from './hooks/useIpcEvents';
 
 /** Heavy routes / dialogs — not needed for first paint */
 const SettingsPage = lazy(() =>
@@ -192,7 +192,6 @@ export function App() {
   const omniEditingRef = useRef(false);
   const omniFocusedRef = useRef(false);
   const [nav, setNav] = useState({ back: false, forward: false });
-  const [blockedToday, setBlockedToday] = useState(0);
   const [saveOffer, setSaveOffer] = useState<SaveOffer | null>(null);
   const [pwForPage, setPwForPage] = useState(0);
   const [taskMgrOpen, setTaskMgrOpen] = useState(false);
@@ -200,11 +199,6 @@ export function App() {
   const tabMediaRef = useRef<Record<string, { hasVideo: boolean; playing: boolean }>>({});
   const prevActiveIdRef = useRef(activeId);
   const [hotTabs, setHotTabs] = useState<Record<string, number>>({});
-  const [permAsk, setPermAsk] = useState<{
-    askId: string;
-    origin: string;
-    permission: string;
-  } | null>(null);
   const [mediaFlags, setMediaFlags] = useState<{ mic: boolean; cam: boolean }>({
     mic: false,
     cam: false,
@@ -214,12 +208,6 @@ export function App() {
   const [torError, setTorError] = useState<string | null>(null);
   const [torProgress, setTorProgress] = useState<string | null>(null);
   const [shieldOpen, setShieldOpen] = useState(false);
-  const [httpsWarn, setHttpsWarn] = useState<{ httpUrl: string; httpsUrl: string } | null>(null);
-  const [popupBlocked, setPopupBlocked] = useState<{
-    url: string;
-    origin: string;
-    webContentsId: number;
-  } | null>(null);
   const [pageHasVideo, setPageHasVideo] = useState(false);
   const [permRemember, setPermRemember] = useState(true);
   const [crashOffer, setCrashOffer] = useState(false);
@@ -252,14 +240,6 @@ export function App() {
   const bookmarks = useStore((s) => s.bookmarks);
   const [htmlFullscreen, setHtmlFullscreen] = useState(false);
   const [fsToast, setFsToast] = useState(false);
-  const [certWarn, setCertWarn] = useState<{
-    webContentsId: number;
-    url: string;
-    host: string;
-    error: string;
-    issuer?: string;
-    tor?: boolean;
-  } | null>(null);
   const [certRemember, setCertRemember] = useState(false);
   const zoomFlashTimer = useRef<number | null>(null);
   const navHistoryRef = useRef<Record<string, Tab['navHistory']>>({});
@@ -317,30 +297,6 @@ export function App() {
       return { ...m, [tabId]: webContentsId };
     });
   }, []);
-
-  useEffect(() => {
-    const wcId = guestWc[activeId];
-    if (typeof wcId === 'number') void window.shell?.extensionsSelectTab?.(wcId);
-  }, [activeId, guestWc]);
-
-  useEffect(() => {
-    const offAct = window.shell?.onExtensionsActivateTab?.((payload) => {
-      const id = Number(payload?.webContentsId);
-      if (!Number.isFinite(id)) return;
-      const entry = Object.entries(guestWc).find(([, wc]) => wc === id);
-      if (entry) setActive(entry[0]);
-    });
-    const offClose = window.shell?.onExtensionsCloseTab?.((payload) => {
-      const id = Number(payload?.webContentsId);
-      if (!Number.isFinite(id)) return;
-      const entry = Object.entries(guestWc).find(([, wc]) => wc === id);
-      if (entry) closeTab(entry[0]);
-    });
-    return () => {
-      offAct?.();
-      offClose?.();
-    };
-  }, [guestWc, setActive, closeTab]);
 
   useEffect(() => {
     applyThemeToDom(settings);
@@ -493,19 +449,6 @@ export function App() {
     };
   }, [restoreSessionTabs, setSessionReady]);
 
-  // Secondary window close → push closed-window stack for Ctrl+Shift+T
-  useEffect(() => {
-    const off = window.shell?.onWindowClosing?.(() => {
-      try {
-        useStore.getState().pushClosedWindow();
-      } catch {
-        /* */
-      }
-      void window.shell?.windowClosingAck?.();
-    });
-    return () => off?.();
-  }, []);
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && (e.key === 'S' || e.key === 's')) {
@@ -563,59 +506,6 @@ export function App() {
   }, [persistSessionNow]);
 
   useEffect(() => {
-    const unsub = window.shell?.onPermissionAsk?.((req) => {
-      setPermAsk({
-        askId: String(req.askId || ''),
-        origin: String(req.origin || ''),
-        permission: String(req.permission || ''),
-      });
-    });
-    return () => unsub?.();
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const url = active?.url || '';
-    void (async () => {
-      try {
-        const origin = new URL(url).origin;
-        if (!/^https:/i.test(origin)) {
-          if (!cancelled) setMediaFlags({ mic: false, cam: false });
-          return;
-        }
-        const list = (await window.shell?.permissionsList?.()) as
-          Record<string, Record<string, string>> | undefined;
-        const entry = list?.[origin] || {};
-        if (!cancelled) {
-          setMediaFlags({
-            mic: entry.microphone === 'allow' || entry.media === 'allow',
-            cam: entry.camera === 'allow' || entry.media === 'allow',
-          });
-        }
-      } catch {
-        if (!cancelled) setMediaFlags({ mic: false, cam: false });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [active?.url, permAsk]);
-
-  useEffect(() => {
-    void window.shell?.passwordsIdle?.(settings.passwordsIdleMinutes);
-  }, [settings.passwordsIdleMinutes]);
-
-  useEffect(() => {
-    const ping = () => void window.shell?.passwordsActivity?.();
-    window.addEventListener('pointerdown', ping);
-    window.addEventListener('keydown', ping);
-    return () => {
-      window.removeEventListener('pointerdown', ping);
-      window.removeEventListener('keydown', ping);
-    };
-  }, []);
-
-  useEffect(() => {
     setSaveOffer(null);
     if (!settings.passwordsEnabled || isHome || !active?.url) {
       setPwForPage(0);
@@ -635,104 +525,6 @@ export function App() {
       cancelled = true;
     };
   }, [active?.url, activeId, isHome, settings.passwordsEnabled]);
-
-  useEffect(() => {
-    const rules = settings.adblockCustomRules
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    void window.shell
-      ?.adblockConfig?.({
-        enabled: settings.adblockEnabled,
-        network: settings.adblockNetwork,
-        cosmetic: settings.adblockCosmetic,
-        trackers: settings.adblockTrackers,
-        customRules: rules,
-      })
-      .then((st) => {
-        if (st?.blockedToday != null) setBlockedToday(st.blockedToday);
-      });
-    void window.shell?.privacyConfig?.({
-      enabled: settings.adblockEnabled,
-      stripTracking: settings.privacyStripTracking,
-      secGpc: settings.privacySecGpc,
-      dnt: settings.privacyDnt,
-      referrerPolicy: settings.privacyReferrerPolicy,
-      thirdPartyCookies: settings.privacyThirdPartyCookies,
-      httpsOnly: settings.privacyHttpsOnly,
-      chromeUa: settings.privacyChromeUa,
-      webRtc: settings.privacyWebRtc,
-      fingerprint: settings.privacyFingerprint,
-      siteExceptions: settings.privacySiteExceptions,
-      doh: settings.privacyAllowAppNetwork ? settings.privacyDoh : 'off',
-      dohCustom: settings.privacyDohCustom,
-      adblockUpdateLists: settings.privacyAllowAppNetwork && settings.adblockUpdateLists,
-      clearOnQuit: settings.privacyClearOnQuit,
-      clearOnQuitKeep: settings.privacyClearOnQuitKeep,
-    });
-    void window.shell?.historyConfig?.({ retention: settings.historyRetention || '90' });
-    void window.shell?.downloadsConfig?.({
-      folder: settings.downloadsFolder || undefined,
-      askWhere: settings.downloadsAskWhere,
-    });
-  }, [
-    settings.adblockEnabled,
-    settings.adblockNetwork,
-    settings.adblockCosmetic,
-    settings.adblockTrackers,
-    settings.adblockCustomRules,
-    settings.adblockUpdateLists,
-    settings.privacyStripTracking,
-    settings.privacySecGpc,
-    settings.privacyDnt,
-    settings.privacyReferrerPolicy,
-    settings.privacyThirdPartyCookies,
-    settings.privacyHttpsOnly,
-    settings.privacyChromeUa,
-    settings.privacyWebRtc,
-    settings.privacyFingerprint,
-    settings.privacySiteExceptions,
-    settings.privacyDoh,
-    settings.privacyDohCustom,
-    settings.privacyAllowAppNetwork,
-    settings.privacyClearOnQuit,
-    settings.privacyClearOnQuitKeep,
-    settings.historyRetention,
-    settings.downloadsFolder,
-    settings.downloadsAskWhere,
-  ]);
-
-  useEffect(() => {
-    const off = window.shell?.onAdblockBlocked?.((n) => setBlockedToday(n));
-    return () => off?.();
-  }, []);
-
-  useEffect(() => {
-    const off = window.shell?.onHttpsWarn?.((payload) => {
-      if (payload?.httpUrl)
-        setHttpsWarn({ httpUrl: payload.httpUrl, httpsUrl: payload.httpsUrl || '' });
-    });
-    return () => off?.();
-  }, []);
-
-  useEffect(() => {
-    const off = window.shell?.onPopupBlocked?.((payload) => {
-      if (!payload?.url) return;
-      setPopupBlocked({
-        url: String(payload.url),
-        origin: String(payload.origin || ''),
-        webContentsId: Number(payload.webContentsId) || 0,
-      });
-    });
-    return () => off?.();
-  }, []);
-
-  useEffect(() => {
-    // Re-apply optional Tor daemon autostart after migration removed Startup shortcuts
-    if (settings.torDaemonAutostart) {
-      void window.shell?.torDaemonAutostart?.(true);
-    }
-  }, [settings.torDaemonAutostart]);
 
   useEffect(() => {
     if (activeIsTor && settings.sidePanelOpen) {
@@ -779,33 +571,6 @@ export function App() {
     [settings.torProxyUrl, settings.torBridgeMode, settings.torBridgeLines, newTorTab, setView],
   );
 
-  useEffect(() => {
-    let applied = false;
-    const apply = (payload: { mode?: string; partition?: string | null }) => {
-      const m = payload.mode === 'private' || payload.mode === 'tor' ? payload.mode : 'normal';
-      setWindowMode(m);
-      setWindowPartition(typeof payload.partition === 'string' ? payload.partition : null);
-      setWindowBoot({ mode: m, partition: payload.partition });
-      if (applied || m === 'normal') return;
-      applied = true;
-      // Ephemeral windows: discard restored/normal tabs
-      useStore.setState({ tabs: [], activeId: '', closedTabs: [] });
-      setSessionReady(true);
-      if (m === 'private') {
-        document.title = 'Prywatne — djxxr';
-        useStore.getState().newPrivateTab(HOME_URL);
-      } else if (m === 'tor') {
-        document.title = 'Tor — djxxr';
-        void openTorTab();
-      }
-    };
-    void window.shell?.getWindowBoot?.().then((r) => {
-      if (r && r.mode && r.mode !== 'normal') apply(r);
-    });
-    const off = window.shell?.onWindowBoot?.(apply);
-    return () => off?.();
-  }, [openTorTab]);
-
   const requestNewIdentity = useCallback(async () => {
     const torTabs = useStore.getState().tabs.filter((t) => t.mode === 'tor');
     if (!torTabs.length && !torInfo?.active) return;
@@ -840,14 +605,6 @@ export function App() {
   }, [torInfo?.active, newTorTab, setView]);
 
   useEffect(() => {
-    const off = window.shell?.onTorProgress?.((ev) => {
-      const msg = typeof ev?.message === 'string' ? ev.message : null;
-      if (msg) setTorProgress(msg);
-    });
-    return () => off?.();
-  }, []);
-
-  useEffect(() => {
     const onOpen = () => void openTorTab();
     window.addEventListener('djxxr-open-tor', onOpen);
     return () => window.removeEventListener('djxxr-open-tor', onOpen);
@@ -865,12 +622,6 @@ export function App() {
       void window.shell?.torStop?.().then((st) => setTorInfo(st || null));
     }
   }, [tabs, torInfo?.active]);
-
-  // Clear blocked-popup badge when navigating away
-  useEffect(() => {
-    setPopupBlocked(null);
-    setPageHasVideo(false);
-  }, [activeId, active?.url]);
 
   const runPictureInPictureOnTab = useCallback(
     (tabId: string, opts?: { enterOnly?: boolean }) => {
@@ -949,60 +700,6 @@ export function App() {
   }, [active?.id, active?.url, isHome, isTorHome, isInternalAbout]);
 
   useEffect(() => {
-    const off = window.shell?.onOpenUrl?.((payload) => {
-      const url = typeof payload === 'string' ? payload : payload?.url;
-      const viaTor = typeof payload === 'object' && Boolean(payload?.tor);
-      const viaPrivate = typeof payload === 'object' && Boolean(payload?.private);
-      const background = typeof payload === 'object' && Boolean(payload?.background);
-      if (!url) return;
-      if (viaTor) {
-        const part = tabs.find((t) => t.mode === 'tor')?.partition;
-        if (part) newTorTab({ url, partition: part, background });
-        else void openTorTab(url);
-        return;
-      }
-      if (viaPrivate) {
-        newTab(url, { private: true, background });
-        return;
-      }
-      newTab(url, { background });
-    });
-    return () => off?.();
-  }, [newTab, newTorTab, tabs, openTorTab]);
-
-  useEffect(() => {
-    const off = window.shell?.onContextAction?.((payload) => {
-      const action = String(payload?.action || '');
-      const url = typeof payload?.url === 'string' ? payload.url : '';
-      const text = typeof payload?.text === 'string' ? payload.text : '';
-      const tor = Boolean(payload?.tor);
-      const priv = Boolean(payload?.private);
-      if (action === 'open-window' && url) {
-        if (tor) {
-          const part = useStore.getState().tabs.find((t) => t.mode === 'tor')?.partition;
-          if (part) newTorTab({ url, partition: part });
-          else void openTorTab(url);
-        } else {
-          newTab(url, { private: priv });
-        }
-        return;
-      }
-      if (action === 'search-selection' && text.trim()) {
-        const st = useStore.getState().settings;
-        const qUrl = searchUrl(st, text.trim());
-        if (tor) {
-          const part = useStore.getState().tabs.find((t) => t.mode === 'tor')?.partition;
-          if (part) newTorTab({ url: qUrl, partition: part });
-          else void openTorTab(qUrl);
-        } else {
-          newTab(qUrl, { private: priv });
-        }
-      }
-    });
-    return () => off?.();
-  }, [newTab, newTorTab, openTorTab]);
-
-  useEffect(() => {
     void window.shell?.setDevtoolsEnabled?.(Boolean(settings.allowInspect));
   }, [settings.allowInspect]);
 
@@ -1070,16 +767,60 @@ export function App() {
     [navigateHistory],
   );
 
+  const {
+    blockedToday,
+    permAsk,
+    setPermAsk,
+    httpsWarn,
+    setHttpsWarn,
+    popupBlocked,
+    setPopupBlocked,
+    certWarn,
+    setCertWarn,
+  } = useIpcEvents({
+    guestWc,
+    openTorTab,
+    doBrowserNav,
+    setTorProgress,
+    setWindowMode,
+    setWindowPartition,
+    setCertRemember,
+  });
+
   useEffect(() => {
-    const off = window.shell?.onBrowserNav?.((payload) => {
-      if (payload?.dir === 'back' || payload?.dir === 'forward') {
-        // Main already navigated guest WC — skip duplicate goBack in renderer
-        if (payload.handled) return;
-        doBrowserNav(payload.dir, payload.source || 'app-command');
+    let cancelled = false;
+    const url = active?.url || '';
+    void (async () => {
+      try {
+        const origin = new URL(url).origin;
+        if (!/^https:/i.test(origin)) {
+          if (!cancelled) setMediaFlags({ mic: false, cam: false });
+          return;
+        }
+        const list = (await window.shell?.permissionsList?.()) as
+          | Record<string, Record<string, string>>
+          | undefined;
+        const entry = list?.[origin] || {};
+        if (!cancelled) {
+          setMediaFlags({
+            mic: entry.microphone === 'allow' || entry.media === 'allow',
+            cam: entry.camera === 'allow' || entry.media === 'allow',
+          });
+        }
+      } catch {
+        if (!cancelled) setMediaFlags({ mic: false, cam: false });
       }
-    });
-    return () => off?.();
-  }, [doBrowserNav]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [active?.url, permAsk]);
+
+  // Clear blocked-popup badge when navigating away
+  useEffect(() => {
+    setPopupBlocked(null);
+    setPageHasVideo(false);
+  }, [activeId, active?.url, setPopupBlocked]);
 
   // Chrome UI (tabs / omnibox / about:*): mouseup X1/X2 — primary on all platforms.
   // app-command remains fallback from main (deduped above).
@@ -1290,15 +1031,6 @@ export function App() {
     window.addEventListener('djxxr-bookmark-page', onBookmark);
     return () => window.removeEventListener('djxxr-bookmark-page', onBookmark);
   }, [openBookmarkDialog]);
-
-  useEffect(() => {
-    const off = window.shell?.onCertificateError?.((payload) => {
-      if (!payload || typeof payload.webContentsId !== 'number') return;
-      setCertRemember(false);
-      setCertWarn(payload);
-    });
-    return () => off?.();
-  }, []);
 
   useEffect(() => {
     if (!htmlFullscreen) {
