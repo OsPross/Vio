@@ -1213,6 +1213,7 @@ export function applyThemeToDom(settings: Settings) {
     root.style.setProperty('--fg', t.fg);
     root.style.setProperty('--fg-2', t.fg2);
     root.style.setProperty('--fg-3', t.fg3);
+    root.style.setProperty('--text-tertiary', t.fg3);
     root.style.setProperty('--line', t.line);
     const accent = settings.useThemeAccent ? t.accent : settings.accent;
     root.style.setProperty('--accent', accent);

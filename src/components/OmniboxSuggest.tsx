@@ -1,6 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Clock, Globe, LayoutTemplate, Search, Sparkles, Terminal, X } from 'lucide-react';
 import { formatSuggestSubtitle, formatUrlPlain, isHttpNavigableUrl } from '../lib/url-display';
+import {
+  ghostNavigateUrl,
+  matchOmniboxGhost,
+  normalizeGhostFill,
+  shouldShowOmniboxGhost,
+} from '../lib/omniboxGhost';
 import { useStore, type Bang, type Shortcut, type Tab } from '../store';
 
 export type SuggestItem = {
@@ -21,9 +27,7 @@ type Props = {
   onSubmit: (raw: string, opts?: { typed?: boolean; fromSuggest?: boolean }) => void;
   onSwitchTab?: (tabId: string) => void;
   onContextMenu?: (e: React.MouseEvent<HTMLInputElement>) => void;
-  /** Current page URL (full) — used for Esc restore and focus select-all */
   pageUrl?: string;
-  /** Notify parent that user is editing (block external draft overwrites) */
   onEditingChange?: (editing: boolean) => void;
   onFocusChange?: (focused: boolean) => void;
   disabledSuggest?: boolean;
@@ -47,6 +51,11 @@ function flattenGroups(groups: { label: string; items: SuggestItem[] }[]) {
   return rows;
 }
 
+function itemDisplay(item: SuggestItem): string {
+  if (item.kind === 'completion') return item.fill || item.title || '';
+  return item.url || item.fill || item.title || '';
+}
+
 export function OmniboxSuggest({
   value,
   onChange,
@@ -67,16 +76,22 @@ export function OmniboxSuggest({
 }: Props) {
   const settings = useStore((s) => s.settings);
   const inputRef = useRef<HTMLInputElement>(null);
+  const ghostRef = useRef<HTMLSpanElement>(null);
   const [focused, setFocused] = useState(false);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [completion, setCompletion] = useState<{ host: string; fill: string } | null>(null);
   const [groups, setGroups] = useState<{ label: string; items: SuggestItem[] }[]>([]);
   const [remote, setRemote] = useState<SuggestItem[]>([]);
+  const [composing, setComposing] = useState(false);
+  const [ghostDismissed, setGhostDismissed] = useState(false);
+  const [caret, setCaret] = useState({ start: 0, end: 0 });
+  const [scrollLeft, setScrollLeft] = useState(0);
   const reqId = useRef(0);
-  /** User changed text since last focus/sync — parent must not overwrite */
   const dirtyRef = useRef(false);
   const escArmedRef = useRef(false);
+  /** Text the user typed before arrowing the list (Chrome-style restore) */
+  const userTypedRef = useRef(value);
 
   const tor = !!torMode || !!disabledSuggest;
 
@@ -91,6 +106,13 @@ export function OmniboxSuggest({
     dirtyRef.current = false;
     onEditingChange?.(false);
   }, [onEditingChange]);
+
+  const syncCaret = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    setCaret({ start: el.selectionStart ?? 0, end: el.selectionEnd ?? 0 });
+    setScrollLeft(el.scrollLeft || 0);
+  }, []);
 
   const pageCanonical = useMemo(() => {
     if (!pageUrl || pageUrl.startsWith('about:')) return '';
@@ -112,7 +134,6 @@ export function OmniboxSuggest({
     [bookmarks],
   );
 
-  // History / tabs / bangs / shortcuts / bookmarks via main (debounce ~50ms)
   useEffect(() => {
     if (tor) {
       setCompletion(null);
@@ -155,7 +176,6 @@ export function OmniboxSuggest({
     settings.suggestBangs,
   ]);
 
-  // Remote search suggest (preset-gated) — never on Tor
   useEffect(() => {
     if (tor || !settings.privacySearchSuggest || !settings.privacyAllowAppNetwork) {
       setRemote([]);
@@ -189,61 +209,92 @@ export function OmniboxSuggest({
   const allGroups = useMemo(() => {
     const g = [...groups];
     if (remote.length) {
-      // Cap total flat items at 8
       let n = g.reduce((a, x) => a + x.items.length, 0);
-      if (completion) n += 1;
       const room = Math.max(0, 8 - n);
       if (room > 0) g.push({ label: 'Wyszukiwarka', items: remote.slice(0, room) });
     }
     return g;
-  }, [groups, remote, completion]);
+  }, [groups, remote]);
 
   const flat = useMemo(() => flattenGroups(allGroups), [allGroups]);
-  const selectable = useMemo(() => flat.map((r, i) => ({ ...r, i })).filter((r) => r.item), [flat]);
 
-  const show = open && !tor && (completion || allGroups.some((g) => g.items.length));
+  const ghostSuffix = useMemo(() => {
+    if (tor || composing || ghostDismissed) return '';
+    return matchOmniboxGhost(value, completion?.fill);
+  }, [tor, composing, ghostDismissed, value, completion?.fill]);
 
-  const acceptCompletion = useCallback(() => {
-    if (!completion) return false;
-    const cur = value;
-    const host = completion.fill;
-    if (!host.toLowerCase().startsWith(cur.toLowerCase()) || host.length <= cur.length) return false;
+  const ghostVisible = shouldShowOmniboxGhost({
+    typed: value,
+    fill: completion?.fill,
+    focused,
+    composing,
+    dismissed: ghostDismissed,
+    listActive: active,
+    caretStart: caret.start,
+    caretEnd: caret.end,
+  });
+
+  const completionItem: SuggestItem | null =
+    ghostSuffix && completion?.fill
+      ? {
+          kind: 'completion',
+          title: value + ghostSuffix,
+          subtitle: 'Enter',
+          fill: normalizeGhostFill(completion.fill),
+          url: `https://${normalizeGhostFill(completion.fill)}`,
+        }
+      : null;
+
+  const listRows = useMemo(() => {
+    const rows: { header?: boolean; label?: string; item?: SuggestItem; selIdx: number }[] = [];
+    let sel = 0;
+    if (completionItem && ghostSuffix) {
+      rows.push({ item: completionItem, selIdx: sel++ });
+    }
+    for (const r of flat) {
+      if (r.header) {
+        rows.push({ header: true, label: r.label, selIdx: -1 });
+      } else if (r.item) {
+        rows.push({ item: r.item, selIdx: sel++ });
+      }
+    }
+    return rows;
+  }, [flat, completionItem, ghostSuffix]);
+
+  const selectable = useMemo(() => listRows.filter((r) => r.item), [listRows]);
+
+  const show = open && !tor && (Boolean(ghostSuffix) || allGroups.some((g) => g.items.length));
+
+  /** Accept ghost into the field (Tab / →) — value becomes completed host */
+  const acceptGhost = useCallback(() => {
+    if (!completion?.fill || !ghostSuffix) return false;
+    const next = value + ghostSuffix;
     markDirty();
-    onChange(host);
+    setGhostDismissed(true);
+    onChange(next);
+    userTypedRef.current = next;
     requestAnimationFrame(() => {
       const el = inputRef.current;
       if (!el) return;
       el.focus();
-      el.setSelectionRange(cur.length, host.length);
+      el.setSelectionRange(next.length, next.length);
+      syncCaret();
     });
     return true;
-  }, [completion, value, onChange, markDirty]);
-
-  // Chrome-style: expand value to completion and select the suffix while typing
-  const inlineApplied = useRef('');
-  useEffect(() => {
-    if (!focused || tor || !completion?.fill) return;
-    const host = completion.fill;
-    const cur = value;
-    if (!cur || host.length <= cur.length) return;
-    if (!host.toLowerCase().startsWith(cur.toLowerCase())) return;
-    if (inlineApplied.current === `${cur}|${host}`) return;
-    const el = inputRef.current;
-    if (!el) return;
-    if (el.selectionStart !== el.selectionEnd) return;
-    if (el.selectionStart !== cur.length) return;
-    inlineApplied.current = `${cur}|${host}`;
-    onChange(host);
-    requestAnimationFrame(() => {
-      el.setSelectionRange(cur.length, host.length);
-    });
-  }, [completion, value, focused, tor, onChange]);
+  }, [completion?.fill, ghostSuffix, value, onChange, markDirty, syncCaret]);
 
   const runItem = (item: SuggestItem) => {
     setOpen(false);
     setActive(-1);
+    setGhostDismissed(true);
     if (item.kind === 'tab' && item.tabId && onSwitchTab) {
       onSwitchTab(item.tabId);
+      return;
+    }
+    if (item.kind === 'completion' && item.url) {
+      clearDirty();
+      onChange(item.fill || item.title);
+      onSubmit(item.url, { typed: true, fromSuggest: true });
       return;
     }
     if (item.fill && !item.url) {
@@ -282,7 +333,6 @@ export function OmniboxSuggest({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Never let these bubble to app shortcut handler while editing
     if (
       e.key === 'Backspace' ||
       e.key === 'Delete' ||
@@ -296,32 +346,28 @@ export function OmniboxSuggest({
       e.stopPropagation();
     }
 
-    // Backspace with completion selected → remove completion only
-    if (e.key === 'Backspace' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      const el = inputRef.current;
-      if (el && completion && el.selectionStart !== el.selectionEnd) {
-        const start = el.selectionStart ?? 0;
-        const end = el.selectionEnd ?? 0;
-        const fill = completion.fill;
-        if (
-          end === value.length &&
-          start < end &&
-          value.toLowerCase() === fill.toLowerCase()
-        ) {
-          e.preventDefault();
-          const keep = value.slice(0, start);
-          inlineApplied.current = '';
-          markDirty();
-          onChange(keep);
-          requestAnimationFrame(() => {
-            inputRef.current?.setSelectionRange(keep.length, keep.length);
-          });
-          return;
-        }
-      }
+    // Shift+Enter → search exactly what was typed (ignore ghost)
+    if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      setGhostDismissed(true);
+      setActive(-1);
+      clearDirty();
+      onSubmit(value, { typed: false, fromSuggest: false });
+      return;
     }
 
-    // Ctrl+Enter → www. + .com
+    // Ctrl+Backspace with ghost → ignore ghost, search typed
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Backspace' && ghostVisible) {
+      e.preventDefault();
+      e.stopPropagation();
+      setGhostDismissed(true);
+      setActive(-1);
+      clearDirty();
+      onSubmit(value, { typed: false, fromSuggest: false });
+      return;
+    }
+
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
@@ -340,9 +386,17 @@ export function OmniboxSuggest({
     if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
+      if (ghostVisible) {
+        setGhostDismissed(true);
+        escArmedRef.current = true;
+        return;
+      }
       if (open) {
         setOpen(false);
         setActive(-1);
+        if (userTypedRef.current !== value && active >= 0) {
+          onChange(userTypedRef.current);
+        }
         escArmedRef.current = true;
         return;
       }
@@ -358,7 +412,6 @@ export function OmniboxSuggest({
         });
         return;
       }
-      // Second Esc (or Esc when already synced): blur → page
       setOpen(false);
       setActive(-1);
       clearDirty();
@@ -377,32 +430,48 @@ export function OmniboxSuggest({
     if (e.key === 'ArrowDown' && show) {
       e.preventDefault();
       e.stopPropagation();
-      setActive((i) => Math.min(selectable.length - 1, i + 1));
+      const next = Math.min(selectable.length - 1, active + 1);
+      if (active < 0) userTypedRef.current = value;
+      setActive(next);
+      const item = selectable[next]?.item;
+      if (item) onChange(itemDisplay(item));
       return;
     }
     if (e.key === 'ArrowUp' && show) {
       e.preventDefault();
       e.stopPropagation();
-      setActive((i) => Math.max(-1, i - 1));
+      const next = Math.max(-1, active - 1);
+      setActive(next);
+      if (next < 0) {
+        onChange(userTypedRef.current);
+      } else {
+        const item = selectable[next]?.item;
+        if (item) onChange(itemDisplay(item));
+      }
       return;
     }
-    if ((e.key === 'Tab' || e.key === 'ArrowRight') && completion && active < 0) {
+
+    if ((e.key === 'Tab' || e.key === 'ArrowRight') && ghostVisible && active < 0) {
       const el = inputRef.current;
       const atEnd = el && el.selectionStart === value.length && el.selectionEnd === value.length;
       if (e.key === 'Tab' || atEnd) {
-        if (acceptCompletion()) {
+        if (acceptGhost()) {
           e.preventDefault();
           e.stopPropagation();
-          markDirty();
           return;
         }
       }
     }
-    if (e.key === 'Enter' && active < 0 && completion?.fill && value.toLowerCase() === completion.fill.toLowerCase()) {
+
+    if (e.key === 'Enter' && active < 0) {
       e.preventDefault();
       e.stopPropagation();
       clearDirty();
-      onSubmit(`https://${completion.fill}`, { typed: true, fromSuggest: true });
+      if (ghostVisible && completion?.fill) {
+        onSubmit(ghostNavigateUrl(value, completion.fill), { typed: true, fromSuggest: true });
+      } else {
+        onSubmit(value, { typed: true });
+      }
       return;
     }
     if (e.key === 'Enter' && active >= 0 && selectable[active]?.item) {
@@ -416,22 +485,24 @@ export function OmniboxSuggest({
       e.preventDefault();
       e.stopPropagation();
       const item = active >= 0 ? selectable[active]?.item : null;
-      if (item) void removeItem(item);
+      if (item && item.kind !== 'completion') void removeItem(item);
     }
   };
 
-  // Ghost completion suffix (visual only). Controlled value is ALWAYS full `value` while focused.
-  const ghost =
-    !tor &&
-    focused &&
-    completion &&
-    value &&
-    completion.fill.toLowerCase().startsWith(value.toLowerCase()) &&
-    completion.fill.length > value.length
-      ? completion.fill.slice(value.length)
-      : '';
+  useLayoutEffect(() => {
+    if (!ghostVisible || !ghostRef.current || !inputRef.current) return;
+    const input = inputRef.current;
+    const ghost = ghostRef.current;
+    const cs = getComputedStyle(input);
+    ghost.style.font = cs.font;
+    ghost.style.letterSpacing = cs.letterSpacing;
+    ghost.style.paddingLeft = cs.paddingLeft;
+    ghost.style.paddingRight = cs.paddingRight;
+    ghost.style.paddingTop = cs.paddingTop;
+    ghost.style.paddingBottom = cs.paddingBottom;
+  }, [ghostVisible, value, ghostSuffix]);
 
-  // Shortened display ONLY when blurred — never feed shortened text back into draft
+  // Shortened display ONLY when blurred
   const inputDisplayValue =
     !focused && isHttpNavigableUrl(value) ? formatUrlPlain(value) : value;
 
@@ -445,21 +516,37 @@ export function OmniboxSuggest({
           onChange={(e) => {
             markDirty();
             escArmedRef.current = false;
+            setGhostDismissed(false);
+            setActive(-1);
+            userTypedRef.current = e.target.value;
             onChange(e.target.value);
             setOpen(true);
-            setActive(-1);
+            requestAnimationFrame(syncCaret);
+          }}
+          onSelect={syncCaret}
+          onClick={syncCaret}
+          onKeyUp={syncCaret}
+          onScroll={(e) => setScrollLeft((e.target as HTMLInputElement).scrollLeft)}
+          onCompositionStart={() => setComposing(true)}
+          onCompositionEnd={() => {
+            setComposing(false);
+            requestAnimationFrame(syncCaret);
+          }}
+          onPaste={() => {
+            setGhostDismissed(true);
+            setComposing(false);
           }}
           onFocus={(e) => {
             setFocused(true);
             onFocusChange?.(true);
             escArmedRef.current = false;
-            // Ensure full URL is shown (not search-label shortening)
+            setGhostDismissed(false);
             if (pageCanonical && !dirtyRef.current && value !== pageCanonical) {
               onChange(pageCanonical);
             }
-            // Select all after React commits full URL
             requestAnimationFrame(() => {
               e.target.select();
+              syncCaret();
             });
             setOpen(true);
           }}
@@ -477,39 +564,22 @@ export function OmniboxSuggest({
           autoCorrect="off"
           autoCapitalize="off"
         />
-        {ghost ? (
-          <span className="omnibox-ghost" aria-hidden>
-            <span className="omnibox-ghost-pad">{value}</span>
-            <span className="omnibox-ghost-rest">{ghost}</span>
+        {ghostVisible ? (
+          <span className="omnibox-ghost" aria-hidden ref={ghostRef}>
+            <span
+              className="omnibox-ghost-inner"
+              style={{ transform: `translateX(${-scrollLeft}px)` }}
+            >
+              <span className="omnibox-ghost-pad">{value}</span>
+              <span className="omnibox-ghost-rest">{ghostSuffix}</span>
+            </span>
           </span>
         ) : null}
       </div>
 
       {show ? (
         <div className="omnibox-suggest" role="listbox">
-          {completion && ghost ? (
-            <button
-              type="button"
-              className={`omnibox-suggest-row ${active === -1 ? 'hint' : ''}`}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                acceptCompletion();
-              }}
-            >
-              <span className="omnibox-suggest-ico">
-                <Globe size={14} strokeWidth={1.75} />
-              </span>
-              <span className="grow">
-                <span className="omnibox-suggest-title">
-                  {value}
-                  <mark>{ghost}</mark>
-                </span>
-                <span className="omnibox-suggest-sub">Dopełnienie · Tab</span>
-              </span>
-            </button>
-          ) : null}
-
-          {flat.map((row, idx) => {
+          {listRows.map((row, idx) => {
             if (row.header) {
               return (
                 <div key={`h-${row.label}-${idx}`} className="omnibox-suggest-head">
@@ -518,33 +588,55 @@ export function OmniboxSuggest({
               );
             }
             const item = row.item!;
-            const selIdx = selectable.findIndex((s) => s.i === idx);
-            const isActive = selIdx === active;
+            const selIdx = row.selIdx;
+            const isActive =
+              selIdx === active ||
+              (selIdx === 0 && active < 0 && item.kind === 'completion' && ghostVisible);
             const Ico =
-              item.kind === 'tab'
-                ? LayoutTemplate
-                : item.kind === 'bang'
-                  ? Terminal
-                  : item.kind === 'remote'
-                    ? Sparkles
-                    : item.kind === 'query'
-                      ? Search
-                      : Clock;
+              item.kind === 'completion'
+                ? Globe
+                : item.kind === 'tab'
+                  ? LayoutTemplate
+                  : item.kind === 'bang'
+                    ? Terminal
+                    : item.kind === 'remote'
+                      ? Sparkles
+                      : item.kind === 'query'
+                        ? Search
+                        : Clock;
             return (
               <button
                 type="button"
                 key={`${item.kind}-${item.id || item.tabId || item.url || item.title}-${idx}`}
-                className={`omnibox-suggest-row ${isActive ? 'active' : ''}`}
+                className={`omnibox-suggest-row ${isActive ? 'active' : ''} ${item.kind === 'completion' ? 'hint' : ''}`}
                 onMouseDown={(e) => e.preventDefault()}
-                onMouseEnter={() => setActive(selIdx)}
+                onMouseEnter={() => {
+                  if (item.kind === 'completion' && active < 0) return;
+                  if (active < 0) userTypedRef.current = value;
+                  setActive(selIdx);
+                  onChange(itemDisplay(item));
+                }}
                 onClick={() => runItem(item)}
               >
                 <span className="omnibox-suggest-ico">
                   <Ico size={14} strokeWidth={1.75} />
                 </span>
                 <span className="grow">
-                  <span className="omnibox-suggest-title">{item.title}</span>
-                  {item.subtitle ? (
+                  <span className="omnibox-suggest-title">
+                    {item.kind === 'completion' ? (
+                      <>
+                        {value}
+                        <mark>{ghostSuffix}</mark>
+                      </>
+                    ) : (
+                      item.title
+                    )}
+                  </span>
+                  {item.kind === 'completion' ? (
+                    <span className="omnibox-suggest-sub omnibox-suggest-enter">
+                      <kbd>↵</kbd> Enter
+                    </span>
+                  ) : item.subtitle ? (
                     <span className="omnibox-suggest-sub">
                       {formatSuggestSubtitle(item.subtitle, item.url)}
                     </span>
