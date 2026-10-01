@@ -1,9 +1,8 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { MotionConfig } from 'motion/react';
-import { KeyRound, TriangleAlert, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { HomeSearch } from './components/HomeSearch';
 import { BookmarksBar } from './components/BookmarksBar';
-import { FindBar } from './components/FindBar';
 import { ErrorPage } from './components/ErrorPage';
 import { hostFromPageUrl, zoomFactorForHost } from './lib/pageHost';
 import { bindCommandHost } from './lib/commands';
@@ -27,7 +26,6 @@ import {
   type ThemeId,
 } from './store';
 import { buildSessionSnapshot } from './lib/sessionSnapshot';
-import { Switch } from './components/ui/Switch';
 import type { TorStatusInfo } from './components/TorLanding';
 import { isEditableDomTarget } from './lib/shortcutsRegistry';
 import {
@@ -39,6 +37,14 @@ import {
   type SaveOffer,
 } from './features/tabs';
 import { BrowserChrome } from './features/omnibox';
+import {
+  ChromeOverlays,
+  CrashRestoreOffer,
+  HttpsWarnOverlay,
+  ShellOverlays,
+  StageOverlays,
+  type AboutInfo,
+} from './features/dialogs';
 import {
   draftForUrl,
   isInternalPageUrl,
@@ -66,21 +72,6 @@ const ExtensionsPage = lazy(() =>
 );
 const DownloadsPage = lazy(() =>
   import('./components/DownloadsUI').then((m) => ({ default: m.DownloadsPage })),
-);
-const CommandPalette = lazy(() =>
-  import('./components/CommandPalette').then((m) => ({ default: m.CommandPalette })),
-);
-const ClearDataDialog = lazy(() =>
-  import('./components/ClearDataDialog').then((m) => ({ default: m.ClearDataDialog })),
-);
-const AboutDialog = lazy(() =>
-  import('./components/AppDialogs').then((m) => ({ default: m.AboutDialog })),
-);
-const QrShareDialog = lazy(() =>
-  import('./components/AppDialogs').then((m) => ({ default: m.QrShareDialog })),
-);
-const TaskManagerOverlay = lazy(() =>
-  import('./components/metrics/ResourcesPanel').then((m) => ({ default: m.TaskManagerOverlay })),
 );
 const AppSidebar = lazy(() =>
   import('./components/AppSidebar').then((m) => ({ default: m.AppSidebar })),
@@ -187,13 +178,7 @@ export function App() {
   const [zoomPercent, setZoomPercent] = useState(100);
   const [qrOpen, setQrOpen] = useState(false);
   const [clearDataOpen, setClearDataOpen] = useState(false);
-  const [aboutInfo, setAboutInfo] = useState<{
-    appVersion: string;
-    electron: string;
-    chrome: string;
-    node: string;
-    platform: string;
-  } | null>(null);
+  const [aboutInfo, setAboutInfo] = useState<AboutInfo | null>(null);
   const [findOpen, setFindOpen] = useState(false);
   const [findQuery, setFindQuery] = useState('');
   const [findActive, setFindActive] = useState(0);
@@ -1149,27 +1134,14 @@ export function App() {
   const shell = (node: React.ReactNode) => (
     <MotionConfig reducedMotion={motionOff ? 'always' : 'never'}>
       {node}
-      <Suspense fallback={null}>
-        <TaskManagerOverlay open={taskMgrOpen} onClose={() => setTaskMgrOpen(false)} />
-      </Suspense>
-      <Suspense fallback={null}>
-        <CommandPalette
-          open={paletteOpen}
-          onClose={() => setPaletteOpen(false)}
-          onNavigate={(url, opts) => {
-            if (opts?.newTab) newTab(normalizeInput(url, settings, bangs));
-            else go(url);
-          }}
-          onSwitchTab={(id) => {
-            setActive(id);
-            setView('browser');
-          }}
-          onRunBang={(fill) => {
-            setDraft(fill);
-            document.getElementById('omnibox-input')?.focus();
-          }}
-        />
-      </Suspense>
+      <ShellOverlays
+        taskMgrOpen={taskMgrOpen}
+        setTaskMgrOpen={setTaskMgrOpen}
+        paletteOpen={paletteOpen}
+        setPaletteOpen={setPaletteOpen}
+        setDraft={setDraft}
+        go={go}
+      />
     </MotionConfig>
   );
 
@@ -1334,92 +1306,28 @@ export function App() {
 
         <BookmarksBar onOpen={openBookmarkUrl} onEdit={(b) => openBookmarkDialog(b.url, b.title)} />
 
-        {findOpen && (
-          <FindBar
-            query={findQuery}
-            activeMatch={findActive}
-            matchCount={findTotal}
-            onQueryChange={(q) => {
-              setFindQuery(q);
-              runFind(q);
-            }}
-            onClose={closeFind}
-            onNext={(backward) => runFind(findQuery, backward)}
-          />
-        )}
-        {fsToast && htmlFullscreen && <div className="html-fs-toast">Esc aby wyjść</div>}
-        {certWarn && (
-          <div className="cert-warn-overlay" role="alertdialog">
-            <div className="cert-warn-card">
-              <TriangleAlert size={28} strokeWidth={1.6} />
-              <h2>Ostrzeżenie certyfikatu</h2>
-              <p>
-                Połączenie nie jest zaufane ({certWarn.error || 'błąd certyfikatu'}).
-                {certWarn.tor ? ' Tryb Tor — kontynuuj tylko jeśli ufasz tej stronie.' : ''}
-              </p>
-              {certWarn.issuer ? <p className="muted">Wystawca: {certWarn.issuer}</p> : null}
-              <code className="cert-warn-url">{certWarn.url}</code>
-              {!certWarn.tor ? (
-                <label className="perm-remember">
-                  <Switch
-                    on={certRemember}
-                    onChange={setCertRemember}
-                    aria-label={`Zapamiętaj wyjątek dla ${certWarn.host || 'tej domeny'}`}
-                  />
-                  Zapamiętaj wyjątek dla {certWarn.host || 'tej domeny'}
-                </label>
-              ) : null}
-              <div className="cert-warn-actions">
-                <button
-                  type="button"
-                  className="sbtn ghost"
-                  onClick={() => {
-                    void window.shell?.certificateRespond?.(certWarn.webContentsId, false, false);
-                    setCertWarn(null);
-                  }}
-                >
-                  Anuluj
-                </button>
-                <button
-                  type="button"
-                  className="sbtn danger-text"
-                  onClick={() => {
-                    void window.shell?.certificateRespond?.(
-                      certWarn.webContentsId,
-                      true,
-                      certRemember && !certWarn.tor,
-                    );
-                    setCertWarn(null);
-                  }}
-                >
-                  Kontynuuj mimo to
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {qrOpen && pageUrlForShare && (
-          <Suspense fallback={null}>
-            <QrShareDialog url={pageUrlForShare} onClose={() => setQrOpen(false)} />
-          </Suspense>
-        )}
-        {clearDataOpen && (
-          <Suspense fallback={null}>
-            <ClearDataDialog
-              open={clearDataOpen}
-              onClose={() => setClearDataOpen(false)}
-              onConfirm={async (range) => {
-                await window.shell?.historyClear?.({ range });
-                setClearDataOpen(false);
-              }}
-            />
-          </Suspense>
-        )}
-        {aboutInfo && (
-          <Suspense fallback={null}>
-            <AboutDialog info={aboutInfo} onClose={() => setAboutInfo(null)} />
-          </Suspense>
-        )}
+        <ChromeOverlays
+          findOpen={findOpen}
+          findQuery={findQuery}
+          findActive={findActive}
+          findTotal={findTotal}
+          setFindQuery={setFindQuery}
+          runFind={runFind}
+          closeFind={closeFind}
+          fsToast={fsToast}
+          htmlFullscreen={htmlFullscreen}
+          certWarn={certWarn}
+          setCertWarn={setCertWarn}
+          certRemember={certRemember}
+          setCertRemember={setCertRemember}
+          qrOpen={qrOpen}
+          setQrOpen={setQrOpen}
+          pageUrlForShare={pageUrlForShare}
+          clearDataOpen={clearDataOpen}
+          setClearDataOpen={setClearDataOpen}
+          aboutInfo={aboutInfo}
+          setAboutInfo={setAboutInfo}
+        />
 
         <div
           className="stage"
@@ -1458,63 +1366,12 @@ export function App() {
                 : 'Okno Tor — ruch przez sieć Tor. Sesja tego okna jest izolowana (logika demona Tor bez zmian).'}
             </div>
           )}
-          {crashOffer && (
-            <div className="session-crash-banner" role="alertdialog">
-              <div className="session-crash-text">
-                <strong>Przeglądarka została nieoczekiwanie zamknięta.</strong>
-                <span> Przywrócić karty?</span>
-              </div>
-              <div className="session-crash-actions">
-                <button
-                  type="button"
-                  className="sbtn"
-                  onClick={() => {
-                    void (async () => {
-                      const saved = await window.shell?.sessionLoad?.();
-                      void window.shell?.sessionDismissCrash?.();
-                      void window.shell?.sessionMarkClean?.();
-                      setCrashOffer(false);
-                      if (saved?.tabs?.length) {
-                        restoreSessionTabs(
-                          saved.tabs.map((t) => ({
-                            id: t.id,
-                            url: t.url,
-                            title: t.title,
-                            favicon: t.favicon,
-                            pinned: Boolean(t.pinned),
-                            navHistory: t.navHistory || null,
-                            mode: 'normal' as const,
-                            discarded: true,
-                          })),
-                          saved.activeId,
-                          saved.closedTabs || [],
-                        );
-                      } else {
-                        setSessionReady(true);
-                      }
-                    })();
-                  }}
-                >
-                  Przywróć
-                </button>
-                <button
-                  type="button"
-                  className="sbtn danger-text"
-                  onClick={() => {
-                    void (async () => {
-                      await window.shell?.sessionClear?.();
-                      void window.shell?.sessionDismissCrash?.();
-                      void window.shell?.sessionMarkClean?.();
-                      setCrashOffer(false);
-                      setSessionReady(true);
-                    })();
-                  }}
-                >
-                  Nie
-                </button>
-              </div>
-            </div>
-          )}
+          <CrashRestoreOffer
+            crashOffer={crashOffer}
+            setCrashOffer={setCrashOffer}
+            restoreSessionTabs={restoreSessionTabs}
+            setSessionReady={setSessionReady}
+          />
           {sidebarMenu && (
             <div
               className="tab-ctx-backdrop"
@@ -1571,35 +1428,11 @@ export function App() {
               </div>
             </div>
           )}
-          {httpsWarn && (
-            <div className="https-warn-overlay" role="alertdialog" aria-label="Ostrzeżenie HTTPS">
-              <div className="https-warn-card">
-                <TriangleAlert size={28} strokeWidth={1.6} />
-                <h2>Połączenie nie jest bezpieczne</h2>
-                <p>
-                  Strona nie odpowiada przez HTTPS. W trybie ścisłym możesz wejść mimo to — ruch
-                  będzie nieszyfrowany.
-                </p>
-                <code className="https-warn-url">{httpsWarn.httpUrl}</code>
-                <div className="https-warn-actions">
-                  <button type="button" className="sbtn ghost" onClick={() => setHttpsWarn(null)}>
-                    Anuluj
-                  </button>
-                  <button
-                    type="button"
-                    className="sbtn"
-                    onClick={() => {
-                      const u = httpsWarn.httpUrl;
-                      setHttpsWarn(null);
-                      navigateActive(u);
-                    }}
-                  >
-                    Wejdź mimo to
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <HttpsWarnOverlay
+            httpsWarn={httpsWarn}
+            setHttpsWarn={setHttpsWarn}
+            navigateActive={navigateActive}
+          />
           {torProgress && torBusy && (
             <div className="tor-progress-banner" role="status">
               {torProgress}
@@ -1618,107 +1451,17 @@ export function App() {
               </button>
             </div>
           )}
-          {permAsk && (
-            <div className="perm-bar" role="alertdialog">
-              <span>
-                <strong>{permAsk.origin.replace(/^https:\/\//, '')}</strong> chce użyć:{' '}
-                {permAsk.permission === 'microphone'
-                  ? 'mikrofonu'
-                  : permAsk.permission === 'camera'
-                    ? 'kamery'
-                    : permAsk.permission === 'geolocation'
-                      ? 'lokalizacji'
-                      : permAsk.permission === 'notifications'
-                        ? 'powiadomień'
-                        : permAsk.permission === 'display-capture'
-                          ? 'ekranu'
-                          : permAsk.permission}
-              </span>
-              <label className="perm-remember">
-                <Switch on={permRemember} onChange={setPermRemember} aria-label="Zapamiętaj" />
-                Zapamiętaj
-              </label>
-              <div className="pw-save-actions">
-                <button
-                  type="button"
-                  className="sbtn"
-                  onClick={() => {
-                    void window.shell?.permissionsRespond?.(
-                      permAsk.askId,
-                      true,
-                      permRemember,
-                      permAsk.origin,
-                      permAsk.permission,
-                    );
-                    setPermAsk(null);
-                  }}
-                >
-                  Zezwól
-                </button>
-                <button
-                  type="button"
-                  className="sbtn ghost"
-                  onClick={() => {
-                    void window.shell?.permissionsRespond?.(
-                      permAsk.askId,
-                      false,
-                      permRemember,
-                      permAsk.origin,
-                      permAsk.permission,
-                    );
-                    setPermAsk(null);
-                  }}
-                >
-                  Zablokuj
-                </button>
-              </div>
-            </div>
-          )}
-          {saveOffer && settings.passwordsOfferSave && !activeIsTor && (
-            <div className="pw-save-bar" role="status">
-              <KeyRound size={14} strokeWidth={1.75} />
-              <span>
-                {saveOffer.mode === 'update' ? 'Zaktualizować' : 'Zapisać'} hasło dla{' '}
-                <strong>{saveOffer.origin.replace(/^https:\/\//, '')}</strong>
-                {saveOffer.username ? ` (${saveOffer.username})` : ''}?
-              </span>
-              <div className="pw-save-actions">
-                <button
-                  type="button"
-                  className="sbtn"
-                  onClick={() => {
-                    void window.shell?.passwordsConfirmSave?.().then(() => {
-                      setSaveOffer(null);
-                      setPwForPage((n) => n + (saveOffer.mode === 'create' ? 1 : 0));
-                    });
-                  }}
-                >
-                  Zapisz
-                </button>
-                <button
-                  type="button"
-                  className="sbtn ghost"
-                  onClick={() => {
-                    void window.shell?.passwordsDismissSave?.();
-                    setSaveOffer(null);
-                  }}
-                >
-                  Nie teraz
-                </button>
-                <button
-                  type="button"
-                  className="sbtn danger-text"
-                  onClick={() => {
-                    void window.shell?.passwordsNeverAdd?.(saveOffer.origin);
-                    void window.shell?.passwordsDismissSave?.();
-                    setSaveOffer(null);
-                  }}
-                >
-                  Nigdy dla tej strony
-                </button>
-              </div>
-            </div>
-          )}
+          <StageOverlays
+            permAsk={permAsk}
+            setPermAsk={setPermAsk}
+            permRemember={permRemember}
+            setPermRemember={setPermRemember}
+            saveOffer={saveOffer}
+            setSaveOffer={setSaveOffer}
+            passwordsOfferSave={settings.passwordsOfferSave}
+            activeIsTor={activeIsTor}
+            setPwForPage={setPwForPage}
+          />
           {isHistoryPage && active && (
             <ErrorBoundary name="about:history">
               <Suspense fallback={<LazyFallback />}>
