@@ -7,10 +7,16 @@ contextBridge.exposeInMainWorld('shell', {
   openLogsFolder: () => ipcRenderer.invoke('shell:open-logs-folder'),
   newWindow: (opts) => ipcRenderer.invoke('shell:new-window', opts || {}),
   getWindowBoot: () => ipcRenderer.invoke('shell:window-boot-get'),
+  windowClosingAck: () => ipcRenderer.invoke('shell:window-closing-ack'),
   onWindowBoot: (cb) => {
     const handler = (_e, payload) => cb(payload || {});
     ipcRenderer.on('shell:window-boot', handler);
     return () => ipcRenderer.removeListener('shell:window-boot', handler);
+  },
+  onWindowClosing: (cb) => {
+    const handler = () => cb();
+    ipcRenderer.on('shell:window-closing', handler);
+    return () => ipcRenderer.removeListener('shell:window-closing', handler);
   },
   quitApp: () => ipcRenderer.invoke('shell:quit'),
   windowToggleFullscreen: () => ipcRenderer.invoke('shell:window-toggle-fullscreen'),
@@ -59,6 +65,8 @@ contextBridge.exposeInMainWorld('shell', {
   sessionClear: () => ipcRenderer.invoke('shell:session-clear'),
   sessionDismissCrash: () => ipcRenderer.invoke('shell:session-dismiss-crash'),
   sessionMarkClean: () => ipcRenderer.invoke('shell:session-mark-clean'),
+  sessionPushClosedWindow: (tabs) => ipcRenderer.invoke('shell:session-push-closed-window', tabs),
+  sessionPopClosedWindow: () => ipcRenderer.invoke('shell:session-pop-closed-window'),
   sessionNavHistory: (webContentsId) => ipcRenderer.invoke('shell:session-nav-history', webContentsId),
   downloadsList: () => ipcRenderer.invoke('shell:downloads-list'),
   downloadsConfig: (next) => ipcRenderer.invoke('shell:downloads-config', next),

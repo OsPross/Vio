@@ -406,9 +406,15 @@ function showGuestContextMenu(wc, params, deps) {
         enabled: params.editFlags?.canPaste !== false,
         click: () => {
           try {
-            wc.pasteAndMatchStyle();
+            const { clipboard } = require('electron');
+            const text = clipboard.readText();
+            if (text) wc.insertText(text);
           } catch {
-            /* */
+            try {
+              wc.paste();
+            } catch {
+              /* */
+            }
           }
         },
       },

@@ -4,9 +4,30 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { app } = require('electron');
 
-const CHROME_UA =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36';
+/** Sync CHROME_UA to running Chromium and emit Client Hints like desktop Chrome. */
+function chromeVersion() {
+  try {
+    return String(process.versions.chrome || '134.0.0.0').split('.')[0] || '134';
+  } catch {
+    return '134';
+  }
+}
 
+function buildChromeUa() {
+  const major = chromeVersion();
+  return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36`;
+}
+
+let CHROME_UA = buildChromeUa();
+
+function clientHintHeaders() {
+  const major = chromeVersion();
+  return {
+    'sec-ch-ua': `"Google Chrome";v="${major}", "Chromium";v="${major}", "Not-A.Brand";v="24"`,
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+  };
+}
 const TRACKING_PARAMS = new Set([
   'utm_source','utm_medium','utm_campaign','utm_term','utm_content','utm_id','utm_name',
   'fbclid','gclid','gclsrc','dclid','gbraid','wbraid','mc_eid','mc_cid','igshid','igsh',
@@ -162,6 +183,7 @@ function applyBootSwitches() {
     app.commandLine.appendSwitch('disable-breakpad');
     app.commandLine.appendSwitch('disable-crash-reporter');
     app.commandLine.appendSwitch('disable-domain-reliability');
+    // Note: disable-component-update can block Widevine CDM updates — left for privacy; Netflix may fail.
     app.commandLine.appendSwitch('disable-component-update');
   } catch (e) {
     console.warn('[privacy] boot switches', e);
@@ -179,7 +201,11 @@ function attachToSession(ses, opts) {
   ses.webRequest.onBeforeSendHeaders({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
     const headers = { ...details.requestHeaders };
     if (cfg.enabled && !isException(details.url)) {
-      if (cfg.chromeUa) headers['User-Agent'] = CHROME_UA;
+      if (cfg.chromeUa) {
+        CHROME_UA = buildChromeUa();
+        headers['User-Agent'] = CHROME_UA;
+        Object.assign(headers, clientHintHeaders());
+      }
       if (cfg.secGpc) headers['Sec-GPC'] = '1';
       if (cfg.dnt) headers['DNT'] = '1';
       if (cfg.referrerPolicy) {

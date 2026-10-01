@@ -948,6 +948,22 @@ export function App() {
           setSessionReady(true);
           return;
         }
+        if (Array.isArray(boot?.restoreTabs) && boot.restoreTabs.length) {
+          const tabs = boot.restoreTabs.map((t, i) => ({
+            id: Math.random().toString(36).slice(2, 10),
+            url: t.url,
+            title: t.title || t.url,
+            favicon: t.favicon,
+            pinned: Boolean(t.pinned),
+            navHistory: (t.navHistory as Tab['navHistory']) || null,
+            mode: 'normal' as const,
+            discarded: i !== 0,
+            lastActiveAt: Date.now(),
+          }));
+          restoreSessionTabs(tabs, tabs[0]?.id || null, []);
+          setSessionReady(true);
+          return;
+        }
         const status = await window.shell?.sessionStatus?.();
         const saved = await window.shell?.sessionLoad?.();
         if (cancelled) return;
@@ -1008,6 +1024,19 @@ export function App() {
       cancelled = true;
     };
   }, [restoreSessionTabs, setSessionReady]);
+
+  // Secondary window close → push closed-window stack for Ctrl+Shift+T
+  useEffect(() => {
+    const off = window.shell?.onWindowClosing?.(() => {
+      try {
+        useStore.getState().pushClosedWindow();
+      } catch {
+        /* */
+      }
+      void window.shell?.windowClosingAck?.();
+    });
+    return () => off?.();
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1944,6 +1973,8 @@ export function App() {
             setTaskMgrOpen((v) => !v);
             return true;
           case 'escape': {
+            // HTML video fullscreen: let Chromium handle Esc first
+            if (htmlFullscreen) return false;
             const el = currentView();
             let loading = false;
             try {
@@ -2011,6 +2042,7 @@ export function App() {
       closeFind,
       closeTab,
       findOpen,
+      htmlFullscreen,
       isInternalAbout,
       isHome,
       isTorHome,
@@ -2612,9 +2644,13 @@ export function App() {
               tabs={tabs}
             />
             <div className="omnibox-actions">
-              {zoomFlash != null && !isHome && !isTorHome && !isInternalAbout ? (
+              {((zoomFlash != null && zoomFlash !== 100) ||
+                (zoomPercent !== 100 && !isHome && !isTorHome && !isInternalAbout)) &&
+              !isHome &&
+              !isTorHome &&
+              !isInternalAbout ? (
                 <span className="omnibox-zoom-badge" aria-live="polite">
-                  {zoomFlash}%
+                  {zoomFlash != null ? zoomFlash : zoomPercent}%
                 </span>
               ) : null}
               {popupBlocked && !isHome && !isTorHome && !isInternalAbout ? (
@@ -2979,7 +3015,33 @@ export function App() {
         )}
         {aboutInfo && <AboutDialog info={aboutInfo} onClose={() => setAboutInfo(null)} />}
 
-        <div className="stage">
+        <div
+          className="stage"
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('text/uri-list')) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const uri = e.dataTransfer.getData('text/uri-list').split('\n')[0]?.trim();
+            if (uri && /^https?:/i.test(uri)) {
+              newTab(uri);
+              return;
+            }
+            const file = e.dataTransfer.files?.[0];
+            if (file) {
+              const path = (file as File & { path?: string }).path;
+              if (path) {
+                  const fileUrl = path.startsWith('file:')
+                    ? path
+                    : `file:///${path.replace(/\\/g, '/').replace(/^\/+/, '')}`;
+                  newTab(fileUrl);
+                }
+            }
+          }}
+        >
           {(windowMode === 'private' || windowMode === 'tor') && (
             <div className={`window-mode-banner ${windowMode}`} role="status">
               {windowMode === 'private'

@@ -10,7 +10,7 @@ const downloads = require('./downloads.cjs');
 const adblock = require('./adblock-plus.cjs');
 const spellcheck = require('./spellcheck.cjs');
 
-/** @type {WeakMap<import('electron').BrowserWindow, { mode: string, partition: string|null }>} */
+/** @type {WeakMap<import('electron').BrowserWindow, { mode: string, partition: string|null, restoreTabs?: unknown[]|null }>} */
 const windowMeta = new WeakMap();
 
 const PRIVATE_PARTITION_RE = /^private-[0-9a-f-]{8,}$/i;

@@ -33,10 +33,13 @@ notes.init();
 void extensions.init();
 downloads.init();
 
-/** @type {BrowserWindow | null} */
+/** @type {ReturnType<typeof createWindow> | null} */
 let mainWindow = null;
 /** @type {Set<BrowserWindow>} */
 const appWindows = new Set();
+/** Pending tab restore for a newly created secondary window */
+let pendingRestoreTabs = null;
+let isAppQuitting = false;
 
 function isAppWebContents(wc) {
   if (!wc) return false;
@@ -362,6 +365,11 @@ function createWindow(optsExtra = {}) {
   if (bootMode === 'private') {
     privatePartition = windowMode.createPrivatePartition();
   }
+  const restoreTabs = Array.isArray(optsExtra.restoreTabs)
+    ? optsExtra.restoreTabs
+    : pendingRestoreTabs;
+  if (optsExtra.restoreTabs || pendingRestoreTabs) pendingRestoreTabs = null;
+
   const opts = {
     width: secondary ? 1200 : win.width || 1360,
     height: secondary ? 800 : win.height || 900,
@@ -401,6 +409,7 @@ function createWindow(optsExtra = {}) {
   windowMode.setWindowMeta(bw, {
     mode: bootMode,
     partition: privatePartition,
+    restoreTabs: restoreTabs || null,
   });
   if (privatePartition) {
     try {
@@ -420,6 +429,30 @@ function createWindow(optsExtra = {}) {
       mainWindow = [...appWindows].find((w) => !w.isDestroyed()) || null;
     }
   });
+
+  bw.on('close', (e) => {
+    if (isAppQuitting || bootMode !== 'normal') return;
+    const alive = [...appWindows].filter((w) => !w.isDestroyed());
+    if (alive.length <= 1) return;
+    // Secondary window: ask renderer to push closed-window stack, then destroy
+    if (bw.__djxxrClosingAck) return;
+    e.preventDefault();
+    try {
+      bw.webContents.send('shell:window-closing');
+    } catch {
+      bw.destroy();
+      return;
+    }
+    const t = setTimeout(() => {
+      try {
+        if (!bw.isDestroyed()) bw.destroy();
+      } catch {
+        /* */
+      }
+    }, 400);
+    bw.once('closed', () => clearTimeout(t));
+  });
+
   if (!mainWindow || mainWindow.isDestroyed()) {
     mainWindow = bw;
   }
@@ -507,6 +540,7 @@ function createWindow(optsExtra = {}) {
     bw.webContents.send('shell:window-boot', {
       mode: bootMode,
       partition: privatePartition,
+      restoreTabs: restoreTabs || null,
     });
   };
   bw.webContents.on('did-finish-load', sendBoot);
@@ -640,6 +674,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  isAppQuitting = true;
   try {
     appSession.markCleanExit();
   } catch (err) {
@@ -703,9 +738,12 @@ ipcMain.handle(
   wrapApp((_e, opts) => {
     const boot =
       opts && typeof opts === 'object' && typeof opts.boot === 'string' ? opts.boot : undefined;
+    const restoreTabs =
+      opts && typeof opts === 'object' && Array.isArray(opts.restoreTabs) ? opts.restoreTabs : null;
     createWindow({
       secondary: true,
       boot: boot === 'private' || boot === 'tor' ? boot : undefined,
+      restoreTabs,
     });
     return { ok: true };
   }),
@@ -716,7 +754,23 @@ ipcMain.handle(
     const { BrowserWindow } = require('electron');
     const win = BrowserWindow.fromWebContents(event.sender);
     const meta = windowMode.getWindowMeta(win);
-    return { mode: meta.mode || 'normal', partition: meta.partition || null };
+    return {
+      mode: meta.mode || 'normal',
+      partition: meta.partition || null,
+      restoreTabs: meta.restoreTabs || null,
+    };
+  }),
+);
+ipcMain.handle(
+  'shell:window-closing-ack',
+  wrapApp((event) => {
+    const { BrowserWindow } = require('electron');
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) {
+      win.__djxxrClosingAck = true;
+      win.destroy();
+    }
+    return { ok: true };
   }),
 );
 ipcMain.handle(
@@ -954,6 +1008,11 @@ ipcMain.handle(
 ipcMain.handle('shell:session-clear', wrapApp(() => appSession.clearSession()));
 ipcMain.handle('shell:session-dismiss-crash', wrapApp(() => appSession.dismissCrashOffer()));
 ipcMain.handle('shell:session-mark-clean', wrapApp(() => appSession.markCleanExit()));
+ipcMain.handle(
+  'shell:session-push-closed-window',
+  wrapApp((_e, tabs) => appSession.pushClosedWindow(tabs)),
+);
+ipcMain.handle('shell:session-pop-closed-window', wrapApp(() => appSession.popClosedWindow()));
 ipcMain.handle(
   'shell:session-nav-history',
   wrapApp((_e, webContentsId) => {

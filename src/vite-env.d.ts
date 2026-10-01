@@ -37,8 +37,29 @@ declare global {
       }>;
       openUserData: () => Promise<{ ok: boolean }>;
       openLogsFolder: () => Promise<{ ok: boolean }>;
-      newWindow: (opts?: { boot?: 'private' | 'tor' }) => Promise<{ ok: boolean }>;
-      getWindowBoot: () => Promise<{ mode: string; partition?: string | null }>;
+      newWindow: (opts?: {
+        boot?: 'private' | 'tor';
+        restoreTabs?: {
+          url: string;
+          title?: string;
+          favicon?: string;
+          pinned?: boolean;
+          navHistory?: unknown;
+        }[];
+      }) => Promise<{ ok: boolean }>;
+      getWindowBoot: () => Promise<{
+        mode: string;
+        partition?: string | null;
+        restoreTabs?: {
+          url: string;
+          title?: string;
+          favicon?: string;
+          pinned?: boolean;
+          navHistory?: unknown;
+        }[] | null;
+      }>;
+      windowClosingAck: () => Promise<{ ok: boolean }>;
+      onWindowClosing: (cb: () => void) => () => void;
       onWindowBoot: (cb: (payload: { mode?: string; partition?: string | null }) => void) => () => void;
       quitApp: () => Promise<{ ok: boolean }>;
       windowToggleFullscreen: () => Promise<{ ok: boolean; fullScreen?: boolean }>;
@@ -396,6 +417,31 @@ declare global {
       sessionClear: () => Promise<{ ok: boolean }>;
       sessionDismissCrash: () => Promise<{ ok: boolean }>;
       sessionMarkClean: () => Promise<{ ok: boolean }>;
+      sessionPushClosedWindow: (
+        tabs: {
+          id?: string;
+          url: string;
+          title?: string;
+          favicon?: string;
+          pinned?: boolean;
+          index?: number;
+          navHistory?: unknown;
+          closedAt?: number;
+        }[],
+      ) => Promise<{ ok: boolean; count?: number; error?: string }>;
+      sessionPopClosedWindow: () => Promise<{
+        tabs: {
+          id: string;
+          url: string;
+          title: string;
+          favicon?: string;
+          pinned?: boolean;
+          index: number;
+          navHistory?: unknown;
+          closedAt: number;
+        }[];
+        closedAt: number;
+      } | null>;
       sessionNavHistory: (webContentsId: number) => Promise<{
         url: string;
         title: string;

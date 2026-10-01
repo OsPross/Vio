@@ -259,7 +259,7 @@ export function SettingsPage() {
                         })
                       }
                     >
-                      <option value="session">Przywróć poprzednią sesję</option>
+                      <option value="session">Otwórz poprzednie karty</option>
                       <option value="newtab">Otwórz nową kartę</option>
                       <option value="pages">Otwórz konkretne strony</option>
                     </select>

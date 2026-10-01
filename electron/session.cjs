@@ -18,6 +18,7 @@ try {
 
 const VERSION = 1;
 const MAX_CLOSED = 25;
+const MAX_CLOSED_WINDOWS = 5;
 
 /** @type {string | null} */
 let rootOverride = null;
@@ -78,6 +79,7 @@ function _setRootForTests(dir) {
  *   activeId: string | null,
  *   tabs: SessionTab[],
  *   closedTabs: ClosedTab[],
+ *   closedWindows: { tabs: ClosedTab[], closedAt: number }[],
  *   window: { x?: number, y?: number, width: number, height: number, isMaximized?: boolean },
  * }} SessionData */
 
@@ -115,6 +117,7 @@ function defaultSession() {
     activeId: null,
     tabs: [],
     closedTabs: [],
+    closedWindows: [],
     window: { width: 1360, height: 900, isMaximized: false },
   };
 }
@@ -189,6 +192,19 @@ function normalize(raw) {
   const closedTabs = Array.isArray(raw.closedTabs)
     ? raw.closedTabs.map(sanitizeClosed).filter(Boolean).slice(0, MAX_CLOSED)
     : [];
+  const closedWindows = Array.isArray(raw.closedWindows)
+    ? raw.closedWindows
+        .map((w) => {
+          if (!w || typeof w !== 'object') return null;
+          const tabs = Array.isArray(w.tabs)
+            ? w.tabs.map(sanitizeClosed).filter(Boolean).slice(0, MAX_CLOSED)
+            : [];
+          if (!tabs.length) return null;
+          return { tabs, closedAt: Number(w.closedAt) || Date.now() };
+        })
+        .filter(Boolean)
+        .slice(0, MAX_CLOSED_WINDOWS)
+    : [];
   // Pinned first, then by index
   tabs.sort((a, b) => {
     if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
@@ -206,6 +222,7 @@ function normalize(raw) {
     activeId,
     tabs,
     closedTabs,
+    closedWindows,
     window: {
       x: typeof win.x === 'number' ? win.x : undefined,
       y: typeof win.y === 'number' ? win.y : undefined,
@@ -306,6 +323,7 @@ function saveSnapshot(patch) {
     dirtyExit: cleanExitMarked ? false : true,
     tabs: Array.isArray(patch.tabs) ? patch.tabs : cur.tabs,
     closedTabs: Array.isArray(patch.closedTabs) ? patch.closedTabs : cur.closedTabs,
+    closedWindows: Array.isArray(patch.closedWindows) ? patch.closedWindows : cur.closedWindows,
     window: patch.window ? { ...cur.window, ...patch.window } : cur.window,
     activeId: patch.activeId !== undefined ? patch.activeId : cur.activeId,
   });
@@ -393,8 +411,32 @@ function readNavHistory(wc) {
   }
 }
 
+function pushClosedWindow(tabs) {
+  const cur = load();
+  const cleaned = (Array.isArray(tabs) ? tabs : [])
+    .map((t, i) => sanitizeClosed({ ...t, index: typeof t?.index === 'number' ? t.index : i }))
+    .filter(Boolean);
+  if (!cleaned.length) return { ok: false, error: 'empty' };
+  cur.closedWindows = [{ tabs: cleaned, closedAt: Date.now() }, ...(cur.closedWindows || [])].slice(
+    0,
+    MAX_CLOSED_WINDOWS,
+  );
+  cached = cur;
+  scheduleFlush(200);
+  return { ok: true, count: cur.closedWindows.length };
+}
+
+function popClosedWindow() {
+  const cur = load();
+  const win = (cur.closedWindows || []).shift();
+  cached = cur;
+  scheduleFlush(200);
+  return win || null;
+}
+
 module.exports = {
   MAX_CLOSED,
+  MAX_CLOSED_WINDOWS,
   load,
   saveSnapshot,
   markCleanExit,
@@ -407,5 +449,7 @@ module.exports = {
   isTorLike,
   readNavHistory,
   defaultSession,
+  pushClosedWindow,
+  popClosedWindow,
   _setRootForTests,
 };

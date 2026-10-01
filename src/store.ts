@@ -44,6 +44,12 @@ export type ClosedTab = {
   closedAt: number;
 };
 
+/** Whole window closed (Ctrl+Shift+T when tab stack empty) */
+export type ClosedWindow = {
+  tabs: ClosedTab[];
+  closedAt: number;
+};
+
 export type StartupMode = 'session' | 'newtab' | 'pages';
 
 export type { Bang } from './lib/bangs';
@@ -453,6 +459,8 @@ type State = {
   bookmarkFolders: BookmarkFolder[];
   /** Recently closed normal tabs (Tor never here) — mirrored to session.json */
   closedTabs: ClosedTab[];
+  /** Closed windows (secondary) for Ctrl+Shift+T */
+  closedWindows: ClosedWindow[];
   /** Session bootstrap done */
   sessionReady: boolean;
 
@@ -467,6 +475,8 @@ type State = {
   updateTab: (id: string, patch: Partial<Tab>) => void;
   pinTab: (id: string, pinned?: boolean) => void;
   reopenClosedTab: () => string | null;
+  pushClosedWindow: () => void;
+  setClosedWindows: (wins: ClosedWindow[]) => void;
   closeOtherTabs: (id: string) => void;
   closeTabsToRight: (id: string) => void;
   duplicateTab: (id: string) => void;
@@ -556,6 +566,7 @@ export function sortTabsPinnedFirst(tabs: Tab[]): Tab[] {
 }
 
 const MAX_CLOSED_TABS = 25;
+const MAX_CLOSED_WINDOWS = 5;
 
 function toClosedTab(tab: Tab, index: number): ClosedTab | null {
   if (isTorTab(tab)) return null;
@@ -1282,6 +1293,7 @@ export const useStore = create<State>()(
       bookmarks: [],
       bookmarkFolders: [...DEFAULT_BOOKMARK_FOLDERS],
       closedTabs: [],
+      closedWindows: [],
       sessionReady: false,
 
       newTab: (url, opts) => {
@@ -1427,32 +1439,56 @@ export const useStore = create<State>()(
       reopenClosedTab: () => {
         const { closedTabs, tabs } = get();
         const entry = closedTabs[0];
-        if (!entry) return null;
-        const id = uid();
-        const insertAt = Math.min(Math.max(0, entry.index), tabs.length);
-        const tab: Tab = {
-          id,
-          url: entry.url,
-          title: entry.title || 'Karta',
-          favicon: entry.favicon,
-          pinned: Boolean(entry.pinned),
-          navHistory: entry.navHistory || null,
-          lastActiveAt: Date.now(),
-          discarded: true,
-          mode: 'normal',
-        };
-        const next = [...tabs];
-        next.splice(insertAt, 0, tab);
-        set({
-          tabs: sortTabsPinnedFirst(next),
-          activeId: id,
-          closedTabs: closedTabs.slice(1),
-          view: 'browser',
+        if (entry) {
+          const id = uid();
+          const insertAt = Math.min(Math.max(0, entry.index), tabs.length);
+          const tab: Tab = {
+            id,
+            url: entry.url,
+            title: entry.title || 'Karta',
+            favicon: entry.favicon,
+            pinned: Boolean(entry.pinned),
+            navHistory: entry.navHistory || null,
+            lastActiveAt: Date.now(),
+            discarded: true,
+            mode: 'normal',
+          };
+          const next = [...tabs];
+          next.splice(insertAt, 0, tab);
+          set({
+            tabs: sortTabsPinnedFirst(next),
+            activeId: id,
+            closedTabs: closedTabs.slice(1),
+            view: 'browser',
+          });
+          get().setActive(id);
+          return id;
+        }
+        // Whole window — from shared session store
+        void window.shell?.sessionPopClosedWindow?.().then((win) => {
+          if (!win?.tabs?.length) return;
+          void window.shell?.newWindow?.({
+            restoreTabs: win.tabs.map((t: ClosedTab) => ({
+              url: t.url,
+              title: t.title,
+              favicon: t.favicon,
+              pinned: t.pinned,
+              navHistory: t.navHistory,
+            })),
+          });
         });
-        // Activate clears discarded
-        get().setActive(id);
-        return id;
+        return 'window';
       },
+      pushClosedWindow: () => {
+        const { tabs } = get();
+        const entries = tabs
+          .map((t, i) => (!isTorTab(t) && !isPrivateTab(t) ? toClosedTab(t, i) : null))
+          .filter(Boolean) as ClosedTab[];
+        if (!entries.length) return;
+        void window.shell?.sessionPushClosedWindow?.(entries);
+      },
+      setClosedWindows: (wins) =>
+        set({ closedWindows: (wins || []).slice(0, MAX_CLOSED_WINDOWS) }),
       closeOtherTabs: (id) => {
         const { tabs, closedTabs } = get();
         const keep = tabs.find((t) => t.id === id);
