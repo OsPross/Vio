@@ -23,16 +23,6 @@ type WebviewEl = HTMLElement & {
 
 import { resolveFavicon, faviconImgFallback } from '../lib/favicon';
 
-async function injectCosmetic(el: WebviewEl) {
-  try {
-    const css = (await window.shell?.adblockCosmetic?.()) ?? '';
-    if (!css) return;
-    await el.insertCSS(css);
-  } catch {
-    /* */
-  }
-}
-
 function SideAppIcon({ app }: { app: SideApp }) {
   const [src, setSrc] = useState<string | null>(null);
 
@@ -84,17 +74,11 @@ function SideWebview({
     const el = local.current;
     if (!el) return;
     const onStop = () => setLoaded(true);
-    const onReady = () => {
-      setLoaded(true);
-      void injectCosmetic(el);
-    };
     el.addEventListener('did-stop-loading', onStop);
-    el.addEventListener('dom-ready', onReady);
-    el.addEventListener('did-finish-load', onReady);
+    el.addEventListener('dom-ready', onStop);
     return () => {
       el.removeEventListener('did-stop-loading', onStop);
-      el.removeEventListener('dom-ready', onReady);
-      el.removeEventListener('did-finish-load', onReady);
+      el.removeEventListener('dom-ready', onStop);
     };
   }, [app.id]);
 

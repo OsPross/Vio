@@ -173,10 +173,9 @@ type SaveOffer = {
   id?: string;
 };
 
+/** Page scripts only — cosmetic CSS is injected in webview-preload (legacy) or Ghostery session preload. */
 async function injectPageScripts(el: WebviewEl, passwordsOn: boolean) {
   try {
-    const css = (await window.shell?.adblockCosmetic?.()) ?? '';
-    if (css) await el.insertCSS(css);
     let pageUrl = '';
     try {
       pageUrl = el.getURL();
@@ -243,6 +242,10 @@ function TabWebview({
 }) {
   const ref = useRef<WebviewEl | null>(null);
   const scrollbarCssKeyRef = useRef<string | null>(null);
+  /** Full navigation generation — in-page SPA navigations must not re-run scrollbars / page scripts. */
+  const docGenRef = useRef(0);
+  const scrollbarsGenRef = useRef(-1);
+  const pageScriptsGenRef = useRef(-1);
   const updateTab = useStore((s) => s.updateTab);
 
   const applyPageScrollbars = useCallback(
@@ -302,7 +305,6 @@ function TabWebview({
     };
 
     const onFinish = () => {
-      onReady();
       try {
         if (tab.mode !== 'tor') {
           // Catches navigations that finished before did-navigate listener was attached
@@ -311,6 +313,14 @@ function TabWebview({
       } catch {
         /* */
       }
+    };
+
+    const onStartNavigation = (raw: unknown) => {
+      const ev = raw as { isMainFrame?: boolean; isInPlace?: boolean };
+      if (ev.isMainFrame === false || ev.isInPlace) return;
+      docGenRef.current += 1;
+      scrollbarsGenRef.current = -1;
+      pageScriptsGenRef.current = -1;
     };
 
     const reportGuest = () => {
@@ -340,8 +350,15 @@ function TabWebview({
     const onReady = () => {
       reportGuest();
       applyStoredZoom();
-      void injectPageScripts(el, passwordsEnabled);
-      void applyPageScrollbars(el);
+      const gen = docGenRef.current;
+      if (pageScriptsGenRef.current !== gen) {
+        pageScriptsGenRef.current = gen;
+        void injectPageScripts(el, passwordsEnabled);
+      }
+      if (scrollbarsGenRef.current !== gen) {
+        scrollbarsGenRef.current = gen;
+        void applyPageScrollbars(el);
+      }
     };
 
     const onNavigateZoom = () => {
@@ -512,6 +529,7 @@ function TabWebview({
     el.addEventListener('page-title-updated', sync);
     el.addEventListener('did-stop-loading', sync);
     el.addEventListener('did-start-loading', onStart);
+    el.addEventListener('did-start-navigation', onStartNavigation);
     el.addEventListener('dom-ready', onReady);
     el.addEventListener('did-finish-load', onFinish);
     el.addEventListener('found-in-page', onFound);
@@ -539,6 +557,7 @@ function TabWebview({
       el.removeEventListener('page-title-updated', sync);
       el.removeEventListener('did-stop-loading', sync);
       el.removeEventListener('did-start-loading', onStart);
+      el.removeEventListener('did-start-navigation', onStartNavigation);
       el.removeEventListener('dom-ready', onReady);
       el.removeEventListener('did-finish-load', onFinish);
       el.removeEventListener('found-in-page', onFound);
@@ -1292,29 +1311,75 @@ export function App() {
     setPageHasVideo(false);
   }, [activeId, active?.url]);
 
-  const togglePictureInPicture = useCallback(() => {
-    const el = currentView();
-    if (!el) return;
-    try {
-      el.send?.('djxxr-pip-toggle');
-    } catch {
+  const runPictureInPictureOnTab = useCallback(
+    (tabId: string, opts?: { enterOnly?: boolean }) => {
+      const wcId = guestWc[tabId];
+      if (typeof wcId === 'number' && window.shell?.pictureInPicture) {
+        void window.shell.pictureInPicture(wcId, { enterOnly: Boolean(opts?.enterOnly) });
+        return;
+      }
+      if (tabId !== useStore.getState().activeId) return;
+      const el = currentView();
+      if (!el) return;
+      const enterOnly = Boolean(opts?.enterOnly);
       void el
         .executeJavaScript?.(
-          `(() => {
-            if (!document.pictureInPictureEnabled) return false;
-            if (document.pictureInPictureElement) {
-              document.exitPictureInPicture();
-              return 'exit';
+          enterOnly
+            ? `(async () => {
+            try {
+              if (!document.pictureInPictureEnabled) return 'disabled';
+              if (document.pictureInPictureElement) return 'already';
+              const videos = Array.from(document.querySelectorAll('video'));
+              const v =
+                videos.find((x) => !x.paused && !x.ended) ||
+                videos.find((x) => (x.readyState || 0) > 1) ||
+                videos[0];
+              if (!v) return 'no-video';
+              await v.requestPictureInPicture();
+              return 'enter';
+            } catch {
+              return 'error';
             }
-            const videos = Array.from(document.querySelectorAll('video'));
-            const v = videos.find((x) => !x.paused && !x.ended) || videos.find((x) => x.readyState > 1) || videos[0];
-            if (!v) return false;
-            return v.requestPictureInPicture().then(() => 'enter').catch(() => false);
+          })()`
+            : `(async () => {
+            try {
+              if (!document.pictureInPictureEnabled) return 'disabled';
+              if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
+                return 'exit';
+              }
+              const videos = Array.from(document.querySelectorAll('video'));
+              const v =
+                videos.find((x) => !x.paused && !x.ended) ||
+                videos.find((x) => (x.readyState || 0) > 1) ||
+                videos[0];
+              if (!v) return 'no-video';
+              await v.requestPictureInPicture();
+              return 'enter';
+            } catch {
+              return 'error';
+            }
           })()`,
+          true,
         )
         .catch(() => {});
-    }
-  }, []);
+    },
+    [guestWc],
+  );
+
+  const togglePictureInPicture = useCallback(() => {
+    runPictureInPictureOnTab(useStore.getState().activeId);
+  }, [runPictureInPictureOnTab]);
+
+  // Document PiP is OS-level — do not exit when the tab webview is hidden (tab switch / minimize).
+  useEffect(() => {
+    const prevId = prevActiveIdRef.current;
+    prevActiveIdRef.current = activeId;
+    if (!settings.autoPipOnTabSwitch || !prevId || prevId === activeId) return;
+    const media = tabMediaRef.current[prevId];
+    if (!media?.playing) return;
+    runPictureInPictureOnTab(prevId, { enterOnly: true });
+  }, [activeId, settings.autoPipOnTabSwitch, runPictureInPictureOnTab]);
 
   useEffect(() => {
     if (omniEditingRef.current && omniFocusedRef.current) return;
@@ -2608,6 +2673,12 @@ export function App() {
                             ],
                           });
                           void window.shell?.privacyExceptionAdd?.(base || h);
+                          const el = currentView();
+                          try {
+                            el?.reloadIgnoringCache?.();
+                          } catch {
+                            el?.reload?.();
+                          }
                         } else {
                           patchSettings({
                             privacySiteExceptions: (settings.privacySiteExceptions || []).filter(
@@ -2615,6 +2686,26 @@ export function App() {
                             ),
                           });
                           void window.shell?.privacyExceptionRemove?.(base || h);
+                        }
+                      } catch {
+                        /* */
+                      }
+                    }}
+                    onDisableOnThisPage={() => {
+                      try {
+                        const h = new URL(active?.url || '').hostname.replace(/^www\./, '');
+                        const base = h.split('.').slice(-2).join('.');
+                        patchSettings({
+                          privacySiteExceptions: [
+                            ...new Set([...(settings.privacySiteExceptions || []), base || h]),
+                          ],
+                        });
+                        void window.shell?.privacyExceptionAdd?.(base || h);
+                        const el = currentView();
+                        try {
+                          el?.reloadIgnoringCache?.();
+                        } catch {
+                          el?.reload?.();
                         }
                       } catch {
                         /* */
@@ -3440,6 +3531,7 @@ export function App() {
                   if (t.id === activeId) setHtmlFullscreen(on);
                 }}
                 onMediaState={(st) => {
+                  tabMediaRef.current[t.id] = st;
                   if (t.id === activeId) setPageHasVideo(Boolean(st.hasVideo || st.playing));
                 }}
                 onBrowserNav={(dir) => doBrowserNav(dir)}

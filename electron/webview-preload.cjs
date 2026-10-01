@@ -12,6 +12,37 @@ try {
   console.debug('[webview-preload] run', { id: __djxxrPreloadRunId });
 }
 
+// Legacy-engine cosmetic CSS as early as possible (Ghostery getCosmeticCss returns '' — session preload handles that engine).
+function injectLegacyCosmeticCss() {
+  void ipcRenderer
+    .invoke('shell:adblock-cosmetic')
+    .then((css) => {
+      if (typeof css !== 'string' || !css.trim()) return;
+      const STYLE_ID = 'djxxr-legacy-cosmetic';
+      const apply = () => {
+        try {
+          if (document.getElementById(STYLE_ID)) return;
+          const style = document.createElement('style');
+          style.id = STYLE_ID;
+          style.textContent = css;
+          const root = document.head || document.documentElement;
+          if (root) root.appendChild(style);
+        } catch {
+          /* */
+        }
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', apply, { once: true });
+      } else {
+        apply();
+      }
+    })
+    .catch(() => {
+      /* */
+    });
+}
+injectLegacyCosmeticCss();
+
 contextBridge.exposeInMainWorld('__djxxrPw', {
   post: (type, payload) => {
     if (typeof type !== 'string') return;
@@ -89,26 +120,7 @@ if (document.readyState === 'loading') {
   bootMediaWatch();
 }
 
-ipcRenderer.on('djxxr-pip-toggle', async () => {
-  try {
-    if (!document.pictureInPictureEnabled) return;
-    if (document.pictureInPictureElement) {
-      await document.exitPictureInPicture();
-      reportMedia();
-      return;
-    }
-    const videos = Array.from(document.querySelectorAll('video'));
-    const preferred =
-      videos.find((v) => !v.paused && !v.ended) ||
-      videos.find((v) => (v.readyState || 0) > 1) ||
-      videos[0];
-    if (!preferred) return;
-    await preferred.requestPictureInPicture();
-    reportMedia();
-  } catch (err) {
-    console.warn('[djxxr-pip]', err);
-  }
-});
+// PiP toggle runs in main via shell:picture-in-picture + executeJavaScript(..., userGesture=true).
 
 function isEditableTarget(el) {
   if (!el || el === document || el === document.documentElement) return false;

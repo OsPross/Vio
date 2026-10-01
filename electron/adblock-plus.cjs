@@ -192,7 +192,9 @@ function enableGhostery(ses) {
 
 /**
  * Prefer Ghostery when ready. Legacy attach only as fallback — no double onBeforeRequest.
- * Legacy getCosmeticCss / getPageScript remain for YouTube + custom cosmetic inject.
+ * Cosmetics (one path): Ghostery → adblocker-electron-preload on the session; legacy →
+ * webview-preload style inject via getCosmeticCss. Renderer must not insertCSS cosmetic rules.
+ * getPageScript stays legacy-only (YouTube helpers).
  */
 function attachToSession(ses) {
   attached.add(ses);
@@ -222,7 +224,10 @@ module.exports = {
   attachToSession,
   setConfig,
   getStatus,
-  getCosmeticCss: (...a) => legacy.getCosmeticCss(...a),
+  getCosmeticCss(...a) {
+    if (blocker) return '';
+    return legacy.getCosmeticCss(...a);
+  },
   getPageScript: (...a) => legacy.getPageScript(...a),
   shouldBlock: (...a) => legacy.shouldBlock(...a),
   setBlockedListener: (...a) => legacy.setBlockedListener(...a),

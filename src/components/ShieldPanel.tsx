@@ -9,6 +9,7 @@ type Props = {
   blockedToday: number;
   protectionOn: boolean;
   onToggleProtection: (on: boolean) => void;
+  onDisableOnThisPage: () => void;
   onForget: () => void;
 };
 
@@ -19,6 +20,7 @@ export function ShieldPanel({
   blockedToday,
   protectionOn,
   onToggleProtection,
+  onDisableOnThisPage,
   onForget,
 }: Props) {
   const [blocked, setBlocked] = useState<{ host: string; url: string }[]>([]);
@@ -74,6 +76,12 @@ export function ShieldPanel({
           ? 'Coś nie działa? Wyłącz ochronę dla tej strony — zapamiętamy wyjątek per domena.'
           : 'Ochrona wyłączona dla tej domeny (wyjątek zapisany).'}
       </p>
+
+      {protectionOn && (
+        <button type="button" className="sbtn primary shield-disable-site" onClick={onDisableOnThisPage}>
+          Wyłącz na tej stronie
+        </button>
+      )}
 
       <button type="button" className="sbtn ghost shield-forget" onClick={onForget}>
         <Trash2 size={14} strokeWidth={1.75} /> Zapomnij tę stronę

@@ -554,6 +554,7 @@ function setConfig(next) {
   return getStatus();
 }
 
+/** Injected once per document from electron/webview-preload.cjs (not renderer insertCSS). */
 function getCosmeticCss() {
   if (!config.enabled || !config.cosmetic) return '';
   return COSMETIC_CSS;
