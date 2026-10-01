@@ -707,6 +707,7 @@ export function App() {
   const [permRemember, setPermRemember] = useState(true);
   const [crashOffer, setCrashOffer] = useState(false);
   const [tabMenu, setTabMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
+  const [newTabMenu, setNewTabMenu] = useState<{ x: number; y: number } | null>(null);
   const [omniMenu, setOmniMenu] = useState<{ x: number; y: number } | null>(null);
   const [sidebarMenu, setSidebarMenu] = useState<{ x: number; y: number } | null>(null);
   const [sidebarAutoOpen, setSidebarAutoOpen] = useState(false);
@@ -1769,6 +1770,10 @@ export function App() {
               setTabMenu(null);
               return true;
             }
+            if (newTabMenu) {
+              setNewTabMenu(null);
+              return true;
+            }
             if (omniMenu) {
               setOmniMenu(null);
               return true;
@@ -2271,17 +2276,32 @@ export function App() {
               ))}
             </AnimatePresence>
           </LayoutGroup>
-          <button type="button" className="tab-add" title="Nowa karta (Ctrl+T)" onClick={() => newTab()}>
-            <Plus size={15} strokeWidth={1.8} />
-          </button>
           <button
             type="button"
-            className="tab-add tor-add"
-            title="Nowa karta Tor (Ctrl+Shift+N)"
-            onClick={() => void openTorTab()}
-            disabled={torBusy}
+            className="tab-add"
+            title="Nowa karta (Ctrl+T) · PPM / przytrzymaj: Tor"
+            onClick={() => newTab()}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setNewTabMenu({ x: e.clientX, y: e.clientY });
+            }}
+            onPointerDown={(e) => {
+              if (e.button !== 0) return;
+              const target = e.currentTarget;
+              const timer = window.setTimeout(() => {
+                const r = target.getBoundingClientRect();
+                setNewTabMenu({ x: r.left, y: r.bottom + 4 });
+              }, 450);
+              const clear = () => {
+                window.clearTimeout(timer);
+                target.removeEventListener('pointerup', clear);
+                target.removeEventListener('pointerleave', clear);
+              };
+              target.addEventListener('pointerup', clear);
+              target.addEventListener('pointerleave', clear);
+            }}
           >
-            <span className="tab-onion">◉</span>
+            <Plus size={15} strokeWidth={1.8} />
           </button>
         </div>
 
@@ -2788,6 +2808,53 @@ export function App() {
               </div>
             </div>
           )}
+          {newTabMenu && (
+            <div
+              className="tab-ctx-backdrop"
+              onMouseDown={() => setNewTabMenu(null)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setNewTabMenu(null);
+              }}
+            >
+              <div
+                className="tab-ctx-menu"
+                style={{ left: newTabMenu.x, top: newTabMenu.y }}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    newTab();
+                    setNewTabMenu(null);
+                  }}
+                >
+                  Nowa karta
+                  <kbd>Ctrl+T</kbd>
+                </button>
+                <button
+                  type="button"
+                  disabled={torBusy}
+                  onClick={() => {
+                    setNewTabMenu(null);
+                    void openTorTab();
+                  }}
+                >
+                  Nowa karta Tor
+                  <kbd>Shift+Alt+N</kbd>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewTabMenu(null);
+                    void window.shell?.newWindow?.({ boot: 'tor' });
+                  }}
+                >
+                  Nowe okno Tor
+                </button>
+              </div>
+            </div>
+          )}
           {tabMenu && (
             <div
               className="tab-ctx-backdrop"
@@ -2847,6 +2914,17 @@ export function App() {
                         }}
                       >
                         {tab?.muted ? 'Włącz dźwięk karty' : 'Wycisz kartę'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={tor || !tab?.url || tab.url.startsWith('about:')}
+                        onClick={() => {
+                          const u = tab?.url;
+                          setTabMenu(null);
+                          if (u) void openTorTab(u);
+                        }}
+                      >
+                        Otwórz w oknie Tor
                       </button>
                       <hr />
                       <button
