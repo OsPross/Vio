@@ -2808,7 +2808,6 @@ export function App() {
               {!activeIsTor ? (
                 <>
                   {/* Custom element from electron-chrome-extensions (injectBrowserAction in preload) */}
-                  {/* eslint-disable-next-line react/no-unknown-property */}
                   <browser-action-list
                     className="ext-browser-actions"
                     partition={
