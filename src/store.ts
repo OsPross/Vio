@@ -41,7 +41,9 @@ export type ClosedTab = {
 
 export type StartupMode = 'session' | 'newtab' | 'pages';
 
-export type Bang = { key: string; label: string; url: string };
+export type { Bang } from './lib/bangs';
+export { DEFAULT_BANGS, migrateBangsToDdg, resolveBang } from './lib/bangs';
+import { DEFAULT_BANGS, migrateBangsToDdg, resolveBang, type Bang } from './lib/bangs';
 export type Shortcut = { id: string; label: string; url: string };
 export type Bookmark = { id: string; title: string; url: string; folderId?: string; createdAt: number };
 export type BookmarkFolder = { id: string; title: string; parentId?: string };
@@ -560,18 +562,6 @@ function toClosedTab(tab: Tab, index: number): ClosedTab | null {
     closedAt: Date.now(),
   };
 }
-
-export const DEFAULT_BANGS: Bang[] = [
-  { key: 'yt', label: 'YouTube', url: 'https://www.youtube.com/results?search_query=%s' },
-  { key: 'w', label: 'Wikipedia', url: 'https://pl.wikipedia.org/wiki/Specjalna:Szukaj?search=%s' },
-  { key: 'gh', label: 'GitHub', url: 'https://github.com/search?q=%s' },
-  { key: 'r', label: 'Reddit', url: 'https://www.reddit.com/search/?q=%s' },
-  { key: 'maps', label: 'Mapy', url: 'https://www.google.com/maps/search/%s' },
-  { key: 'g', label: 'Gmail', url: 'https://mail.google.com/mail/u/0/#search/%s' },
-  { key: 'sp', label: 'Startpage', url: 'https://www.startpage.com/sp/search?query=%s' },
-  { key: 'ahmia', label: 'Ahmia', url: 'https://ahmia.fi/search/?q=%s' },
-  { key: 'onion', label: 'OnionLand', url: 'https://onionlandsearchengine.com/search?q=%s' },
-];
 
 export const DEFAULT_SHORTCUTS: Shortcut[] = [
   { id: 'gmail', label: 'Gmail', url: 'https://mail.google.com/' },
@@ -1158,24 +1148,15 @@ export function searchHome(settings: Settings) {
   }
 }
 
-/** Resolve bang `!yt query` or plain search / URL. */
-export function resolveBang(raw: string, bangs: Bang[], _settings: Settings): string | null {
-  const t = raw.trim();
-  const m = t.match(/^!([a-z0-9]+)(?:\s+(.*))?$/i);
-  if (!m) return null;
-  const bang = bangs.find((b) => b.key.toLowerCase() === m[1].toLowerCase());
-  if (!bang) return null;
-  const rest = (m[2] ?? '').trim();
-  if (!rest && bang.url.includes('%s')) {
-    return bang.url.replace('%s', '').replace(/\?q=$/, '') || bang.url.split('%s')[0];
-  }
-  return bang.url.replace('%s', encodeURIComponent(rest));
+/** Resolve bang — see `lib/bangs.ts`. Kept as thin wrapper for call sites with settings. */
+export function resolveBangWithSettings(raw: string, bangs: Bang[], _settings: Settings): string | null {
+  return resolveBang(raw, bangs);
 }
 
 export function normalizeInput(raw: string, settings: Settings, bangs: Bang[] = DEFAULT_BANGS) {
   const t = raw.trim();
   if (!t) return settings.homepage === HOME_URL ? HOME_URL : settings.homepage;
-  const bang = resolveBang(t, bangs, settings);
+  const bang = resolveBang(t, bangs);
   if (bang) return bang;
   if (/^https?:\/\//i.test(t)) return t;
   if (/^about:/i.test(t)) return t;
@@ -1904,7 +1885,7 @@ export const useStore = create<State>()(
           ...current,
           ...p,
           settings: mergedSettings,
-          bangs: p.bangs?.length ? p.bangs : current.bangs,
+          bangs: migrateBangsToDdg(p.bangs?.length ? p.bangs : current.bangs),
           shortcuts: p.shortcuts?.length ? p.shortcuts : current.shortcuts,
           sideApps: p.sideApps?.length ? p.sideApps : current.sideApps,
           // history lives in electron/history.cjs — keep ephemeral for one-shot migrate
