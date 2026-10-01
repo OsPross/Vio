@@ -1847,11 +1847,34 @@ export const useStore = create<State>()(
         } catch {
           /* */
         }
-        // Round 4: spellcheck is a user toggle, not an off-by-default perf cut
+        // Round 4+: wyszukiwarka / sugestie silnika — włączone (strict wcześniej je gasił)
+        try {
+          if (
+            typeof localStorage !== 'undefined' &&
+            !localStorage.getItem('djxxr-search-suggest-on-v1')
+          ) {
+            mergedSettings.privacySearchSuggest = true;
+            mergedSettings.privacyAllowAppNetwork = true;
+            mergedSettings.suggestHistory = true;
+            mergedSettings.newTabIsSearch = true;
+            localStorage.setItem('djxxr-search-suggest-on-v1', '1');
+          }
+        } catch {
+          /* */
+        }
+        if (typeof mergedSettings.privacySearchSuggest !== 'boolean') {
+          mergedSettings.privacySearchSuggest = true;
+        }
+        if (typeof mergedSettings.privacyAllowAppNetwork !== 'boolean') {
+          mergedSettings.privacyAllowAppNetwork = true;
+        }
+        if (typeof mergedSettings.newTabIsSearch !== 'boolean') {
+          mergedSettings.newTabIsSearch = true;
+        }
+        // One-shot: old DEFAULT was false; flip to true once unless user already on
         if (typeof mergedSettings.perfSpellcheck !== 'boolean') {
           mergedSettings.perfSpellcheck = true;
         }
-        // One-shot: old DEFAULT was false; flip to true once unless user already on
         try {
           if (
             typeof localStorage !== 'undefined' &&
