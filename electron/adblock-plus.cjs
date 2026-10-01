@@ -249,6 +249,16 @@ function cacheMetaPath() {
   return path.join(cacheDir(), 'meta.json');
 }
 
+/** True when filter-list meta is missing or older than 24h. */
+function listsNeedRefresh() {
+  try {
+    const meta = JSON.parse(fs.readFileSync(cacheMetaPath(), 'utf8'));
+    return Date.now() - (Number(meta.at) || 0) >= 24 * 60 * 60 * 1000;
+  } catch {
+    return true;
+  }
+}
+
 function engineCachePath() {
   return path.join(cacheDir(), 'engine.bin');
 }
@@ -556,6 +566,10 @@ function syncBlockingOnSessions() {
 
 async function init(opts = {}) {
   if (typeof opts.updateLists === 'boolean') updateLists = opts.updateLists;
+  // Warm engine.bin already resident — do not re-parse lists unless forced or stale.
+  if (blocker && !opts.force && !listsNeedRefresh()) {
+    return { ok: true, engine: 'ghostery', lists: LIST_URLS.length, fromCache: true, skipped: true };
+  }
   if (initPromise && !opts.force) {
     return initPromise;
   }
@@ -731,6 +745,7 @@ refreshCustom();
 module.exports = {
   init,
   loadCachedEngineSync,
+  listsNeedRefresh,
   whenReady,
   isReady,
   installBootGate,

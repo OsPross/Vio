@@ -769,9 +769,19 @@ app.whenReady().then(async () => {
     void ensureEngine.then((r) => {
       console.log('[adblock+] ensureEngine', r, 'ms', Date.now() - heavyStart);
       if (adblock.isReady()) {
-        // background refresh of filter lists even when cache hit
+        // Avoid double-resident engines: only re-parse lists when meta is stale.
+        // Warm engine.bin already covers first guest request; refresh later if needed.
         if (cacheLoad && cacheLoad.ok) {
-          void adblock.init({ updateLists: true, force: true }).then((rr) => console.log('[adblock+] refresh', rr));
+          if (adblock.listsNeedRefresh()) {
+            setTimeout(() => {
+              void adblock
+                .init({ updateLists: true, force: true })
+                .then((rr) => console.log('[adblock+] deferred refresh', rr));
+            }, 60_000);
+            console.log('[adblock+] scheduled list refresh in 60s (meta stale)');
+          } else {
+            console.log('[adblock+] skip list rebuild (engine.bin + lists fresh)');
+          }
         }
       } else {
         void adblock.init({ updateLists: true }).then((rr) => console.log('[adblock+]', rr));
@@ -799,6 +809,13 @@ app.whenReady().then(async () => {
       void bench.run(() => mainWindow);
     } catch (err) {
       console.error('[perf-bench] failed to start', err);
+    }
+  } else if (!app.isPackaged && process.env.PERF_PROBE_HEAP === '1') {
+    try {
+      const probe = require('../scripts/probe-main-heap.cjs');
+      void probe.run(() => mainWindow);
+    } catch (err) {
+      console.error('[probe-heap] failed to start', err);
     }
   } else if (!app.isPackaged && process.env.PERF_VERIFY_TABS === '1') {
     try {
