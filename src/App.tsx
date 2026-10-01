@@ -24,7 +24,7 @@ import { usePageActions } from './hooks/usePageActions';
 
 /** Heavy routes / dialogs — not needed for first paint */
 const SettingsPage = lazy(() =>
-  import('./components/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+  import('./components/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 );
 
 function LazyFallback({ label }: { label?: string }) {

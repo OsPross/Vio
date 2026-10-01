@@ -23,7 +23,10 @@ const sec = fs.readFileSync(path.join(root, 'electron', 'security.cjs'), 'utf8')
 const preload = fs.readFileSync(path.join(root, 'electron', 'preload.cjs'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'src', 'App.tsx'), 'utf8');
 const store = fs.readFileSync(path.join(root, 'src', 'store.ts'), 'utf8');
-const settings = fs.readFileSync(path.join(root, 'src', 'components', 'SettingsPage.tsx'), 'utf8');
+const settings = fs.readFileSync(
+  path.join(root, 'src', 'components', 'settings', 'sections', 'SearchSection.tsx'),
+  'utf8',
+);
 
 check('tor.cjs exists with start/stop', tor.includes('async function start') && tor.includes('async function stop'));
 check('ephemeral partition tor-uuid', tor.includes('tor-${crypto.randomUUID()}') || tor.includes('tor-${'));

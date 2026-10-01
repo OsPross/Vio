@@ -26,7 +26,10 @@ const fav = fs.readFileSync(path.join(root, 'electron', 'favicon-cache.cjs'), 'u
 const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
 const preload = fs.readFileSync(path.join(root, 'electron', 'preload.cjs'), 'utf8');
 const store = fs.readFileSync(path.join(root, 'src', 'store.ts'), 'utf8');
-const settings = fs.readFileSync(path.join(root, 'src', 'components', 'SettingsPage.tsx'), 'utf8');
+const settings = fs.readFileSync(
+  path.join(root, 'src', 'components', 'settings', 'sections', 'SearchSection.tsx'),
+  'utf8',
+);
 const adblockPlus = fs.readFileSync(path.join(root, 'electron', 'adblock-plus.cjs'), 'utf8');
 
 console.log('\n=== 1. Favicony Tor ===');
