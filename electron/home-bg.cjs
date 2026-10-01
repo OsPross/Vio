@@ -51,23 +51,34 @@ function registerPrivilegedScheme() {
 }
 
 function registerProtocol() {
-  if (protocol.isProtocolHandled?.(SCHEME)) return;
-  protocol.handle(SCHEME, (request) => {
+  const attach = () => {
     try {
-      const u = new URL(request.url);
-      const name = path.basename(decodeURIComponent(u.pathname || ''));
-      if (!name || name === '.' || name === '..') {
-        return new Response('Not found', { status: 404 });
+      if (typeof protocol.isProtocolHandled === 'function' && protocol.isProtocolHandled(SCHEME)) {
+        return;
       }
-      const filePath = path.join(bgDir(), name);
-      if (!fs.existsSync(filePath)) {
-        return new Response('Not found', { status: 404 });
-      }
-      return net.fetch(pathToFileURL(filePath).href);
-    } catch {
-      return new Response('Bad request', { status: 400 });
+      protocol.handle(SCHEME, (request) => {
+        try {
+          const u = new URL(request.url);
+          const name = path.basename(decodeURIComponent(u.pathname || ''));
+          if (!name || name === '.' || name === '..') {
+            return new Response('Not found', { status: 404 });
+          }
+          const filePath = path.join(bgDir(), name);
+          if (!fs.existsSync(filePath)) {
+            return new Response('Not found', { status: 404 });
+          }
+          return net.fetch(pathToFileURL(filePath).href);
+        } catch {
+          return new Response('Bad request', { status: 400 });
+        }
+      });
+    } catch (err) {
+      console.warn('[home-bg] protocol', err && err.message);
     }
-  });
+  };
+  // protocol.handle requires app ready — register-misc runs at require-time before whenReady.
+  if (app.isReady()) attach();
+  else void app.whenReady().then(attach);
 }
 
 async function pickAndCopy() {
