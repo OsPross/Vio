@@ -31,7 +31,7 @@ const {
   normalizeHomeWidgets,
   sortTabsPinnedFirst,
   useStore,
-} = await import('../src/store.ts');
+} = await import('../src/store/index.ts');
 
 const {
   applyOneShotLocalFlags,

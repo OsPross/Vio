@@ -9,7 +9,7 @@ import {
   resolveTorHomeUrl,
   titleForInternalUrl,
 } from '../src/lib/tabNavigate.ts';
-import { HOME_URL, HISTORY_URL, TOR_HOME_URL } from '../src/store.ts';
+import { HOME_URL, HISTORY_URL, TOR_HOME_URL } from '../src/store/index.ts';
 
 assert.equal(titleForInternalUrl(HISTORY_URL, false), 'Historia');
 assert.equal(titleForInternalUrl(HOME_URL, true), 'Tor');

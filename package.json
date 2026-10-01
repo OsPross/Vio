@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "node test/home-widgets.test.mjs && node test/notes.test.mjs && node --experimental-strip-types test/url-display.test.mjs && node --experimental-strip-types test/bangs.test.mjs && node --experimental-strip-types test/omnibox-ghost.test.mjs && npx tsx test/store.test.mjs && npx tsx test/shortcuts-registry.test.mjs && node test/popup-policy.test.cjs && node test/partitions.test.cjs && node test/ua-chrome.test.cjs && npx tsx test/tab-navigate.test.mjs",
+    "test": "node test/home-widgets.test.mjs && node test/notes.test.mjs && node --experimental-strip-types test/url-display.test.mjs && node --experimental-strip-types test/bangs.test.mjs && node --experimental-strip-types test/omnibox-ghost.test.mjs && npx tsx test/store.test.mjs && npx tsx test/store-persist-hydrate.test.mjs && npx tsx test/shortcuts-registry.test.mjs && node test/popup-policy.test.cjs && node test/partitions.test.cjs && node test/ua-chrome.test.cjs && npx tsx test/tab-navigate.test.mjs",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.md\" \"docs/**/*.md\"",
