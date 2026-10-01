@@ -3,30 +3,20 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { app } = require('electron');
+const uaChrome = require('./ua-chrome.cjs');
 
-/** Sync CHROME_UA to running Chromium and emit Client Hints like desktop Chrome. */
 function chromeVersion() {
-  try {
-    return String(process.versions.chrome || '134.0.0.0').split('.')[0] || '134';
-  } catch {
-    return '134';
-  }
+  return uaChrome.chromeMajor();
 }
 
 function buildChromeUa() {
-  const major = chromeVersion();
-  return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36`;
+  return uaChrome.buildChromeUa();
 }
 
 let CHROME_UA = buildChromeUa();
 
 function clientHintHeaders() {
-  const major = chromeVersion();
-  return {
-    'sec-ch-ua': `"Google Chrome";v="${major}", "Chromium";v="${major}", "Not-A.Brand";v="24"`,
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"Windows"',
-  };
+  return uaChrome.clientHintHeaders();
 }
 const TRACKING_PARAMS = new Set([
   'utm_source','utm_medium','utm_campaign','utm_term','utm_content','utm_id','utm_name',

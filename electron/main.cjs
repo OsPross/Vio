@@ -22,11 +22,13 @@ const shortcutsGuest = require('./shortcuts-guest.cjs');
 const pip = require('./pip.cjs');
 const bookmarksImport = require('./bookmarks-import.cjs');
 const extensions = require('./extensions.cjs');
+const uaChrome = require('./ua-chrome.cjs');
 const spellcheck = require('./spellcheck.cjs');
 const { webContents: electronWebContents } = require('electron');
 
 /** Boot switches MUST run before ready */
 privacy.applyBootSwitches();
+uaChrome.applyBootFallback();
 const boot = perf.applyBootSwitches();
 history.init();
 notes.init();
@@ -149,6 +151,9 @@ function wireGuestNavigation(guestWc) {
         guestWc.session === session.fromPartition('persist:private'));
   } catch {
     /* */
+  }
+  if (!torMode) {
+    void uaChrome.applyToWebContents(guestWc, { tor: false });
   }
   security.attachNavigationGuards(guestWc, {
     askExternal: torMode ? null : askExternalProtocol,
