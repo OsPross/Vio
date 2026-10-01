@@ -23,6 +23,7 @@ const pip = require('./pip.cjs');
 const bookmarksImport = require('./bookmarks-import.cjs');
 const extensions = require('./extensions.cjs');
 const uaChrome = require('./ua-chrome.cjs');
+const mouseNav = require('./mouse-nav.cjs');
 const spellcheck = require('./spellcheck.cjs');
 const { webContents: electronWebContents } = require('electron');
 
@@ -340,6 +341,16 @@ function wireGuestNavigation(guestWc) {
   });
 
   wireGuestChromeShortcuts(guestWc);
+  try {
+    const host = require('electron').BrowserWindow.fromWebContents(guestWc) ||
+      (typeof guestWc.getOwnerBrowserWindow === 'function' ? guestWc.getOwnerBrowserWindow() : null);
+    mouseNav.attachSideButtons(guestWc, {
+      host: host && !host.isDestroyed() ? host : undefined,
+      label: `guest:${guestWc.id}`,
+    });
+  } catch (err) {
+    mouseNav.log('attach guest fail', err && err.message);
+  }
 }
 
 function wireGuestChromeShortcuts(guestWc) {
@@ -480,20 +491,9 @@ function createWindow(optsExtra = {}) {
     mainWindow = bw;
   }
 
-  // Windows mouse X1/X2 (browser-backward / browser-forward) — single path to renderer
-  bw.on('app-command', (e, cmd) => {
-    if (cmd === 'browser-backward' || cmd === 'browser-forward') {
-      e.preventDefault();
-      try {
-        bw.webContents.send('shell:browser-nav', {
-          dir: cmd === 'browser-backward' ? 'back' : 'forward',
-          source: 'app-command',
-        });
-      } catch {
-        /* */
-      }
-    }
-  });
+  // X1/X2: before-mouse-event is primary (app-command does not fire on this stack).
+  mouseNav.attachAppCommandFallback(bw);
+  mouseNav.attachSideButtons(bw.webContents, { host: bw, label: `host:${bw.id}` });
 
   if (!secondary && win.isMaximized) {
     try {
@@ -549,6 +549,7 @@ function createWindow(optsExtra = {}) {
         const host = BrowserWindow.fromWebContents(bw.webContents) || bw;
         extensions.trackGuestTab(guestContents, host, { tor: false });
       }
+      mouseNav.attachSideButtons(guestContents, { host: bw, label: `guest:${guestContents.id}` });
     } catch (err) {
       console.warn('[ext] trackGuestTab', err);
     }
@@ -697,7 +698,14 @@ app.whenReady().then(async () => {
 
   createWindow();
   // Smoke hooks: unpackaged (dev) only — never in built/installed app
-  if (!app.isPackaged && process.env.SMOKE_ROUND7 === '1') {
+  if (!app.isPackaged && process.env.SMOKE_MOUSE === '1') {
+    try {
+      const smoke = require('../scripts/smoke-mouse-xbutton.cjs');
+      void smoke.run(() => mainWindow);
+    } catch (err) {
+      console.error('[smoke-mouse] failed to start', err);
+    }
+  } else if (!app.isPackaged && process.env.SMOKE_ROUND7 === '1') {
     try {
       const smoke = require('../scripts/smoke-round7-live.cjs');
       void smoke.run(() => mainWindow);

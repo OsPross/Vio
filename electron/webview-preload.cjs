@@ -135,25 +135,60 @@ function isEditableTarget(el) {
   return false;
 }
 
-// Mouse X1/X2: on Windows, BrowserWindow 'app-command' is the sole source (avoids double-back).
-// Other platforms keep this fallback.
-if (process.platform !== 'win32') {
-  window.addEventListener(
-    'mouseup',
-    (e) => {
-      if (e.button === 3 || e.button === 4) {
-        try {
-          e.preventDefault();
-          e.stopPropagation();
-        } catch {
-          /* */
-        }
-        ipcRenderer.sendToHost('djxxr-mouse-nav', { dir: e.button === 3 ? 'back' : 'forward' });
-      }
-    },
-    true,
-  );
+const mouseDebug =
+  typeof process !== 'undefined' &&
+  (process.env.DJXXR_DEBUG_MOUSE === '1' || process.env.DJXXR_DEBUG_MOUSE === 'true');
+
+function logMouse(kind, e) {
+  if (!mouseDebug) return;
+  try {
+    console.log('[mouse-nav:guest]', kind, {
+      button: e.button,
+      buttons: e.buttons,
+      type: e.type,
+      target: (e.target && e.target.tagName) || null,
+    });
+  } catch {
+    /* */
+  }
 }
+
+function emitSideButtonNav(e) {
+  if (e.button !== 3 && e.button !== 4) return false;
+  logMouse('side-button', e);
+  try {
+    e.preventDefault();
+    e.stopPropagation();
+  } catch {
+    /* */
+  }
+  ipcRenderer.sendToHost('djxxr-mouse-nav', {
+    dir: e.button === 3 ? 'back' : 'forward',
+    source: 'guest-mouseup',
+  });
+  return true;
+}
+
+// Primary path for X1/X2 over webview (Windows included — app-command alone is unreliable
+// when focus is inside <webview>). preventDefault stops page-level handlers from double-nav.
+window.addEventListener('mousedown', (e) => logMouse('mousedown', e), true);
+window.addEventListener(
+  'mouseup',
+  (e) => {
+    logMouse('mouseup', e);
+    emitSideButtonNav(e);
+  },
+  true,
+);
+window.addEventListener('auxclick', (e) => logMouse('auxclick', e), true);
+window.addEventListener(
+  'pointerdown',
+  (e) => {
+    logMouse('pointerdown', e);
+    if (e.button === 3 || e.button === 4) emitSideButtonNav(e);
+  },
+  true,
+);
 
 // Chrome: Backspace must NOT navigate history
 window.addEventListener(

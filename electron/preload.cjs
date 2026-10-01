@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('shell', {
   platform: () => ipcRenderer.invoke('shell:platform'),
+  debugMouse: process.env.DJXXR_DEBUG_MOUSE === '1' || process.env.DJXXR_DEBUG_MOUSE === 'true',
   appInfo: () => ipcRenderer.invoke('shell:app-info'),
   openUserData: () => ipcRenderer.invoke('shell:open-user-data'),
   openLogsFolder: () => ipcRenderer.invoke('shell:open-logs-folder'),

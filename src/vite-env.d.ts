@@ -26,6 +26,7 @@ declare global {
   interface Window {
     shell?: {
       platform: () => Promise<string>;
+      debugMouse?: boolean;
       appInfo: () => Promise<{
         appVersion: string;
         electron: string;

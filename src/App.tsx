@@ -248,7 +248,7 @@ function TabWebview({
   darkPageScrollbars: boolean;
   appTheme: ThemeId;
   onMediaState?: (state: { hasVideo: boolean; playing: boolean }) => void;
-  onBrowserNav?: (dir: 'back' | 'forward') => void;
+  onBrowserNav?: (dir: 'back' | 'forward', source?: string) => void;
 }) {
   const ref = useRef<WebviewEl | null>(null);
   const scrollbarCssKeyRef = useRef<string | null>(null);
@@ -502,8 +502,10 @@ function TabWebview({
         return;
       }
       if (e.channel === 'djxxr-mouse-nav') {
-        const msg = e.args?.[0] as { dir?: string } | undefined;
-        if (msg?.dir === 'back' || msg?.dir === 'forward') onBrowserNav?.(msg.dir);
+        const msg = e.args?.[0] as { dir?: string; source?: string } | undefined;
+        if (msg?.dir === 'back' || msg?.dir === 'forward') {
+          onBrowserNav?.(msg.dir, msg.source || 'guest-mouseup');
+        }
         return;
       }
       if (tab.mode === 'tor') return; // no password IPC in Tor
@@ -1569,12 +1571,20 @@ export function App() {
     if (!url.startsWith('about:')) setDraft(url);
   }, []);
 
-  /** Debounced history nav — merges app-command + mouse X1/X2 so we don't go back twice */
+  /** Deduped history nav — mouseup (primary) + app-command (fallback) share one gate */
   const browserNavAt = useRef(0);
-  const doBrowserNav = useCallback((dir: 'back' | 'forward') => {
+  const doBrowserNav = useCallback((dir: 'back' | 'forward', source = 'unknown') => {
     const now = Date.now();
-    if (now - browserNavAt.current < 120) return;
+    if (now - browserNavAt.current < 180) {
+      if (typeof window !== 'undefined' && (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE) {
+        console.log('[mouse-nav:ui] dedup-skip', { dir, source });
+      }
+      return;
+    }
     browserNavAt.current = now;
+    if (typeof window !== 'undefined' && (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE) {
+      console.log('[mouse-nav:ui] nav', { dir, source });
+    }
     const st = useStore.getState();
     if (st.view === 'settings') {
       if (dir === 'back') st.setView('browser');
@@ -1582,7 +1592,7 @@ export function App() {
     }
     const tab = st.tabs.find((t) => t.id === st.activeId);
     if (!tab) return;
-    // Internal pages without webview: no-op (or settings already handled)
+    // Internal pages without webview: no history stack — event still consumed (no double fire)
     if (tab.url === HOME_URL || tab.url === TOR_HOME_URL || tab.url.startsWith('about:')) {
       return;
     }
@@ -1597,29 +1607,65 @@ export function App() {
 
   useEffect(() => {
     const off = window.shell?.onBrowserNav?.((payload) => {
-      if (payload?.dir === 'back' || payload?.dir === 'forward') doBrowserNav(payload.dir);
+      if (payload?.dir === 'back' || payload?.dir === 'forward') {
+        doBrowserNav(payload.dir, payload.source || 'app-command');
+      }
     });
     return () => off?.();
   }, [doBrowserNav]);
 
-  // Chrome UI fallback (settings / home) for mouse X1/X2 when focus is not in webview.
-  // On Windows app-command is the sole path — skip mouseup to avoid double navigation.
+  // Chrome UI (tabs / omnibox / about:*): mouseup X1/X2 — primary on all platforms.
+  // app-command remains fallback from main (deduped above).
   useEffect(() => {
-    const onUp = (e: MouseEvent) => {
+    const debug =
+      typeof window !== 'undefined' &&
+      (Boolean(window.shell?.debugMouse) ||
+        /[?&]djxxr_debug_mouse=1/i.test(location.search) ||
+        (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE);
+    if (debug) (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE = true;
+
+    const logUi = (kind: string, e: MouseEvent | PointerEvent) => {
+      if (!(window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE) return;
+      console.log('[mouse-nav:ui]', kind, {
+        button: e.button,
+        type: e.type,
+        target: (e.target as HTMLElement | null)?.tagName || null,
+      });
+    };
+
+    const onSide = (e: MouseEvent | PointerEvent) => {
       if (e.button !== 3 && e.button !== 4) return;
+      logUi('side', e);
       e.preventDefault();
-      doBrowserNav(e.button === 3 ? 'back' : 'forward');
+      doBrowserNav(e.button === 3 ? 'back' : 'forward', 'chrome-mouseup');
+    };
+
+    const onUp = (e: MouseEvent) => {
+      logUi('mouseup', e);
+      onSide(e);
+    };
+    const onDown = (e: MouseEvent) => logUi('mousedown', e);
+    const onAux = (e: MouseEvent) => logUi('auxclick', e);
+    const onPtr = (e: PointerEvent) => {
+      logUi('pointerdown', e);
+      onSide(e);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Backspace' || e.altKey || e.ctrlKey || e.metaKey) return;
       if (isEditableDomTarget(e.target)) return;
       e.preventDefault();
     };
-    const isWin = typeof navigator !== 'undefined' && /Win/i.test(navigator.platform || '');
-    if (!isWin) window.addEventListener('mouseup', onUp, true);
+
+    window.addEventListener('mouseup', onUp, true);
+    window.addEventListener('mousedown', onDown, true);
+    window.addEventListener('auxclick', onAux, true);
+    window.addEventListener('pointerdown', onPtr, true);
     window.addEventListener('keydown', onKey, true);
     return () => {
-      if (!isWin) window.removeEventListener('mouseup', onUp, true);
+      window.removeEventListener('mouseup', onUp, true);
+      window.removeEventListener('mousedown', onDown, true);
+      window.removeEventListener('auxclick', onAux, true);
+      window.removeEventListener('pointerdown', onPtr, true);
       window.removeEventListener('keydown', onKey, true);
     };
   }, [doBrowserNav]);
@@ -3698,7 +3744,7 @@ export function App() {
                   tabMediaRef.current[t.id] = st;
                   if (t.id === activeId) setPageHasVideo(Boolean(st.hasVideo || st.playing));
                 }}
-                onBrowserNav={(dir) => doBrowserNav(dir)}
+                onBrowserNav={(dir, source) => doBrowserNav(dir, source)}
                 onNav={(b, f, u, title) => onNav(b, f, u, title)}
                 onSaveOffer={setSaveOffer}
                 onGuestMeta={onGuestMeta}
