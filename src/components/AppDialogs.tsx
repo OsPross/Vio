@@ -58,8 +58,15 @@ export function AboutDialog({ info, onClose }: AboutProps) {
         aria-label="O djxxr"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2>djxxr</h2>
-        <p className="app-dialog-sub">Prywatna przeglądarka na Electronie</p>
+        <div className="about-hero" style={{ marginBottom: 12 }}>
+          <div className="about-logo" aria-hidden>
+            <img src="./vio-256.png" alt="" width={48} height={48} />
+          </div>
+          <div>
+            <h2>djxxr</h2>
+            <p className="app-dialog-sub">Prywatna przeglądarka na Electronie</p>
+          </div>
+        </div>
         <dl className="about-dl">
           <div>
             <dt>Wersja aplikacji</dt>

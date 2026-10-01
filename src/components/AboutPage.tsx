@@ -55,7 +55,7 @@ export function AboutPage() {
       <div className="about-page">
         <div className="about-hero">
           <div className="about-logo" aria-hidden>
-            dx
+            <img src="./vio-256.png" alt="" width={48} height={48} />
           </div>
           <div>
             <h2>djxxr</h2>

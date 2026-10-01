@@ -64,6 +64,8 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "build/icon.ico",
+      "build/vio-256.png",
       "scripts/perf-bench.cjs",
       "package.json"
     ],
@@ -76,6 +78,7 @@
       }
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis"
       ],
@@ -83,7 +86,10 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
     }
   }
 }
