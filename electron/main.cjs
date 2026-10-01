@@ -473,6 +473,12 @@ function createWindow(optsExtra = {}) {
     opts.y = win.y;
   }
   const bw = new BrowserWindow(opts);
+  try {
+    require('./window-events.cjs').patchWindow(bw);
+    require('./webcontents-events.cjs').patchWebContents(bw.webContents);
+  } catch (err) {
+    console.warn('[window-events] patch', err && err.message);
+  }
   bw.once('ready-to-show', () => {
     if (bw.isDestroyed()) return;
     global.__DJXXR_PERF_WINDOW_VISIBLE_AT = Date.now();
@@ -686,7 +692,10 @@ app.whenReady().then(async () => {
     mainWindow?.webContents.send('shell:permission-ask', req);
   });
 
-  // Fast path: attach session hooks then show window; heavy boot deferred
+  // Fast path: deserialize engine cache (ms), attach sessions, show window.
+  // Heavy list refresh / chrome-extensions stay after show; guests gated until engine ready.
+  const cacheLoad = adblock.loadCachedEngineSync();
+  console.log('[adblock+] cache load', cacheLoad);
   adblock.attachToSession(ses);
   downloads.attachToSession(ses, { tor: false });
   downloads.setPushHandler((list) => {
@@ -720,13 +729,14 @@ app.whenReady().then(async () => {
   createWindow();
   global.__DJXXR_PERF_WINDOW_CREATED_AT = Date.now();
 
-  // Deferred: Ghostery lists, chrome-extensions, passwords, Tor autostart cleanup, session perf
+  // Deferred: list refresh, chrome-extensions, passwords — then unlock guests if needed
   setImmediate(() => {
     try {
       torDaemon.removeAutostartShortcuts();
     } catch (e) {
       console.warn('[tor] autostart migrate', e);
     }
+    const heavyStart = Date.now();
     try {
       extensions.initChromeApi({
         getMainWindow: () => mainWindow,
@@ -743,16 +753,41 @@ app.whenReady().then(async () => {
     } catch (err) {
       console.warn('[ext] initChromeApi', err);
     }
-    void adblock.init({ updateLists: true }).then((r) => {
-      console.log('[adblock+]', r);
-    });
-    void perf.applySessionPerf(ses, { cacheMb: boot.cacheMb }).then(() => {
-      spellcheck.applyToSession(ses, { tor: false });
-    });
     passwords.init({
       onLock: () => {
         mainWindow?.webContents.send('shell:passwords-locked');
       },
+    });
+    const ensureEngine = adblock.isReady()
+      ? Promise.resolve({ ok: true, fromCache: true })
+      : Promise.race([
+          adblock.init({ updateLists: true }),
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ ok: adblock.isReady(), timedOut: true }), 1500),
+          ),
+        ]);
+    void ensureEngine.then((r) => {
+      console.log('[adblock+] ensureEngine', r, 'ms', Date.now() - heavyStart);
+      if (adblock.isReady()) {
+        // background refresh of filter lists even when cache hit
+        if (cacheLoad && cacheLoad.ok) {
+          void adblock.init({ updateLists: true, force: true }).then((rr) => console.log('[adblock+] refresh', rr));
+        }
+      } else {
+        void adblock.init({ updateLists: true }).then((rr) => console.log('[adblock+]', rr));
+      }
+      try {
+        mainWindow?.webContents.send('shell:services-ready', {
+          adblock: adblock.getStatus(),
+          boot: adblock.getBootTiming(),
+          at: Date.now(),
+        });
+      } catch {
+        /* */
+      }
+    });
+    void perf.applySessionPerf(ses, { cacheMb: boot.cacheMb }).then(() => {
+      spellcheck.applyToSession(ses, { tor: false });
     });
     global.__DJXXR_PERF_HEAVY_DONE_AT = Date.now();
   });
@@ -764,6 +799,28 @@ app.whenReady().then(async () => {
       void bench.run(() => mainWindow);
     } catch (err) {
       console.error('[perf-bench] failed to start', err);
+    }
+  } else if (!app.isPackaged && process.env.PERF_VERIFY_TABS === '1') {
+    try {
+      const probe = require('../scripts/probe-perf-verify-tabs.cjs');
+      void probe.run(() => mainWindow).then((r) => {
+        if (process.env.PERF_VERIFY_QUIT === '1') {
+          setTimeout(() => app.quit(), r?.ok ? 500 : 2000);
+        }
+      });
+    } catch (err) {
+      console.error('[perf-verify-tabs] failed to start', err);
+    }
+  } else if (!app.isPackaged && process.env.PERF_VERIFY_ADBLOCK === '1') {
+    try {
+      const probe = require('../scripts/probe-perf-verify-adblock.cjs');
+      void probe.run(() => mainWindow).then((r) => {
+        if (process.env.PERF_VERIFY_QUIT === '1') {
+          setTimeout(() => app.quit(), r?.ok ? 500 : 2000);
+        }
+      });
+    } catch (err) {
+      console.error('[perf-verify-adblock] failed to start', err);
     }
   } else if (!app.isPackaged && process.env.CAPTURE_NOTES === '1') {
     try {
