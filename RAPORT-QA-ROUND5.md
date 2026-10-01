@@ -19,7 +19,7 @@ Poprzednie: `RAPORT-QA-ROUND4.md`, `docs/FULL_STATE.md`
 | `e5f72c7` | fix: submenu safe-triangle hover + keyboard + clamp |
 | `d38a792` | fix: print via guest webContents; PDF/HTML names from title |
 | `6401711` | fix: purge Partitions/private before any session, EPERM retry flag |
-| *(ten)* | test: smoke round5 + RAPORT-QA-ROUND5 |
+| `954d6e9` | test: smoke round5 + RAPORT-QA-ROUND5 |
 
 ---
 
