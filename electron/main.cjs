@@ -453,7 +453,7 @@ function createWindow(optsExtra = {}) {
       additionalArguments: [
         `--djxxr-boot=${bootMode}`,
         privatePartition ? `--djxxr-partition=${privatePartition}` : '',
-        !app.isPackaged && process.env.PERF_BENCH === '1' ? '--djxxr-perf-bench=1' : '',
+        process.env.PERF_BENCH === '1' ? '--djxxr-perf-bench=1' : '',
       ].filter(Boolean),
     },
   };
@@ -746,8 +746,8 @@ app.whenReady().then(async () => {
     global.__DJXXR_PERF_HEAVY_DONE_AT = Date.now();
   });
 
-  // Smoke hooks: unpackaged (dev) only — never in built/installed app
-  if (!app.isPackaged && process.env.PERF_BENCH === '1') {
+  // Perf bench: env-gated (safe off by default). Allowed in --dir builds for startup compare.
+  if (process.env.PERF_BENCH === '1') {
     try {
       const bench = require('../scripts/perf-bench.cjs');
       void bench.run(() => mainWindow);
