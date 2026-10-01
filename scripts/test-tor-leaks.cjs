@@ -18,14 +18,39 @@ function check(name, cond) {
   }
 }
 
-const appTsx = fs.readFileSync(path.join(root, 'src', 'App.tsx'), 'utf8');
+const appTsx = (() => {
+  function readTree(dir, exts = ['.ts', '.tsx']) {
+    if (!fs.existsSync(dir)) return '';
+    let out = '';
+    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, ent.name);
+      if (ent.isDirectory()) out += readTree(p, exts);
+      else if (exts.some((e) => ent.name.endsWith(e))) out += fs.readFileSync(p, 'utf8') + '\n';
+    }
+    return out;
+  }
+  return readTree(path.join(root, 'src'));
+})();
 const home = fs.readFileSync(path.join(root, 'src', 'components', 'HomeSearch.tsx'), 'utf8');
 const tor = fs.readFileSync(path.join(root, 'electron', 'tor.cjs'), 'utf8');
 const daemon = fs.readFileSync(path.join(root, 'electron', 'tor-daemon.cjs'), 'utf8');
 const fav = fs.readFileSync(path.join(root, 'electron', 'favicon-cache.cjs'), 'utf8');
 const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
+const ipcDir = path.join(root, 'electron', 'ipc');
+const ipcBundle = [main]
+  .concat(
+    fs.existsSync(ipcDir)
+      ? fs.readdirSync(ipcDir).filter((f) => f.endsWith('.cjs')).map((f) => fs.readFileSync(path.join(ipcDir, f), 'utf8'))
+      : [],
+  )
+  .join('\n');
 const preload = fs.readFileSync(path.join(root, 'electron', 'preload.cjs'), 'utf8');
-const store = fs.readFileSync(path.join(root, 'src', 'store.ts'), 'utf8');
+const storeDir = path.join(root, 'src', 'store');
+const store = fs
+  .readdirSync(storeDir)
+  .filter((f) => f.endsWith('.ts'))
+  .map((f) => fs.readFileSync(path.join(storeDir, f), 'utf8'))
+  .join('\n');
 const settings = fs.readFileSync(
   path.join(root, 'src', 'components', 'settings', 'sections', 'SearchSection.tsx'),
   'utf8',
@@ -36,15 +61,15 @@ console.log('\n=== 1. Favicony Tor ===');
 check('Tor tab favicon only data: or letter (no faviconCachePut)', /mode === 'tor'[\s\S]*?faviconCachePut/.test(appTsx) === false || /if \(tab\.mode === 'tor'\)[\s\S]*?return;[\s\S]*?faviconCachePut/.test(appTsx));
 check('Tor favicon branch rejects non-data', appTsx.includes("f.startsWith('data:')") && appTsx.includes("tab.mode === 'tor'"));
 check('favicon-cache refuses .onion', fav.includes('.onion'));
-check('main favicon-cache-put rejects opts.tor / onion', main.includes('opts.tor') && main.includes('.onion'));
+check('main favicon-cache-put rejects opts.tor / onion', ipcBundle.includes('opts.tor') && ipcBundle.includes('.onion'));
 
 console.log('\n=== 2. Sugestie / historia ===');
 check('navigateActive skips pushHistory for Tor', /const tor = isTorTab\(active\);\s*\n\s*if \(!tor\)/.test(appTsx) || appTsx.includes('if (!tor) {\n      if (query) pushHistory'));
 check('go() early-return for Tor without history', /if \(isTorTab\(active\)\) \{\s*\n\s*navigateActive\(url\);\s*\n\s*return;/.test(appTsx));
 check('HomeSearch only on non-Tor home', appTsx.includes('!activeIsTor') && appTsx.includes('<HomeSearch'));
-check('searchSuggest is main net.fetch (clearnet) — must not be used from Tor UI', main.includes('shell:search-suggest') && main.includes('duckduckgo.com/ac/'));
+check('searchSuggest is main net.fetch (clearnet) — must not be used from Tor UI', ipcBundle.includes('shell:search-suggest') && ipcBundle.includes('duckduckgo.com/ac/'));
 check('history module exists', fs.existsSync(path.join(root, 'electron', 'history.cjs')));
-check('history IPC wired', main.includes('shell:history-record-visit') && preload.includes('historyRecordVisit'));
+check('history IPC wired', ipcBundle.includes('shell:history-record-visit') && preload.includes('historyRecordVisit'));
 check('recordVisit rejects tor', (() => {
   const h = fs.readFileSync(path.join(root, 'electron', 'history.cjs'), 'utf8');
   return h.includes("opts.tor") && h.includes("reason: 'tor'") && h.includes('.onion');
@@ -52,11 +77,11 @@ check('recordVisit rejects tor', (() => {
 check('App never records Tor visits', appTsx.includes('tab.mode !== \'tor\'') && appTsx.includes('recordVisitFromTab') && /if \(tab\.mode === 'tor'\) return;/.test(appTsx));
 check('OmniboxSuggest disabled on Tor', appTsx.includes('torMode={activeIsTor}') || appTsx.includes('torMode={activeIsTor}'));
 check('Ctrl+H blocked for Tor tabs', appTsx.includes('Ctrl') && appTsx.includes('HISTORY_URL') && /isTorTab\(tab\)\) return/.test(appTsx));
-check('historySuggest returns empty when tor', main.includes("opts.tor) return { completion: null, groups: [] }") || main.includes('if (opts && opts.tor) return { completion: null, groups: [] }'));
+check('historySuggest returns empty when tor', ipcBundle.includes("opts.tor) return { completion: null, groups: [] }") || ipcBundle.includes('if (opts && opts.tor) return { completion: null, groups: [] }'));
 
 console.log('\n=== 2c. Session restore (Tor never persisted) ===');
 check('session module exists', fs.existsSync(path.join(root, 'electron', 'session.cjs')));
-check('session IPC wired', main.includes('shell:session-save') && preload.includes('sessionSave'));
+check('session IPC wired', ipcBundle.includes('shell:session-save') && preload.includes('sessionSave'));
 check('session isTorLike rejects tor/onion', (() => {
   const s = fs.readFileSync(path.join(root, 'electron', 'session.cjs'), 'utf8');
   return s.includes('isTorLike') && s.includes("mode === 'tor'") && s.includes('.onion') && s.includes('about:tor');
@@ -114,7 +139,7 @@ console.log('\n=== 2b. History runtime (Tor guards) ===');
 console.log('\n=== 3. Clearnet paths inventory (must not serve Tor tabs) ===');
 const clearnetHits = [];
 if (fav.includes('net.fetch')) clearnetHits.push('favicon-cache.net.fetch');
-if (main.includes("duckduckgo.com/ac/")) clearnetHits.push('search-suggest');
+if (ipcBundle.includes("duckduckgo.com/ac/")) clearnetHits.push('search-suggest');
 if (adblockPlus.includes('net.fetch') || adblockPlus.includes('fetchText')) clearnetHits.push('adblock-lists');
 if (daemon.includes('https.get') || daemon.includes('https.get')) clearnetHits.push('tor-bundle-download');
 check('tor verify uses ses.fetch not net.fetch default', tor.includes('ses.fetch') && tor.includes('check.torproject.org'));
@@ -174,7 +199,7 @@ check('builtin bridges with date', bridgesMod.includes('updated') && bridgesMod.
 check('ClientTransportPlugin lyrebird/snowflake', daemon.includes('ClientTransportPlugin') && daemon.includes('lyrebird'));
 check('UseBridges + applyBridges', daemon.includes('UseBridges 1') && daemon.includes('applyBridges'));
 check('newIdentity in tor.cjs', tor.includes('newIdentity') && tor.includes('signalNewnym'));
-check('IPC new-identity / bridges', main.includes('shell:tor-new-identity') && preload.includes('torNewIdentity') && preload.includes('torBridges'));
+check('IPC new-identity / bridges', ipcBundle.includes('shell:tor-new-identity') && preload.includes('torNewIdentity') && preload.includes('torBridges'));
 check('no Moat (builtin + manual only)', !daemon.includes('moat/fetch') && !daemon.includes('bridges.torproject.org/moat'));
 check('torBridgeMode default none', store.includes("torBridgeMode: 'none'"));
 check('Settings mosty UI', settings.includes('Mosty') && settings.includes('obfs4'));

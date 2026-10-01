@@ -18,11 +18,34 @@ function check(name, cond) {
 }
 
 const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
+const ipcDir = path.join(root, 'electron', 'ipc');
+const ipcBundle = [main]
+  .concat(
+    fs.existsSync(ipcDir)
+      ? fs.readdirSync(ipcDir).filter((f) => f.endsWith('.cjs')).map((f) => fs.readFileSync(path.join(ipcDir, f), 'utf8'))
+      : [],
+  )
+  .join('\n');
 const tor = fs.readFileSync(path.join(root, 'electron', 'tor.cjs'), 'utf8');
 const sec = fs.readFileSync(path.join(root, 'electron', 'security.cjs'), 'utf8');
 const preload = fs.readFileSync(path.join(root, 'electron', 'preload.cjs'), 'utf8');
-const app = fs.readFileSync(path.join(root, 'src', 'App.tsx'), 'utf8');
-const store = fs.readFileSync(path.join(root, 'src', 'store.ts'), 'utf8');
+function readTree(dir, exts = ['.ts', '.tsx']) {
+  if (!fs.existsSync(dir)) return '';
+  let out = '';
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, ent.name);
+    if (ent.isDirectory()) out += readTree(p, exts);
+    else if (exts.some((e) => ent.name.endsWith(e))) out += fs.readFileSync(p, 'utf8') + '\n';
+  }
+  return out;
+}
+const app = readTree(path.join(root, 'src'));
+const storeDir = path.join(root, 'src', 'store');
+const store = fs
+  .readdirSync(storeDir)
+  .filter((f) => f.endsWith('.ts'))
+  .map((f) => fs.readFileSync(path.join(storeDir, f), 'utf8'))
+  .join('\n');
 const settings = fs.readFileSync(
   path.join(root, 'src', 'components', 'settings', 'sections', 'SearchSection.tsx'),
   'utf8',
@@ -38,8 +61,8 @@ check('WebRTC kill + UTC', tor.includes('RTCPeerConnection') && tor.includes('ti
 check('UA Firefox-like', tor.includes('Firefox/128.0'));
 check('Accept-Language en-US', tor.includes('en-US,en;q=0.5'));
 
-check('main wires tor IPC', main.includes('shell:tor-start') && main.includes("require('./tor.cjs')"));
-check('legacy shell:set-proxy removed', !main.includes('shell:set-proxy') && !preload.includes('setProxy:'));
+check('main wires tor IPC', ipcBundle.includes('shell:tor-start') && main.includes('./tor.cjs'));
+check('legacy shell:set-proxy removed', !ipcBundle.includes('shell:set-proxy') && !preload.includes('setProxy:'));
 check('tor guest harden on attach', main.includes('tor.hardenGuestWebContents') || main.includes('isTorWebContents'));
 
 check('security allows tor partitions', sec.includes('TOR_PARTITION_RE') && sec.includes('isAllowedPartition'));

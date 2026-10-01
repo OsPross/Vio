@@ -342,8 +342,21 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
     }
   };
 
-  const onExport = () => {
+  const onExport = async () => {
     const html = exportNetscapeBookmarksHtml(bookmarkFolders, bookmarks, 'Zakładki djxxr');
+    try {
+      if (window.shell?.bookmarksSaveExport) {
+        const res = await window.shell.bookmarksSaveExport(html);
+        if (res?.canceled) return;
+        if (!res?.ok) {
+          window.alert(res?.error || 'Eksport nie powiódł się.');
+        }
+        return;
+      }
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Eksport nie powiódł się.');
+      return;
+    }
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

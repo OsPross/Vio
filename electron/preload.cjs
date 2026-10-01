@@ -85,6 +85,7 @@ contextBridge.exposeInMainWorld('shell', {
   },
   bookmarksDiscoverProfiles: () => ipcRenderer.invoke('shell:bookmarks-discover-profiles'),
   bookmarksReadProfile: (profilePath) => ipcRenderer.invoke('shell:bookmarks-read-profile', profilePath),
+  bookmarksSaveExport: (html, opts) => ipcRenderer.invoke('shell:bookmarks-save-export', html, opts || {}),
   searchSuggest: (q) => ipcRenderer.invoke('shell:search-suggest', q),
   weatherFetch: (opts) => ipcRenderer.invoke('shell:weather-fetch', opts || {}),
   weatherSuggest: (opts) => ipcRenderer.invoke('shell:weather-suggest', opts || {}),

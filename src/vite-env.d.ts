@@ -552,6 +552,10 @@ declare global {
         { browser: string; path: string; exists: boolean }[]
       >;
       bookmarksReadProfile: (profilePath: string) => Promise<string>;
+      bookmarksSaveExport: (
+        html: string,
+        opts?: { forcePath?: string },
+      ) => Promise<{ ok: boolean; filePath?: string; canceled?: boolean; error?: string }>;
       searchSuggest: (q: string) => Promise<string[]>;
       weatherFetch: (opts: { location?: string; lat?: number; lon?: number }) => Promise<{
         ok: boolean;

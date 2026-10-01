@@ -5,12 +5,35 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const main = fs.readFileSync(path.join(root, 'electron', 'main.cjs'), 'utf8');
+const ipcDir = path.join(root, 'electron', 'ipc');
+const ipcBundle = [main]
+  .concat(
+    fs.existsSync(ipcDir)
+      ? fs.readdirSync(ipcDir).filter((f) => f.endsWith('.cjs')).map((f) => fs.readFileSync(path.join(ipcDir, f), 'utf8'))
+      : [],
+  )
+  .join('\n');
 const preload = fs.readFileSync(path.join(root, 'electron', 'preload.cjs'), 'utf8');
 const wv = fs.readFileSync(path.join(root, 'electron', 'webview-preload.cjs'), 'utf8');
 const security = fs.readFileSync(path.join(root, 'electron', 'security.cjs'), 'utf8');
-const app = fs.readFileSync(path.join(root, 'src', 'App.tsx'), 'utf8');
+function readTree(dir, exts = ['.ts', '.tsx']) {
+  if (!fs.existsSync(dir)) return '';
+  let out = '';
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, ent.name);
+    if (ent.isDirectory()) out += readTree(p, exts);
+    else if (exts.some((e) => ent.name.endsWith(e))) out += fs.readFileSync(p, 'utf8') + '\n';
+  }
+  return out;
+}
+const app = readTree(path.join(root, 'src'));
 const panel = fs.readFileSync(path.join(root, 'src', 'components', 'PasswordsPanel.tsx'), 'utf8');
-const store = fs.readFileSync(path.join(root, 'src', 'store.ts'), 'utf8');
+const storeDir = path.join(root, 'src', 'store');
+const store = fs
+  .readdirSync(storeDir)
+  .filter((f) => f.endsWith('.ts'))
+  .map((f) => fs.readFileSync(path.join(storeDir, f), 'utf8'))
+  .join('\n');
 
 const checks = [];
 function check(name, cond) {
@@ -44,7 +67,7 @@ const channels = [
 ];
 
 for (const ch of channels) {
-  check(`main registers ${ch}`, main.includes(`'${ch}'`));
+  check(`main registers ${ch}`, ipcBundle.includes(`'${ch}'`));
   const camel = ch
     .replace('shell:', '')
     .replace(/-([a-z])/g, (_, c) => c.toUpperCase())
@@ -56,7 +79,7 @@ check('main assertFromApp', main.includes('assertFromApp'));
 check('main wrapPw', main.includes('wrapPw'));
 check('main wrapApp', main.includes('wrapApp'));
 check('main sandbox true', /sandbox:\s*true/.test(main));
-check('main security module', main.includes("require('./security.cjs')"));
+check('main security module', main.includes('./security.cjs'));
 check('main will-attach / permissions', main.includes('attachWebviewGuard') || main.includes('attachPermissionHandlers'));
 check('main webview preload via will-attach only', main.includes('will-attach-webview') || security.includes('will-attach-webview'));
 check('main no registerPreloadScript frame', !main.includes('registerPreloadScript'));
