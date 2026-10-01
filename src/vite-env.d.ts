@@ -661,14 +661,6 @@ declare global {
 
   namespace JSX {
     interface IntrinsicElements {
-      'browser-action-list': React.DetailedHTMLProps<
-        React.HTMLAttributes<HTMLElement> & {
-          partition?: string;
-          tab?: string;
-          alignment?: string;
-        },
-        HTMLElement
-      >;
       webview: React.DetailedHTMLProps<
         React.HTMLAttributes<HTMLElement> & {
           src?: string;
@@ -677,6 +669,21 @@ declare global {
           useragent?: string;
           preload?: string;
           webpreferences?: string;
+        },
+        HTMLElement
+      >;
+    }
+  }
+}
+
+declare module 'react' {
+  namespace JSX {
+    interface IntrinsicElements {
+      'browser-action-list': React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement> & {
+          partition?: string;
+          tab?: string;
+          alignment?: string;
         },
         HTMLElement
       >;
