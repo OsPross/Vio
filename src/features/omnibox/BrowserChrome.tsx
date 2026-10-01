@@ -26,22 +26,20 @@ import {
 } from 'lucide-react';
 import { DownloadsButton } from '../../components/DownloadsUI';
 import { BookmarkPopover } from '../../components/BookmarkPopover';
-import { AppMenu, type SidebarMode } from '../../components/AppMenu';
+import { AppMenu } from '../../components/AppMenu';
 import { OmniboxSuggest } from '../../components/OmniboxSuggest';
 import { MetricsDot } from '../../components/metrics/MetricsDot';
 import { getWindowPartition } from '../../lib/windowBoot';
 import {
-  ABOUT_URL,
-  BOOKMARKS_URL,
   DOWNLOADS_URL,
   EXTENSIONS_URL,
-  HISTORY_URL,
   isBookmarkableUrl,
   useStore,
   type Tab,
 } from '../../store';
 import type { TorStatusInfo } from '../../components/TorLanding';
 import type { PopupBlocked } from '../../hooks/useIpcEvents';
+import { useAppMenuActions } from '../../hooks/useAppMenuActions';
 import type { WebviewEl } from '../tabs';
 
 const ShieldPanel = lazy(() =>
@@ -153,11 +151,27 @@ export function BrowserChrome({
   const tabs = useStore((s) => s.tabs);
   const activeId = useStore((s) => s.activeId);
   const newTab = useStore((s) => s.newTab);
-  const newTorTab = useStore((s) => s.newTorTab);
   const setActive = useStore((s) => s.setActive);
   const setView = useStore((s) => s.setView);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
   const patchSettings = useStore((s) => s.patchSettings);
+
+  const menuActions = useAppMenuActions({
+    activeIsTor,
+    active,
+    pageUrlForShare,
+    zoomPercent,
+    navigateActive,
+    bumpZoom,
+    applyZoom,
+    printActivePage,
+    saveActivePdf,
+    currentView,
+    setClearDataOpen,
+    setFindOpen,
+    setQrOpen,
+    setTaskMgrOpen,
+  });
 
   return (
     <>
@@ -514,81 +528,7 @@ export function BrowserChrome({
           >
             <Settings2 size={16} strokeWidth={1.75} />
           </button>
-          <AppMenu
-            actions={{
-              newTab: () => newTab(),
-              newWindow: () => void window.shell?.newWindow?.(),
-              newPrivateWindow: () => void window.shell?.newWindow?.({ boot: 'private' }),
-              newTorWindow: () => void window.shell?.newWindow?.({ boot: 'tor' }),
-              sidebarMode: (settings.sidebarMode ||
-                (settings.showSidebar ? 'on' : 'off')) as SidebarMode,
-              setSidebarMode: (mode) => patchSettings({ sidebarMode: mode }),
-              openPasswords: () => setSettingsTab('passwords'),
-              openHistory: () => {
-                if (activeIsTor) return;
-                navigateActive(HISTORY_URL);
-              },
-              openBookmarks: () => {
-                if (activeIsTor) return;
-                navigateActive(BOOKMARKS_URL);
-              },
-              openDownloads: () => {
-                if (activeIsTor) return;
-                navigateActive(DOWNLOADS_URL);
-              },
-              openExtensions: () => {
-                if (activeIsTor) return;
-                navigateActive(EXTENSIONS_URL);
-              },
-              clearBrowsingData: () => setClearDataOpen(true),
-              zoomOut: () => bumpZoom(-0.1),
-              zoomIn: () => bumpZoom(0.1),
-              zoomReset: () => applyZoom(1),
-              zoomPercent,
-              toggleFullscreen: () => {
-                void window.shell?.windowToggleFullscreen?.();
-              },
-              print: () => printActivePage(),
-              findInPage: () => setFindOpen(true),
-              savePage: () => {
-                window.dispatchEvent(new CustomEvent('djxxr-save-page'));
-              },
-              savePdf: () => saveActivePdf(),
-              copyLink: () => {
-                if (pageUrlForShare) void navigator.clipboard.writeText(pageUrlForShare);
-              },
-              showQr: () => {
-                if (pageUrlForShare) setQrOpen(true);
-              },
-              openTaskManager: () => setTaskMgrOpen(true),
-              openDevtools: () => {
-                try {
-                  currentView()?.openDevTools?.();
-                } catch {
-                  /* */
-                }
-              },
-              openDevtoolsSettings: () => setSettingsTab('advanced'),
-              viewSource: () => {
-                const u = pageUrlForShare;
-                if (!u) return;
-                const src = u.startsWith('view-source:') ? u : `view-source:${u}`;
-                if (activeIsTor && active?.partition) {
-                  newTorTab({ url: src, partition: active.partition });
-                } else {
-                  newTab(src);
-                }
-              },
-              openAbout: () => {
-                if (activeIsTor) return;
-                navigateActive(ABOUT_URL);
-              },
-              openSettings: () => setSettingsTab('general'),
-              quit: () => void window.shell?.quitApp?.(),
-              allowInspect: Boolean(settings.allowInspect),
-              hasPage: Boolean(pageUrlForShare),
-            }}
-          />
+          <AppMenu actions={menuActions} />
         </div>
       </div>
 

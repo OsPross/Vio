@@ -5,7 +5,6 @@ import { HomeSearch } from './components/HomeSearch';
 import { BookmarksBar } from './components/BookmarksBar';
 import { ErrorPage } from './components/ErrorPage';
 import { hostFromPageUrl, zoomFactorForHost } from './lib/pageHost';
-import { bindCommandHost } from './lib/commands';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useMetrics, useMetricsGuests } from './lib/useMetrics';
 import type { MetricsGuest } from './lib/metricsTypes';
@@ -53,6 +52,7 @@ import {
 } from './lib/tabNavigate';
 import { useIpcEvents } from './hooks/useIpcEvents';
 import { useShortcuts } from './hooks/useShortcuts';
+import { useBindCommandHost } from './hooks/useAppMenuActions';
 
 /** Heavy routes / dialogs — not needed for first paint */
 const SettingsPage = lazy(() =>
@@ -1083,42 +1083,12 @@ export function App() {
     (typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-  useEffect(() => {
-    bindCommandHost({
-      newTab: (url) => newTab(url),
-      openTorTab: () => void openTorTab(),
-      closeActive: () => closeTab(useStore.getState().activeId),
-      reopenClosed: () => reopenClosedTab(),
-      pinActive: () => {
-        const id = useStore.getState().activeId;
-        pinTab(id);
-      },
-      duplicateActive: () => duplicateTab(useStore.getState().activeId),
-      muteActive: () => {
-        const id = useStore.getState().activeId;
-        muteTab(id);
-      },
-      newIdentity: () => window.dispatchEvent(new CustomEvent('djxxr-tor-new-identity')),
-      navigate: (url) => navigateActive(url),
-      setSettingsTab: (t) => setSettingsTab(t as 'general'),
-      patchSettings: (p) => patchSettings(p),
-      toggleSidebar: () =>
-        patchSettings({ showSidebar: !useStore.getState().settings.showSidebar }),
-      openTaskMgr: () => setTaskMgrOpen(true),
-      forgetSite: () => {
-        const url = useStore
-          .getState()
-          .tabs.find((t) => t.id === useStore.getState().activeId)?.url;
-        if (url) void window.shell?.privacyForgetSite?.(url);
-      },
-      clearData: () => {
-        void window.shell?.perfClearCache?.();
-      },
-      print: () => printActivePage(),
-      zoom: (delta) => {
-        bumpZoom(delta > 0 ? 0.1 : -0.1);
-      },
-    });
+  useBindCommandHost({
+    openTorTab,
+    navigateActive,
+    printActivePage,
+    bumpZoom,
+    setTaskMgrOpen,
   });
 
   const pageUrlForShare =
