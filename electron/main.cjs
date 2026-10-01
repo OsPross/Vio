@@ -39,6 +39,17 @@ const uaChrome = timedRequire('ua-chrome', './ua-chrome.cjs');
 const mouseNav = timedRequire('mouse-nav', './mouse-nav.cjs');
 const spellcheck = timedRequire('spellcheck', './spellcheck.cjs');
 const { webContents: electronWebContents } = require('electron');
+const { getLogger } = require('./lib/logger.cjs');
+
+const log = getLogger('main');
+
+process.on('uncaughtException', (err) => {
+  log.error('uncaughtException', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  log.error('unhandledRejection', reason);
+});
 
 /** Boot switches MUST run before ready */
 privacy.applyBootSwitches();
