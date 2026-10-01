@@ -36,17 +36,17 @@ function getUpdater() {
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowDowngrade = false;
 
-  // Dev / unpackaged: optional local feed (dev-app-update.yml)
+  // Dev / unpackaged: optional local feed (dev-app-update.yml at repo root)
   if (!app.isPackaged) {
-    const cfg = path.join(app.getAppPath(), 'dev-app-update.yml');
-    if (fs.existsSync(cfg)) {
-      try {
-        autoUpdater.forceDevUpdateConfig = true;
-      } catch {
-        /* older electron-updater */
-      }
-    } else {
+    const cfg = path.join(__dirname, '..', 'dev-app-update.yml');
+    if (!fs.existsSync(cfg)) {
       return null;
+    }
+    try {
+      autoUpdater.forceDevUpdateConfig = true;
+      autoUpdater.updateConfigPath = cfg;
+    } catch {
+      /* older electron-updater */
     }
   }
 
