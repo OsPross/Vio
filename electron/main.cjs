@@ -707,6 +707,11 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   isAppQuitting = true;
   try {
+    notes.flushNow();
+  } catch (err) {
+    console.warn('[notes] flush on quit', err);
+  }
+  try {
     appSession.markCleanExit();
   } catch (err) {
     console.warn('[session] clean exit', err);

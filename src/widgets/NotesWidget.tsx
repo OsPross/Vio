@@ -174,6 +174,26 @@ export function NotesWidget({
     };
   }, [flushSave, preview]);
 
+  useEffect(() => {
+    if (preview) return;
+    const flush = () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+      void flushSave();
+    };
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [flushSave, preview]);
+
   const selectNote = (note: NoteRecord) => {
     if (preview) return;
     if (saveTimer.current) {

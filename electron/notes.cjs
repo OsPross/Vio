@@ -108,6 +108,10 @@ function scheduleFlush() {
 }
 
 function flushNow() {
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
   if (!dirty || !store) return { ok: true };
   dirty = false;
   const file = notesPath();
@@ -118,6 +122,7 @@ function flushNow() {
     fs.renameSync(tmp, file);
     return { ok: true };
   } catch (err) {
+    dirty = true;
     try {
       fs.unlinkSync(tmp);
     } catch {
