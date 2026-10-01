@@ -2039,8 +2039,14 @@ export function App() {
           ? 'no-side'
           : '',
         settings.sidebarMode === 'auto' ? 'sidebar-auto' : '',
-        settings.sidebarMode === 'auto' && sidebarAutoOpen ? 'sidebar-auto-open' : '',
-        settings.sidebarMode === 'on' && settings.sidePanelOpen ? 'side-panel-open' : '',
+        settings.sidebarMode === 'auto' &&
+        (sidebarAutoOpen || settings.sidePanelOpen)
+          ? 'sidebar-auto-open'
+          : '',
+        (settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') &&
+        settings.sidePanelOpen
+          ? 'side-panel-open'
+          : '',
         settings.uiGlass ? 'glass-on' : '',
         settings.uiMotion ? 'motion-on' : '',
         `theme-${settings.theme}`,
@@ -2055,7 +2061,8 @@ export function App() {
         {
           ['--rail-w' as string]: '56px',
           ['--panel-w' as string]:
-            settings.sidebarMode === 'on' && settings.sidePanelOpen
+            (settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') &&
+            settings.sidePanelOpen
               ? `${settings.sidePanelWidth}px`
               : '0px',
           ['--side-total' as string]:
@@ -2086,6 +2093,8 @@ export function App() {
           }}
           onMouseLeave={() => {
             if (settings.sidebarMode !== 'auto') return;
+            // Keep overlay while a side app panel is open
+            if (settings.sidePanelOpen) return;
             if (sidebarAutoTimer.current) window.clearTimeout(sidebarAutoTimer.current);
             sidebarAutoTimer.current = window.setTimeout(() => setSidebarAutoOpen(false), 300);
           }}

@@ -4665,7 +4665,8 @@ button {
 .app.sidebar-auto .sidebar-edge-hit {
   position: fixed;
   left: 0;
-  top: 0;
+  /* Below tabs + toolbar — never cover chrome */
+  top: calc(var(--tabs-h) + var(--bar-h));
   bottom: 0;
   width: 6px;
   z-index: 45;
@@ -4674,19 +4675,22 @@ button {
   display: block;
   position: fixed;
   left: 0;
-  top: 0;
+  top: calc(var(--tabs-h) + var(--bar-h));
   bottom: 0;
   z-index: 46;
   width: auto;
+  max-width: min(100vw, calc(56px + var(--panel-w, 0px)));
   pointer-events: none;
 }
 .app.sidebar-auto .sidebar-ctx-host > .side-shell {
   pointer-events: auto;
   height: 100%;
+  width: calc(56px + var(--panel-w, 0px));
+  max-width: 100%;
   box-shadow: 8px 0 28px rgba(0, 0, 0, 0.45);
   transform: translateX(-105%);
   opacity: 1;
-  transition: transform 160ms ease;
+  transition: transform 160ms ease, width 0.22s ease;
   border-right: 1px solid var(--line);
 }
 .app.sidebar-auto.sidebar-auto-open .sidebar-ctx-host > .side-shell,

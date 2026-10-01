@@ -229,9 +229,15 @@ export function AppSidebar({
             <button
               type="button"
               className="side-rail-btn"
-              data-tip="Ukryj sidebar"
-              title="Ukryj sidebar (Ctrl+B)"
-              onClick={() => patchSettings({ showSidebar: false, sidePanelOpen: false })}
+              data-tip={settings.sidebarMode === 'auto' ? 'Zamknij panel' : 'Ukryj sidebar'}
+              title={settings.sidebarMode === 'auto' ? 'Zamknij panel' : 'Ukryj sidebar (Ctrl+B)'}
+              onClick={() => {
+                if (settings.sidebarMode === 'auto') {
+                  closeSidePanel();
+                  return;
+                }
+                patchSettings({ showSidebar: false, sidePanelOpen: false, sidebarMode: 'off' });
+              }}
             >
               <PanelLeftClose size={18} strokeWidth={1.75} />
             </button>
