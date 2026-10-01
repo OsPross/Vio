@@ -32,7 +32,24 @@ uaChrome.applyBootFallback();
 const boot = perf.applyBootSwitches();
 history.init();
 notes.init();
-void extensions.init();
+void extensions.init().then(() => {
+  try {
+    extensions.initChromeApi({
+      getMainWindow: () => mainWindow,
+      onOpenUrl: (url, extra = {}) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('shell:open-url', {
+            url,
+            background: Boolean(extra.background),
+          });
+        }
+      },
+      createWindow: () => createWindow({ secondary: true }),
+    });
+  } catch (err) {
+    console.warn('[ext] initChromeApi', err);
+  }
+});
 downloads.init();
 
 /** @type {ReturnType<typeof createWindow> | null} */
@@ -525,6 +542,15 @@ function createWindow(optsExtra = {}) {
       /* */
     }
     wireGuestNavigation(guestContents);
+    try {
+      const torGuest = tor.isTorWebContents(guestContents);
+      if (!torGuest) {
+        const host = BrowserWindow.fromWebContents(bw.webContents) || bw;
+        extensions.trackGuestTab(guestContents, host, { tor: false });
+      }
+    } catch (err) {
+      console.warn('[ext] trackGuestTab', err);
+    }
   });
 
   contextMenu.attachChromeEditMenu(bw.webContents);

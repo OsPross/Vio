@@ -617,6 +617,13 @@ declare global {
       extensionsSetPrivate: (id: string, allow: boolean) => Promise<{ ok: boolean; error?: string }>;
       extensionsSetPinned: (id: string, pinned: boolean) => Promise<{ ok: boolean; error?: string }>;
       extensionsRemove: (id: string) => Promise<{ ok: boolean; error?: string }>;
+      extensionsSelectTab: (webContentsId: number) => Promise<{ ok: boolean }>;
+      onExtensionsActivateTab: (
+        cb: (payload: { webContentsId: number }) => void,
+      ) => () => void;
+      onExtensionsCloseTab: (
+        cb: (payload: { webContentsId: number }) => void,
+      ) => () => void;
       onHttpsWarn: (cb: (payload: { httpUrl: string; httpsUrl?: string; errorCode?: number }) => void) => () => void;
       pictureInPicture: (
         webContentsId: number,
@@ -654,6 +661,14 @@ declare global {
 
   namespace JSX {
     interface IntrinsicElements {
+      'browser-action-list': React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement> & {
+          partition?: string;
+          tab?: string;
+          alignment?: string;
+        },
+        HTMLElement
+      >;
       webview: React.DetailedHTMLProps<
         React.HTMLAttributes<HTMLElement> & {
           src?: string;

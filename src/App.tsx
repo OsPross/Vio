@@ -13,6 +13,7 @@ import {
   Moon,
   PanelLeft,
   Plus,
+  Puzzle,
   RefreshCw,
   Settings2,
   Shield,
@@ -883,6 +884,30 @@ export function App() {
       return { ...m, [tabId]: webContentsId };
     });
   }, []);
+
+  useEffect(() => {
+    const wcId = guestWc[activeId];
+    if (typeof wcId === 'number') void window.shell?.extensionsSelectTab?.(wcId);
+  }, [activeId, guestWc]);
+
+  useEffect(() => {
+    const offAct = window.shell?.onExtensionsActivateTab?.((payload) => {
+      const id = Number(payload?.webContentsId);
+      if (!Number.isFinite(id)) return;
+      const entry = Object.entries(guestWc).find(([, wc]) => wc === id);
+      if (entry) setActive(entry[0]);
+    });
+    const offClose = window.shell?.onExtensionsCloseTab?.((payload) => {
+      const id = Number(payload?.webContentsId);
+      if (!Number.isFinite(id)) return;
+      const entry = Object.entries(guestWc).find(([, wc]) => wc === id);
+      if (entry) closeTab(entry[0]);
+    });
+    return () => {
+      offAct?.();
+      offClose?.();
+    };
+  }, [guestWc, setActive, closeTab]);
 
   useEffect(() => {
     applyThemeToDom(settings);
@@ -2623,6 +2648,31 @@ export function App() {
               tabs={tabs}
             />
             <div className="omnibox-actions">
+              {!activeIsTor ? (
+                <>
+                  {/* Custom element from electron-chrome-extensions (injectBrowserAction in preload) */}
+                  {/* eslint-disable-next-line react/no-unknown-property */}
+                  <browser-action-list
+                    className="ext-browser-actions"
+                    partition={
+                      windowMode === 'private' && getWindowPartition()
+                        ? getWindowPartition()!
+                        : 'persist:main'
+                    }
+                    tab={String(guestWc[activeId] || '')}
+                    alignment="bottom left"
+                  />
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    title="Rozszerzenia"
+                    aria-label="Rozszerzenia"
+                    onClick={() => navigateActive(EXTENSIONS_URL)}
+                  >
+                    <Puzzle size={16} strokeWidth={2} />
+                  </button>
+                </>
+              ) : null}
               {((zoomFlash != null && zoomFlash !== 100) ||
                 (zoomPercent !== 100 && !isHome && !isTorHome && !isInternalAbout)) &&
               !isHome &&

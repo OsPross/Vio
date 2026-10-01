@@ -230,4 +230,23 @@ contextBridge.exposeInMainWorld('shell', {
     ipcRenderer.on('shell:certificate-error', handler);
     return () => ipcRenderer.removeListener('shell:certificate-error', handler);
   },
+  extensionsSelectTab: (webContentsId) =>
+    ipcRenderer.invoke('shell:extensions-select-tab', webContentsId),
+  onExtensionsActivateTab: (cb) => {
+    const handler = (_e, payload) => cb(payload);
+    ipcRenderer.on('shell:extensions-activate-tab', handler);
+    return () => ipcRenderer.removeListener('shell:extensions-activate-tab', handler);
+  },
+  onExtensionsCloseTab: (cb) => {
+    const handler = (_e, payload) => cb(payload);
+    ipcRenderer.on('shell:extensions-close-tab', handler);
+    return () => ipcRenderer.removeListener('shell:extensions-close-tab', handler);
+  },
 });
+
+try {
+  // Enables <browser-action-list> in the chrome UI (electron-chrome-extensions)
+  require('electron-chrome-extensions/browser-action').injectBrowserAction();
+} catch (err) {
+  console.warn('[preload] browser-action inject', err && err.message);
+}

@@ -1,15 +1,11 @@
 /**
- * Chrome extension loading via session.loadExtension (MV3 where Electron supports it).
+ * Chrome extension loading via session.loadExtension (MV3 where Electron supports it)
+ * + electron-chrome-extensions for chrome.tabs / action popups / contextMenus / badges.
  *
  * Scope:
  * - persist:main always (when enabled)
  * - private ephemeral partitions: only if allowPrivate
- * - Tor: NEVER
- *
- * Trade-off vs electron-chrome-extensions:
- * - Native loadExtension: simple install/enable, no chrome.tabs / action popup host
- * - electron-chrome-extensions: chrome.* + toolbar actions/popups, heavier maintenance
- *   and Electron version coupling — deferred; UI exposes pin flag for future chrome.action.
+ * - Tor: NEVER (no loadExtension, no chrome API tracking)
  */
 'use strict';
 
@@ -394,6 +390,142 @@ function register(ipcMain, wrapApp) {
   );
   ipcMain.handle('shell:extensions-set-pinned', wrapApp((_e, id, pinned) => setPinned(String(id || ''), pinned)));
   ipcMain.handle('shell:extensions-remove', wrapApp((_e, id) => remove(String(id || ''))));
+  ipcMain.handle(
+    'shell:extensions-select-tab',
+    wrapApp((_e, webContentsId) => {
+      try {
+        const { webContents } = require('electron');
+        const wc = webContents.fromId(Number(webContentsId));
+        if (wc && !wc.isDestroyed() && chromeExtApi) {
+          chromeExtApi.selectTab(wc);
+          return { ok: true };
+        }
+      } catch (err) {
+        console.warn('[ext] selectTab', err);
+      }
+      return { ok: false };
+    }),
+  );
+}
+
+/** @type {import('electron-chrome-extensions').ElectronChromeExtensions | null} */
+let chromeExtApi = null;
+/** @type {((url: string, opts?: object) => void) | null} */
+let openUrlHandler = null;
+/** @type {(() => import('electron').BrowserWindow | null) | null} */
+let getMainWindow = null;
+
+/**
+ * Wire electron-chrome-extensions (chrome.tabs / action popups / contextMenus).
+ * Tor sessions never get this API.
+ */
+function initChromeApi(opts = {}) {
+  openUrlHandler = typeof opts.onOpenUrl === 'function' ? opts.onOpenUrl : null;
+  getMainWindow = typeof opts.getMainWindow === 'function' ? opts.getMainWindow : null;
+  if (chromeExtApi) return chromeExtApi;
+  try {
+    const { ElectronChromeExtensions } = require('electron-chrome-extensions');
+    const ses = mainSession();
+    try {
+      ElectronChromeExtensions.handleCRXProtocol(ses);
+    } catch (err) {
+      console.warn('[ext] handleCRXProtocol main', err && err.message);
+    }
+    try {
+      ElectronChromeExtensions.handleCRXProtocol(session.defaultSession);
+    } catch (err) {
+      console.warn('[ext] handleCRXProtocol default', err && err.message);
+    }
+    chromeExtApi = new ElectronChromeExtensions({
+      license: 'GPL-3.0',
+      session: ses,
+      createTab: async (details) => {
+        const win = getMainWindow?.() || null;
+        const url = details?.url || 'about:blank';
+        if (openUrlHandler) openUrlHandler(url, { background: !details?.active });
+        // Library expects [webContents, BrowserWindow] — return host chrome WC as placeholder;
+        // real guest arrives via addTab when the renderer opens the tab.
+        if (win && !win.isDestroyed()) return [win.webContents, win];
+        throw new Error('no window');
+      },
+      selectTab: (tab /*, browserWindow */) => {
+        // Extension asked to activate a tab — notify chrome UI (do NOT call api.selectTab here).
+        try {
+          const win = getMainWindow?.() || null;
+          if (win && !win.isDestroyed() && tab && !tab.isDestroyed()) {
+            win.webContents.send('shell:extensions-activate-tab', { webContentsId: tab.id });
+          }
+        } catch {
+          /* */
+        }
+      },
+      removeTab: (tab /*, browserWindow */) => {
+        try {
+          const win = getMainWindow?.() || null;
+          if (win && !win.isDestroyed() && tab && !tab.isDestroyed()) {
+            win.webContents.send('shell:extensions-close-tab', { webContentsId: tab.id });
+          }
+        } catch {
+          /* */
+        }
+      },
+      createWindow: async () => {
+        const { BrowserWindow } = require('electron');
+        if (typeof opts.createWindow === 'function') return opts.createWindow();
+        return new BrowserWindow({ width: 1200, height: 800 });
+      },
+      removeWindow: (bw) => {
+        try {
+          if (bw && !bw.isDestroyed()) bw.close();
+        } catch {
+          /* */
+        }
+      },
+    });
+    try {
+      chromeExtApi.on('browser-action-popup-created', (popup) => {
+        try {
+          if (popup?.browserWindow && !popup.browserWindow.isDestroyed()) {
+            popup.browserWindow.setBackgroundColor('#1e1f24');
+          }
+        } catch {
+          /* */
+        }
+      });
+    } catch {
+      /* */
+    }
+    console.log('[ext] electron-chrome-extensions ready');
+  } catch (err) {
+    console.warn('[ext] electron-chrome-extensions unavailable', err && err.message);
+    chromeExtApi = null;
+  }
+  return chromeExtApi;
+}
+
+/**
+ * Register a guest webContents as a chrome.tabs tab (never Tor).
+ * @param {import('electron').WebContents} guestWc
+ * @param {import('electron').BrowserWindow} hostWin
+ * @param {{ tor?: boolean }} [opts]
+ */
+function trackGuestTab(guestWc, hostWin, opts = {}) {
+  if (!chromeExtApi || !guestWc || guestWc.isDestroyed()) return;
+  if (opts.tor) return;
+  try {
+    chromeExtApi.addTab(guestWc, hostWin);
+  } catch (err) {
+    console.warn('[ext] addTab', err && err.message);
+  }
+}
+
+function getContextMenuItems(guestWc, params) {
+  if (!chromeExtApi || !guestWc) return [];
+  try {
+    return chromeExtApi.getContextMenuItems(guestWc, params) || [];
+  } catch {
+    return [];
+  }
 }
 
 module.exports = {
@@ -410,4 +542,8 @@ module.exports = {
   register,
   attachToPrivateSession,
   unpackedRoot,
+  initChromeApi,
+  trackGuestTab,
+  getContextMenuItems,
+  getChromeApi: () => chromeExtApi,
 };

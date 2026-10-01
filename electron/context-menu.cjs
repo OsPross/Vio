@@ -512,6 +512,17 @@ function showGuestContextMenu(wc, params, deps) {
     });
   }
 
+  try {
+    const extensions = require('./extensions.cjs');
+    const extItems = extensions.getContextMenuItems?.(wc, params) || [];
+    if (extItems.length) {
+      template.push({ type: 'separator' });
+      for (const it of extItems) template.push(it);
+    }
+  } catch {
+    /* */
+  }
+
   const menu = Menu.buildFromTemplate(template);
   const popupWin = win && !win.isDestroyed() ? win : undefined;
   // Do NOT pass guest-relative x/y as window coordinates — menu lands off-screen.
