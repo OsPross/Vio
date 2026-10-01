@@ -2649,7 +2649,10 @@ export function App() {
               !isHome &&
               !isTorHome &&
               !isInternalAbout ? (
-                <span className="omnibox-zoom-badge" aria-live="polite">
+                <span
+                  className={`omnibox-zoom-badge ${zoomFlash != null ? 'flash' : ''}`}
+                  aria-live="polite"
+                >
                   {zoomFlash != null ? zoomFlash : zoomPercent}%
                 </span>
               ) : null}

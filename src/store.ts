@@ -1468,12 +1468,12 @@ export const useStore = create<State>()(
         void window.shell?.sessionPopClosedWindow?.().then((win) => {
           if (!win?.tabs?.length) return;
           void window.shell?.newWindow?.({
-            restoreTabs: win.tabs.map((t: ClosedTab) => ({
+            restoreTabs: win.tabs.map((t) => ({
               url: t.url,
               title: t.title,
               favicon: t.favicon,
               pinned: t.pinned,
-              navHistory: t.navHistory,
+              navHistory: t.navHistory as Tab['navHistory'],
             })),
           });
         });

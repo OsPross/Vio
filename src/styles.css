@@ -4741,6 +4741,8 @@ button {
   border-radius: 6px;
   margin-right: 4px;
   font-variant-numeric: tabular-nums;
+}
+.omnibox-zoom-badge.flash {
   animation: omnibox-zoom-fade 2.2s ease forwards;
 }
 @keyframes omnibox-zoom-fade {
