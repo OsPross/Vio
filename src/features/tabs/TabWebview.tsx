@@ -672,6 +672,7 @@ function TabWebviewInner({
     <webview
       ref={ref as unknown as React.Ref<HTMLElement>}
       className={active ? '' : 'hidden'}
+      data-tab-id={tab.id}
       src={tab.url}
       partition={partition}
       allowpopups={'true' as unknown as boolean}

@@ -3,11 +3,12 @@
  *
  * Diagnosis (Windows / Electron 44):
  * - BrowserWindow 'app-command' does NOT fire for physical/SendInput XBUTTON.
- * - webContents 'before-mouse-event' DOES fire with button "back" | "forward".
- * - DOM mouseup button 3/4 also fires unless before-mouse preventDefault.
+ * - webContents 'before-mouse-event' DOES fire with button "back" | "forward"
+ *   (guest = over page; host = over chrome UI).
+ * - DOM mouseup/auxclick button 3/4 also fire when before-mouse does not preventDefault.
  *
- * Single source: before-mouse-event mouseUp back/forward → shell:browser-nav
- * (preventDefault so page/DOM do not double-handle). app-command kept as fallback.
+ * All sources → shell:browser-nav → renderer navigateHistory(tabId, dir) with 150ms dedup.
+ * Do NOT preventDefault — pages that handle X1/X2 still receive the event; dedup stops double nav.
  */
 'use strict';
 
@@ -18,7 +19,7 @@ const attached = new WeakSet();
 /** @type {WeakMap<object, import('electron').BrowserWindow>} */
 const guestHost = new WeakMap();
 let lastNavAt = 0;
-const DEDUP_MS = 180;
+const DEDUP_MS = 150;
 
 function debugEnabled() {
   return process.env.DJXXR_DEBUG_MOUSE === '1' || process.env.DJXXR_DEBUG_MOUSE === 'true';
@@ -43,7 +44,6 @@ function resolveHost(wc) {
     /* */
   }
   try {
-    // webview guest: owner is the embedder
     if (typeof wc.getOwnerBrowserWindow === 'function') {
       const ow = wc.getOwnerBrowserWindow();
       if (ow && !ow.isDestroyed()) return ow;
@@ -56,6 +56,7 @@ function resolveHost(wc) {
 }
 
 /**
+ * Soft IPC / direct guest nav dedup (renderer also dedups at 150ms).
  * @param {'back'|'forward'} dir
  * @param {string} source
  * @param {import('electron').WebContents} [fromWc]
@@ -73,11 +74,29 @@ function emitNav(dir, source, fromWc) {
     return false;
   }
   log('emit', { dir, source, hostId: host.id });
+
+  // Guest: navigate the webContents directly (reliable vs renderer goBack race).
+  let handled = false;
   try {
-    host.webContents.send('shell:browser-nav', { dir, source });
+    const typ = typeof fromWc?.getType === 'function' ? fromWc.getType() : '';
+    if (fromWc && !fromWc.isDestroyed() && typ === 'webview') {
+      if (dir === 'back' && fromWc.canGoBack()) {
+        fromWc.goBack();
+        handled = true;
+      } else if (dir === 'forward' && fromWc.canGoForward()) {
+        fromWc.goForward();
+        handled = true;
+      }
+    }
+  } catch (err) {
+    log('direct-nav-fail', err && err.message);
+  }
+
+  try {
+    host.webContents.send('shell:browser-nav', { dir, source, handled });
   } catch (err) {
     log('emit-fail', err && err.message);
-    return false;
+    return handled;
   }
   return true;
 }
@@ -97,22 +116,17 @@ function attachSideButtons(wc, opts = {}) {
   const label = opts.label || `wc:${wc.id}`;
 
   try {
-    wc.on('before-mouse-event', (event, mouse) => {
+    wc.on('before-mouse-event', (_event, mouse) => {
       const btn = mouse && mouse.button;
       const typ = mouse && mouse.type;
-      if (btn === 'back' || btn === 'forward' || typ === 'mouseDown' || typ === 'mouseUp') {
-        if (btn === 'back' || btn === 'forward' || debugEnabled()) {
-          log('before-mouse', label, { type: typ, button: btn, x: mouse?.x, y: mouse?.y });
-        }
+      if (btn === 'back' || btn === 'forward') {
+        log('before-mouse', label, { type: typ, button: btn, x: mouse?.x, y: mouse?.y });
+      } else if (debugEnabled() && (typ === 'mouseDown' || typ === 'mouseUp')) {
+        log('before-mouse', label, { type: typ, button: btn, x: mouse?.x, y: mouse?.y });
       }
       if (typ !== 'mouseUp') return;
       if (btn !== 'back' && btn !== 'forward') return;
-      // Stop DOM / page handlers — we own navigation
-      try {
-        event.preventDefault();
-      } catch {
-        /* */
-      }
+      // No preventDefault — page handlers still run; renderer dedups duplicate sources.
       emitNav(btn === 'back' ? 'back' : 'forward', `before-mouse:${label}`, wc);
     });
   } catch (err) {
@@ -151,5 +165,5 @@ module.exports = {
   attachAppCommandFallback,
   emitNav,
   /** @deprecated use attachSideButtons */
-  attachDebugListeners: attachSideButtons,
+  attachMouseListeners: attachSideButtons,
 };

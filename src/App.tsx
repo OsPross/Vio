@@ -981,16 +981,16 @@ export function App() {
     [],
   );
 
-  /** Deduped history nav — mouseup (primary) + app-command (fallback) share one gate */
+  /** Single history nav entry — mouse / IPC / chrome UI share one 150ms gate */
   const browserNavAt = useRef(0);
-  const doBrowserNav = useCallback((dir: 'back' | 'forward', source = 'unknown') => {
+  const navigateHistory = useCallback((tabId: string, dir: 'back' | 'forward', source = 'unknown') => {
     const now = Date.now();
-    if (now - browserNavAt.current < 180) {
+    if (now - browserNavAt.current < 150) {
       if (
         typeof window !== 'undefined' &&
         (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE
       ) {
-        console.log('[mouse-nav:ui] dedup-skip', { dir, source });
+        console.log('[mouse-nav:ui] dedup-skip', { tabId, dir, source });
       }
       return;
     }
@@ -999,20 +999,22 @@ export function App() {
       typeof window !== 'undefined' &&
       (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE
     ) {
-      console.log('[mouse-nav:ui] nav', { dir, source });
+      console.log('[mouse-nav:ui] nav', { tabId, dir, source });
     }
     const st = useStore.getState();
     if (st.view === 'settings') {
       if (dir === 'back') st.setView('browser');
       return;
     }
-    const tab = st.tabs.find((t) => t.id === st.activeId);
+    const id = tabId || st.activeId;
+    const tab = st.tabs.find((t) => t.id === id);
     if (!tab) return;
-    // Internal pages without webview: no history stack — event still consumed (no double fire)
     if (tab.url === HOME_URL || tab.url === TOR_HOME_URL || tab.url.startsWith('about:')) {
       return;
     }
-    const el = currentView();
+    const el =
+      (document.querySelector(`webview[data-tab-id="${id}"]`) as unknown as WebviewEl | null) ||
+      (id === st.activeId ? currentView() : null);
     try {
       if (dir === 'back') el?.goBack?.();
       else el?.goForward?.();
@@ -1021,9 +1023,18 @@ export function App() {
     }
   }, []);
 
+  const doBrowserNav = useCallback(
+    (dir: 'back' | 'forward', source = 'unknown') => {
+      navigateHistory(useStore.getState().activeId, dir, source);
+    },
+    [navigateHistory],
+  );
+
   useEffect(() => {
     const off = window.shell?.onBrowserNav?.((payload) => {
       if (payload?.dir === 'back' || payload?.dir === 'forward') {
+        // Main already navigated guest WC — skip duplicate goBack in renderer
+        if (payload.handled) return;
         doBrowserNav(payload.dir, payload.source || 'app-command');
       }
     });
@@ -1052,6 +1063,7 @@ export function App() {
     const onSide = (e: MouseEvent | PointerEvent) => {
       if (e.button !== 3 && e.button !== 4) return;
       logUi('side', e);
+      // Chrome UI only — do not steal events from page (those go through guest/before-mouse).
       e.preventDefault();
       doBrowserNav(e.button === 3 ? 'back' : 'forward', 'chrome-mouseup');
     };
@@ -1062,10 +1074,7 @@ export function App() {
     };
     const onDown = (e: MouseEvent) => logUi('mousedown', e);
     const onAux = (e: MouseEvent) => logUi('auxclick', e);
-    const onPtr = (e: PointerEvent) => {
-      logUi('pointerdown', e);
-      onSide(e);
-    };
+    const onPtr = (e: PointerEvent) => logUi('pointerdown', e);
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Backspace' || e.altKey || e.ctrlKey || e.metaKey) return;
       if (isEditableDomTarget(e.target)) return;
