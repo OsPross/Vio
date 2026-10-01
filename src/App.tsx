@@ -1,28 +1,16 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { MotionConfig } from 'motion/react';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import {
-  applyThemeToDom,
-  HOME_URL,
-  HISTORY_URL,
-  DOWNLOADS_URL,
-  BOOKMARKS_URL,
-  EXTENSIONS_URL,
-  ABOUT_URL,
-  TOR_HOME_URL,
-  isTorTab,
-  useStore,
-} from './store';
-import {
-  TabContent,
-  type SaveOffer,
-} from './features/tabs';
+import { useStore } from './store';
+import { TabContent, type SaveOffer } from './features/tabs';
 import { AppChrome } from './features/shell';
 import {
   ShellOverlays,
   type AboutInfo,
   useBookmarkHandlers,
 } from './features/dialogs';
+import { useOmniboxDraft } from './features/omnibox';
+import { getActiveTabFlags } from './lib/activeTabFlags';
 import { useIpcEvents } from './hooks/useIpcEvents';
 import { useShortcuts } from './hooks/useShortcuts';
 import { useBindCommandHost } from './hooks/useAppMenuActions';
@@ -30,7 +18,9 @@ import { useSessionPersist } from './hooks/useSessionPersist';
 import { useTabLifecycle, useTabMediaFlags } from './hooks/useTabLifecycle';
 import { useTorSession } from './hooks/useTorSession';
 import { useBrowserNav } from './hooks/useBrowserNav';
-import { useOmniboxDraft } from './features/omnibox';
+import { usePictureInPicture } from './hooks/usePictureInPicture';
+import { useShellEffects } from './hooks/useShellEffects';
+import { usePageActions } from './hooks/usePageActions';
 
 /** Heavy routes / dialogs — not needed for first paint */
 const SettingsPage = lazy(() =>
@@ -53,33 +43,18 @@ export function App() {
   const patchSettings = useStore((s) => s.patchSettings);
 
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
-  const activeIsTor = isTorTab(active);
-  const isHistoryPage = !!active && !activeIsTor && active.url === HISTORY_URL;
-  const isDownloadsPage = !!active && !activeIsTor && active.url === DOWNLOADS_URL;
-  const isBookmarksPage = !!active && !activeIsTor && active.url === BOOKMARKS_URL;
-  const isExtensionsPage = !!active && !activeIsTor && active.url === EXTENSIONS_URL;
-  const isAboutPage =
-    !!active &&
-    !activeIsTor &&
-    (active.url === ABOUT_URL ||
-      active.url === 'about:about' ||
-      active.url === 'djxxr://about' ||
-      /^https?:\/\/djxxr\/about\/?$/i.test(active.url));
-  const isInternalAbout =
-    isHistoryPage || isDownloadsPage || isBookmarksPage || isExtensionsPage || isAboutPage;
-  const isHome =
-    !!active &&
-    !isInternalAbout &&
-    (active.url === HOME_URL ||
-      (active.url.startsWith('about:') &&
-        !activeIsTor &&
-        active.url !== ABOUT_URL &&
-        active.url !== 'about:about' &&
-        active.url !== TOR_HOME_URL));
-  const isTorHome =
-    !!active &&
-    activeIsTor &&
-    (active.url === TOR_HOME_URL || active.url === HOME_URL || active.url === 'about:blank');
+  const {
+    activeIsTor,
+    isHistoryPage,
+    isDownloadsPage,
+    isBookmarksPage,
+    isExtensionsPage,
+    isAboutPage,
+    isInternalAbout,
+    isHome,
+    isTorHome,
+  } = getActiveTabFlags(active);
+
   const { draft, setDraft, omniEditingRef, omniFocusedRef } = useOmniboxDraft({
     activeUrl: active?.url,
     activeId: active?.id,
@@ -87,10 +62,10 @@ export function App() {
     isTorHome,
     isInternalAbout,
   });
+
   const [saveOffer, setSaveOffer] = useState<SaveOffer | null>(null);
   const [pwForPage, setPwForPage] = useState(0);
   const [taskMgrOpen, setTaskMgrOpen] = useState(false);
-  const prevActiveIdRef = useRef(activeId);
   const {
     torInfo,
     setTorInfo,
@@ -131,6 +106,7 @@ export function App() {
     omniFocusedRef,
     setDraft,
   });
+
   const [shieldOpen, setShieldOpen] = useState(false);
   const [permRemember, setPermRemember] = useState(true);
   const [tabMenu, setTabMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
@@ -162,140 +138,26 @@ export function App() {
 
   const { crashOffer, setCrashOffer } = useSessionPersist({ guestWc, windowMode });
 
-  useEffect(() => {
-    applyThemeToDom(settings);
-    const prefersReduce =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document.documentElement.dataset.reduceMotion =
-      settings.perfReduceMotion || !settings.uiMotion || prefersReduce ? 'on' : 'off';
-  }, [settings]);
+  useShellEffects({
+    settings,
+    activeId,
+    activeUrl: active?.url,
+    activeTabId: active?.id,
+    isHome,
+    activeIsTor,
+    htmlFullscreen,
+    setPwForPage,
+    setSaveOffer,
+    setFsToast,
+    patchSettings,
+  });
 
-  useEffect(() => {
-    void window.shell?.perfBoot?.({
-      hardwareAcceleration: settings.perfHardwareAcceleration,
-      smoothScrolling: settings.perfSmoothScrolling,
-      backgroundThrottling: settings.perfBackgroundThrottling,
-      cacheMb: settings.perfCacheMb,
-      reduceRenderers: settings.perfMode === 'saver',
-      memoryCapMb:
-        settings.perfMode === 'saver' ? 512 : settings.perfMode === 'performance' ? 1024 : 768,
-    });
-    void window.shell?.perfApplySession?.({
-      cacheMb: settings.perfCacheMb,
-      backgroundThrottling: settings.perfBackgroundThrottling,
-      spellcheck: settings.perfSpellcheck !== false,
-    });
-    void window.shell?.spellcheckConfig?.({ enabled: settings.perfSpellcheck !== false });
-  }, [
-    settings.perfHardwareAcceleration,
-    settings.perfSmoothScrolling,
-    settings.perfBackgroundThrottling,
-    settings.perfCacheMb,
-    settings.perfMode,
-    settings.perfSpellcheck,
-  ]);
-
-  useEffect(() => {
-    setSaveOffer(null);
-    if (!settings.passwordsEnabled || isHome || !active?.url) {
-      setPwForPage(0);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      const st = await window.shell?.passwordsStatus?.();
-      if (!st?.unlocked || cancelled) {
-        if (!cancelled) setPwForPage(0);
-        return;
-      }
-      const list = await window.shell?.passwordsFind?.(active.url);
-      if (!cancelled) setPwForPage(Array.isArray(list) ? list.length : 0);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [active?.url, activeId, isHome, settings.passwordsEnabled]);
-
-  useEffect(() => {
-    if (activeIsTor && settings.sidePanelOpen) {
-      patchSettings({ sidePanelOpen: false, activeSideAppId: null });
-    }
-  }, [activeIsTor, active?.id, settings.sidePanelOpen, patchSettings]);
-
-  const runPictureInPictureOnTab = useCallback(
-    (tabId: string, opts?: { enterOnly?: boolean }) => {
-      const wcId = guestWc[tabId];
-      if (typeof wcId === 'number' && window.shell?.pictureInPicture) {
-        void window.shell.pictureInPicture(wcId, { enterOnly: Boolean(opts?.enterOnly) });
-        return;
-      }
-      if (tabId !== useStore.getState().activeId) return;
-      const el = currentView();
-      if (!el) return;
-      const enterOnly = Boolean(opts?.enterOnly);
-      void el
-        .executeJavaScript?.(
-          enterOnly
-            ? `(async () => {
-            try {
-              if (!document.pictureInPictureEnabled) return 'disabled';
-              if (document.pictureInPictureElement) return 'already';
-              const videos = Array.from(document.querySelectorAll('video'));
-              const v =
-                videos.find((x) => !x.paused && !x.ended) ||
-                videos.find((x) => (x.readyState || 0) > 1) ||
-                videos[0];
-              if (!v) return 'no-video';
-              await v.requestPictureInPicture();
-              return 'enter';
-            } catch {
-              return 'error';
-            }
-          })()`
-            : `(async () => {
-            try {
-              if (!document.pictureInPictureEnabled) return 'disabled';
-              if (document.pictureInPictureElement) {
-                await document.exitPictureInPicture();
-                return 'exit';
-              }
-              const videos = Array.from(document.querySelectorAll('video'));
-              const v =
-                videos.find((x) => !x.paused && !x.ended) ||
-                videos.find((x) => (x.readyState || 0) > 1) ||
-                videos[0];
-              if (!v) return 'no-video';
-              await v.requestPictureInPicture();
-              return 'enter';
-            } catch {
-              return 'error';
-            }
-          })()`,
-          true,
-        )
-        .catch(() => {});
-    },
-    [guestWc],
-  );
-
-  const togglePictureInPicture = useCallback(() => {
-    runPictureInPictureOnTab(useStore.getState().activeId);
-  }, [runPictureInPictureOnTab]);
-
-  // Document PiP is OS-level — do not exit when the tab webview is hidden (tab switch / minimize).
-  useEffect(() => {
-    const prevId = prevActiveIdRef.current;
-    prevActiveIdRef.current = activeId;
-    if (!settings.autoPipOnTabSwitch || !prevId || prevId === activeId) return;
-    const media = tabMediaRef.current[prevId];
-    if (!media?.playing) return;
-    runPictureInPictureOnTab(prevId, { enterOnly: true });
-  }, [activeId, settings.autoPipOnTabSwitch, runPictureInPictureOnTab]);
-
-  useEffect(() => {
-    void window.shell?.setDevtoolsEnabled?.(Boolean(settings.allowInspect));
-  }, [settings.allowInspect]);
+  const { togglePictureInPicture } = usePictureInPicture({
+    guestWc,
+    currentView,
+    tabMediaRef,
+    autoPipOnTabSwitch: settings.autoPipOnTabSwitch,
+  });
 
   const {
     blockedToday,
@@ -325,52 +187,10 @@ export function App() {
     setPageHasVideo(false);
   }, [activeId, active?.url, setPopupBlocked]);
 
-  const saveActivePage = useCallback(() => {
-    const id = useStore.getState().activeId;
-    const wcId = guestWc[id];
-    if (typeof wcId !== 'number') return;
-    void window.shell?.savePage?.(wcId);
-  }, [guestWc]);
-
-  const saveActivePdf = useCallback(() => {
-    const id = useStore.getState().activeId;
-    const wcId = guestWc[id];
-    if (typeof wcId !== 'number') return;
-    void window.shell?.printToPdf?.(wcId);
-  }, [guestWc]);
-
-  const printActivePage = useCallback(() => {
-    const id = useStore.getState().activeId;
-    const wcId = guestWc[id];
-    if (typeof wcId === 'number' && window.shell?.printPage) {
-      void window.shell.printPage(wcId);
-      return;
-    }
-    try {
-      currentView()?.print?.();
-    } catch {
-      void currentView()?.executeJavaScript?.('window.print()');
-    }
-  }, [guestWc]);
+  const { saveActivePdf, printActivePage } = usePageActions({ guestWc, currentView });
 
   const { bookmarkPop, setBookmarkPop, bookmarkStarRef, openBookmarkDialog, openBookmarkUrl } =
     useBookmarkHandlers({ active, activeIsTor, navigateActive });
-
-  useEffect(() => {
-    const onSave = () => saveActivePage();
-    window.addEventListener('djxxr-save-page', onSave);
-    return () => window.removeEventListener('djxxr-save-page', onSave);
-  }, [saveActivePage]);
-
-  useEffect(() => {
-    if (!htmlFullscreen) {
-      setFsToast(false);
-      return;
-    }
-    setFsToast(true);
-    const t = window.setTimeout(() => setFsToast(false), 4000);
-    return () => window.clearTimeout(t);
-  }, [htmlFullscreen]);
 
   useShortcuts({
     isHome,
