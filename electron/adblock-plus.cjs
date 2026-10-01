@@ -44,6 +44,18 @@ const ghosteryOn = new WeakSet();
 const recentBlocked = new Map();
 let updateLists = true;
 let lastInitError = null;
+/** @type {Promise<{ ok: boolean, engine?: string, fromCache?: boolean, error?: string }> | null} */
+let initPromise = null;
+/** @type {((v: boolean) => void) | null} */
+let readyResolve = null;
+/** @type {Promise<boolean>} */
+let readyPromise = new Promise((resolve) => {
+  readyResolve = resolve;
+});
+let engineReadyAt = 0;
+let firstGuestRequestAt = 0;
+let firstGuestRequestUrl = '';
+let bootGateInstalled = false;
 
 /** @type {import('@ghostery/adblocker').NetworkFilter[]} */
 let appliedCustomNetwork = [];
@@ -237,6 +249,175 @@ function cacheMetaPath() {
   return path.join(cacheDir(), 'meta.json');
 }
 
+function engineCachePath() {
+  return path.join(cacheDir(), 'engine.bin');
+}
+
+function markReady(fromCache) {
+  if (!engineReadyAt) {
+    engineReadyAt = Date.now();
+    console.log(
+      `[adblock+] engine ready at t=${engineReadyAt} fromCache=${Boolean(fromCache)}` +
+        (firstGuestRequestAt
+          ? ` (firstGuestRequest was ${firstGuestRequestAt - engineReadyAt}ms earlier!)`
+          : ''),
+    );
+  }
+  if (readyResolve) {
+    readyResolve(true);
+    readyResolve = null;
+  }
+}
+
+function isReady() {
+  return Boolean(blocker);
+}
+
+/**
+ * Wait until Ghostery engine is ready, or timeoutMs elapses.
+ * @param {number} [timeoutMs=1500]
+ */
+function whenReady(timeoutMs = 1500) {
+  if (blocker) return Promise.resolve(true);
+  const ms = Math.max(0, Number(timeoutMs) || 1500);
+  return Promise.race([
+    readyPromise.then(() => Boolean(blocker)),
+    new Promise((resolve) => {
+      setTimeout(() => {
+        if (!blocker) {
+          console.warn(`[adblock+] whenReady timed out after ${ms}ms — guest may load before engine`);
+        }
+        resolve(Boolean(blocker));
+      }, ms);
+    }),
+  ]);
+}
+
+/**
+ * Sync deserialize of last serialized engine (ms). Call before first guest navigation.
+ * @returns {{ ok: boolean, ms?: number, error?: string }}
+ */
+function loadCachedEngineSync() {
+  if (blocker) {
+    markReady(true);
+    return { ok: true, ms: 0 };
+  }
+  const file = engineCachePath();
+  if (!fs.existsSync(file)) {
+    console.log('[adblock+] no engine.bin cache');
+    return { ok: false, error: 'no-cache' };
+  }
+  const t0 = Date.now();
+  try {
+    const { ElectronBlocker } = require('@ghostery/adblocker-electron');
+    const buf = fs.readFileSync(file);
+    blocker = ElectronBlocker.deserialize(buf);
+    wireBlockerEvents();
+    appliedCustomNetwork = [];
+    appliedCustomCosmetic = [];
+    refreshCustom();
+    applyCustomRulesToBlocker();
+    lastInitError = null;
+    const ms = Date.now() - t0;
+    markReady(true);
+    syncBlockingOnSessions();
+    console.log(`[adblock+] deserialized engine.bin in ${ms}ms (${buf.length} bytes)`);
+    return { ok: true, ms };
+  } catch (err) {
+    lastInitError = String(err.message || err);
+    console.warn('[adblock+] deserialize failed', lastInitError);
+    blocker = null;
+    return { ok: false, error: lastInitError };
+  }
+}
+
+function saveEngineCache() {
+  if (!blocker || typeof blocker.serialize !== 'function') return;
+  try {
+    fs.mkdirSync(cacheDir(), { recursive: true });
+    const buf = blocker.serialize();
+    fs.writeFileSync(engineCachePath(), Buffer.from(buf));
+    console.log(`[adblock+] wrote engine.bin (${buf.byteLength || buf.length} bytes)`);
+  } catch (err) {
+    console.warn('[adblock+] serialize failed', err.message || err);
+  }
+}
+
+function wireBlockerEvents() {
+  if (!blocker || blocker.__djxxrWired) return;
+  blocker.__djxxrWired = true;
+  blocker.on('request-blocked', (request) => {
+    try {
+      const url = request.url;
+      noteFirstGuestRequest(url);
+      pushBlocked(String(request.tabId ?? 'global'), url);
+    } catch {
+      /* */
+    }
+  });
+}
+
+/**
+ * Install a one-shot boot gate: first guest http(s) request waits for engine (≤1.5s).
+ * Only used when engine.bin cache miss. Ghostery enableBlockingInSession replaces this hook.
+ * @param {import('electron').Session} ses
+ */
+function installBootGate(ses) {
+  if (!ses || bootGateInstalled || blocker) return;
+  bootGateInstalled = true;
+  try {
+    ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
+      if (blocker) {
+        noteFirstGuestRequest(details.url);
+        callback({});
+        return;
+      }
+      const t0 = Date.now();
+      whenReady(1500).then((ok) => {
+        noteFirstGuestRequest(details.url);
+        console.log(
+          `[adblock+] boot-gate released after ${Date.now() - t0}ms ready=${ok} url=${String(details.url).slice(0, 100)}`,
+        );
+        try {
+          if (ok) enableGhostery(ses);
+        } catch {
+          /* */
+        }
+        try {
+          callback({});
+        } catch {
+          /* */
+        }
+      });
+    });
+    console.log('[adblock+] boot-gate installed (no engine cache)');
+  } catch (err) {
+    console.warn('[adblock+] boot gate', err.message || err);
+  }
+}
+
+function noteFirstGuestRequest(url) {
+  if (firstGuestRequestAt) return;
+  firstGuestRequestAt = Date.now();
+  firstGuestRequestUrl = String(url || '');
+  console.log(
+    `[adblock+] first guest request at t=${firstGuestRequestAt} readyAt=${engineReadyAt || 0}` +
+      ` deltaMs=${engineReadyAt ? firstGuestRequestAt - engineReadyAt : 'n/a'} url=${firstGuestRequestUrl.slice(0, 120)}`,
+  );
+}
+
+function getBootTiming() {
+  return {
+    engineReadyAt,
+    firstGuestRequestAt,
+    firstGuestRequestUrl,
+    readyBeforeFirstRequest:
+      engineReadyAt > 0 && firstGuestRequestAt > 0 ? engineReadyAt <= firstGuestRequestAt : null,
+    deltaMs:
+      engineReadyAt && firstGuestRequestAt ? firstGuestRequestAt - engineReadyAt : null,
+  };
+}
+
 function fetchText(url) {
   return new Promise((resolve, reject) => {
     const req = net.fetch(url);
@@ -263,7 +444,13 @@ function pushBlocked(tabKey, url) {
 }
 
 function getRecentBlocked(tabKey) {
-  return recentBlocked.get(tabKey) || [];
+  if (tabKey && tabKey !== 'global') return recentBlocked.get(String(tabKey)) || [];
+  // Aggregate all tabs for global view
+  const all = [];
+  for (const list of recentBlocked.values()) {
+    for (const row of list) all.push(row);
+  }
+  return all.sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 80);
 }
 
 function clearRecentBlocked(tabKey) {
@@ -306,7 +493,10 @@ function disableGhostery(ses) {
       blocker.disableBlockingInSession(ses);
     }
   } catch (e) {
-    console.warn('[adblock+] disableBlockingInSession', e);
+    const msg = String(e && e.message ? e.message : e);
+    if (!/not enabled/i.test(msg)) {
+      console.warn('[adblock+] disableBlockingInSession', e);
+    }
   }
   ghosteryOn.delete(ses);
 }
@@ -327,6 +517,17 @@ function enableGhostery(ses) {
       }
     }
     blocker.enableBlockingInSession(ses);
+    // First-request timing (Ghostery owns onBeforeRequest)
+    if (!ses.__djxxrFirstReqHook) {
+      ses.__djxxrFirstReqHook = true;
+      try {
+        ses.webRequest.onCompleted({ urls: ['http://*/*', 'https://*/*'] }, (details) => {
+          noteFirstGuestRequest(details.url);
+        });
+      } catch {
+        /* */
+      }
+    }
     ghosteryOn.add(ses);
   } catch (e) {
     const msg = String(e.message || e);
@@ -340,6 +541,14 @@ function enableGhostery(ses) {
 
 function syncBlockingOnSessions() {
   for (const ses of attached) {
+    // Engine instance may have been replaced (cache → refresh) — force re-bind
+    if (ghosteryOn.has(ses)) {
+      try {
+        disableGhostery(ses);
+      } catch {
+        ghosteryOn.delete(ses);
+      }
+    }
     if (ghosteryBlockingWanted()) enableGhostery(ses);
     else disableGhostery(ses);
   }
@@ -347,61 +556,70 @@ function syncBlockingOnSessions() {
 
 async function init(opts = {}) {
   if (typeof opts.updateLists === 'boolean') updateLists = opts.updateLists;
-  try {
-    const { ElectronBlocker } = require('@ghostery/adblocker-electron');
-    const cachedFetch = async (url) => {
-      fs.mkdirSync(cacheDir(), { recursive: true });
-      const key = cryptoHash(url);
-      const file = path.join(cacheDir(), `${key}.txt`);
-      let meta = { at: 0 };
-      try {
-        meta = JSON.parse(fs.readFileSync(cacheMetaPath(), 'utf8'));
-      } catch {
-        /* */
-      }
-      const fresh = Date.now() - (meta.at || 0) < 24 * 60 * 60 * 1000;
-      if (fresh && fs.existsSync(file)) {
-        return new Response(fs.readFileSync(file, 'utf8'), { headers: { 'content-type': 'text/plain' } });
-      }
-      if (!updateLists && fs.existsSync(file)) {
-        return new Response(fs.readFileSync(file, 'utf8'), { headers: { 'content-type': 'text/plain' } });
-      }
-      if (!updateLists) {
-        throw new Error('List updates disabled and no cache');
-      }
-      const text = await fetchText(url);
-      fs.writeFileSync(file, text, 'utf8');
-      return new Response(text, { headers: { 'content-type': 'text/plain' } });
-    };
-
-    blocker = await ElectronBlocker.fromLists(cachedFetch, LIST_URLS, {
-      enableCompression: true,
-    });
-    fs.writeFileSync(cacheMetaPath(), JSON.stringify({ at: Date.now() }), 'utf8');
-
-    appliedCustomNetwork = [];
-    appliedCustomCosmetic = [];
-    refreshCustom();
-    applyCustomRulesToBlocker();
-
-    blocker.on('request-blocked', (request) => {
-      try {
-        pushBlocked(String(request.tabId ?? 'global'), request.url);
-      } catch {
-        /* */
-      }
-    });
-    lastInitError = null;
-    syncBlockingOnSessions();
-    return { ok: true, engine: 'ghostery', lists: LIST_URLS.length };
-  } catch (err) {
-    lastInitError = String(err.message || err);
-    console.warn('[adblock+] ghostery init failed (cosmetic fallback only)', lastInitError);
-    blocker = null;
-    appliedCustomNetwork = [];
-    appliedCustomCosmetic = [];
-    return { ok: false, error: lastInitError, engine: 'fallback-cosmetic' };
+  if (initPromise && !opts.force) {
+    return initPromise;
   }
+  initPromise = (async () => {
+    try {
+      const { ElectronBlocker } = require('@ghostery/adblocker-electron');
+      const cachedFetch = async (url) => {
+        fs.mkdirSync(cacheDir(), { recursive: true });
+        const key = cryptoHash(url);
+        const file = path.join(cacheDir(), `${key}.txt`);
+        let meta = { at: 0 };
+        try {
+          meta = JSON.parse(fs.readFileSync(cacheMetaPath(), 'utf8'));
+        } catch {
+          /* */
+        }
+        const fresh = Date.now() - (meta.at || 0) < 24 * 60 * 60 * 1000;
+        if (fresh && fs.existsSync(file)) {
+          return new Response(fs.readFileSync(file, 'utf8'), { headers: { 'content-type': 'text/plain' } });
+        }
+        if (!updateLists && fs.existsSync(file)) {
+          return new Response(fs.readFileSync(file, 'utf8'), { headers: { 'content-type': 'text/plain' } });
+        }
+        if (!updateLists) {
+          throw new Error('List updates disabled and no cache');
+        }
+        const text = await fetchText(url);
+        fs.writeFileSync(file, text, 'utf8');
+        return new Response(text, { headers: { 'content-type': 'text/plain' } });
+      };
+
+      const next = await ElectronBlocker.fromLists(cachedFetch, LIST_URLS, {
+        enableCompression: true,
+      });
+      blocker = next;
+      wireBlockerEvents();
+      fs.writeFileSync(cacheMetaPath(), JSON.stringify({ at: Date.now() }), 'utf8');
+      saveEngineCache();
+
+      appliedCustomNetwork = [];
+      appliedCustomCosmetic = [];
+      refreshCustom();
+      applyCustomRulesToBlocker();
+
+      lastInitError = null;
+      markReady(false);
+      syncBlockingOnSessions();
+      return { ok: true, engine: 'ghostery', lists: LIST_URLS.length, fromCache: false };
+    } catch (err) {
+      lastInitError = String(err.message || err);
+      console.warn('[adblock+] ghostery init failed (cosmetic fallback only)', lastInitError);
+      if (!blocker) {
+        blocker = null;
+        if (readyResolve) {
+          readyResolve(false);
+          readyResolve = null;
+        }
+      }
+      appliedCustomNetwork = [];
+      appliedCustomCosmetic = [];
+      return { ok: Boolean(blocker), error: lastInitError, engine: blocker ? 'ghostery' : 'fallback-cosmetic' };
+    }
+  })();
+  return initPromise;
 }
 
 /**
@@ -410,6 +628,7 @@ async function init(opts = {}) {
  */
 function attachToSession(ses) {
   attached.add(ses);
+  if (!blocker) installBootGate(ses);
   if (blocker) enableGhostery(ses);
 }
 
@@ -498,6 +717,8 @@ function getStatus() {
     engine: blocker ? 'ghostery' : 'fallback-cosmetic',
     updateLists,
     lastInitError,
+    ready: Boolean(blocker),
+    boot: getBootTiming(),
   };
 }
 
@@ -509,6 +730,10 @@ refreshCustom();
 
 module.exports = {
   init,
+  loadCachedEngineSync,
+  whenReady,
+  isReady,
+  installBootGate,
   attachToSession,
   setConfig,
   getStatus,
@@ -519,6 +744,7 @@ module.exports = {
   bump,
   getRecentBlocked,
   clearRecentBlocked,
+  getBootTiming,
   LIST_URLS,
   COSMETIC_CSS,
 };
