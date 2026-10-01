@@ -3,6 +3,8 @@
 :root {
   --tabs-h: 36px;
   --bar-h: 44px;
+  --bar-icon-size: 28px;
+  --bar-icon-gap: 2px;
 }
 
 /* —— Tabs —— */
@@ -85,15 +87,17 @@
 .bar-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--bar-icon-gap);
   flex-shrink: 0;
   margin-left: 8px;
 }
 
 .bar .icon-btn {
-  width: 28px;
-  height: 28px;
+  width: var(--bar-icon-size);
+  height: var(--bar-icon-size);
   color: var(--fg-3);
+  position: relative;
+  overflow: visible;
 }
 
 .bar .icon-btn:hover:not(:disabled) {
@@ -110,8 +114,8 @@
   flex: 1;
   min-width: 0;
   height: 34px;
-  gap: 6px;
-  padding: 0 6px 0 10px;
+  gap: 4px;
+  padding: 0 4px 0 10px;
   border-radius: 8px;
   background: var(--chrome-input);
   border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
@@ -141,14 +145,14 @@
 .omnibox-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--bar-icon-gap);
   flex-shrink: 0;
-  margin-left: 2px;
+  margin-left: 0;
 }
 
 .omnibox-actions .icon-btn {
-  width: 28px;
-  height: 28px;
+  width: var(--bar-icon-size);
+  height: var(--bar-icon-size);
   color: var(--fg-3);
   position: relative;
 }
@@ -158,22 +162,52 @@
   background: color-mix(in srgb, var(--fg) 7%, transparent);
 }
 
+.omnibox-bookmark-wrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .omnibox input {
   font-size: 13px;
 }
 
+/* Muted counter clipped inside the icon box — no bright pop-out badge */
 .adblock-count {
+  position: absolute;
   top: 1px;
   right: 1px;
-  min-width: 13px;
-  height: 13px;
-  padding: 0 3px;
-  font-size: 8.5px;
-  line-height: 13px;
-  background: color-mix(in srgb, var(--fg) 18%, transparent);
-  color: var(--fg);
+  min-width: 12px;
+  max-width: 18px;
+  height: 12px;
+  padding: 0 2px;
+  border-radius: 6px;
+  font-size: 8px;
+  line-height: 12px;
+  text-align: center;
   font-weight: 650;
-  border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+  color: var(--fg-2);
+  border: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.adblock-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 70%, var(--fg-3));
+  box-shadow: 0 0 0 1.5px var(--chrome);
+}
+
+.icon-btn.adblock-btn {
+  position: relative;
+  overflow: hidden;
 }
 
 .icon-btn.adblock-btn.on {
@@ -182,6 +216,32 @@
 
 .bar-shield-wrap {
   position: relative;
+}
+
+.bar-actions .dl-btn.idle {
+  opacity: 0.42;
+}
+
+.bar-actions .dl-btn.idle:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.bar-actions .dl-btn.busy {
+  opacity: 1;
+  color: var(--fg-2);
+}
+
+.bar-actions .dl-badge {
+  top: 1px;
+  right: 1px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 2px;
+  font-size: 8px;
+  line-height: 12px;
+  background: color-mix(in srgb, var(--fg) 16%, transparent);
+  color: var(--fg-2);
+  border-radius: 6px;
 }
 
 .media-use-badges {

@@ -10,15 +10,12 @@ import {
   ArrowRight,
   AppWindow,
   PictureInPicture2,
-  Fingerprint,
   Globe,
-  KeyRound,
   Lock,
   Mic,
   PanelLeft,
   Puzzle,
   RefreshCw,
-  Settings2,
   Shield,
   Star,
   TriangleAlert,
@@ -28,7 +25,6 @@ import { DownloadsButton } from '../../components/DownloadsUI';
 import { BookmarkPopover } from '../../components/BookmarkPopover';
 import { AppMenu } from '../../components/AppMenu';
 import { OmniboxSuggest } from '../../components/OmniboxSuggest';
-import { MetricsDot } from '../../components/metrics/MetricsDot';
 import { getWindowPartition } from '../../lib/windowBoot';
 import {
   DOWNLOADS_URL,
@@ -80,7 +76,6 @@ export type BrowserChromeProps = {
   bookmarkPop: { url: string; title: string } | null;
   setBookmarkPop: Dispatch<SetStateAction<{ url: string; title: string } | null>>;
   bookmarkStarRef: MutableRefObject<HTMLButtonElement | null>;
-  pwForPage: number;
   shieldOpen: boolean;
   setShieldOpen: Dispatch<SetStateAction<boolean>>;
   blockedToday: number;
@@ -129,7 +124,6 @@ export function BrowserChrome({
   bookmarkPop,
   setBookmarkPop,
   bookmarkStarRef,
-  pwForPage,
   shieldOpen,
   setShieldOpen,
   blockedToday,
@@ -153,7 +147,6 @@ export function BrowserChrome({
   const newTab = useStore((s) => s.newTab);
   const setActive = useStore((s) => s.setActive);
   const setView = useStore((s) => s.setView);
-  const setSettingsTab = useStore((s) => s.setSettingsTab);
   const patchSettings = useStore((s) => s.patchSettings);
 
   const menuActions = useAppMenuActions({
@@ -281,30 +274,6 @@ export function BrowserChrome({
             tabs={tabs}
           />
           <div className="omnibox-actions">
-            {!activeIsTor ? (
-              <>
-                {/* Custom element from electron-chrome-extensions (injectBrowserAction in preload) */}
-                <browser-action-list
-                  className="ext-browser-actions"
-                  partition={
-                    windowMode === 'private' && getWindowPartition()
-                      ? getWindowPartition()!
-                      : 'persist:main'
-                  }
-                  tab={String(guestWc[activeId] || '')}
-                  alignment="bottom left"
-                />
-                <button
-                  type="button"
-                  className="icon-btn"
-                  title="Rozszerzenia"
-                  aria-label="Rozszerzenia"
-                  onClick={() => navigateActive(EXTENSIONS_URL)}
-                >
-                  <Puzzle size={16} strokeWidth={2} />
-                </button>
-              </>
-            ) : null}
             {((zoomFlash != null && zoomFlash !== 100) ||
               (zoomPercent !== 100 && !isHome && !isTorHome && !isInternalAbout)) &&
             !isHome &&
@@ -374,126 +343,6 @@ export function BrowserChrome({
                 />
               ) : null}
             </div>
-            <button
-              type="button"
-              className={`icon-btn ${pwForPage > 0 && !activeIsTor ? 'on' : ''}`}
-              title={
-                activeIsTor
-                  ? 'Hasła wyłączone w trybie Tor'
-                  : pwForPage > 0
-                    ? `${pwForPage} zapisanych kont — otwórz Hasła`
-                    : 'Menedżer haseł'
-              }
-              onClick={() => setSettingsTab('passwords')}
-              disabled={!settings.passwordsEnabled || activeIsTor}
-              style={{ opacity: settings.passwordsEnabled && !activeIsTor ? 1 : 0.35 }}
-            >
-              <KeyRound size={16} strokeWidth={1.75} />
-              {pwForPage > 0 && (
-                <span className="adblock-count">{pwForPage > 9 ? '9+' : pwForPage}</span>
-              )}
-            </button>
-            <button
-              type="button"
-              className="icon-btn"
-              title="Uprawnienia stron"
-              onClick={() => setSettingsTab('privacy')}
-            >
-              <Fingerprint size={16} strokeWidth={1.75} />
-            </button>
-            <div className="bar-shield-wrap">
-              <button
-                type="button"
-                className={`icon-btn adblock-btn ${settings.adblockEnabled ? 'on' : ''}`}
-                title={
-                  settings.adblockEnabled
-                    ? `Ochrona · dziś ${blockedToday} — kliknij panel tarczy`
-                    : 'Ochrona wyłączona'
-                }
-                onClick={() => setShieldOpen((v) => !v)}
-              >
-                <Shield size={16} strokeWidth={1.75} />
-                {settings.adblockEnabled && blockedToday > 0 && (
-                  <span className="adblock-count">
-                    {blockedToday > 99 ? '99+' : blockedToday}
-                  </span>
-                )}
-              </button>
-              {!activeIsTor && (
-                <Suspense fallback={null}>
-                  <ShieldPanel
-                    open={shieldOpen}
-                    onClose={() => setShieldOpen(false)}
-                    pageUrl={active?.url || ''}
-                    blockedToday={blockedToday}
-                    protectionOn={
-                      !!active?.url &&
-                      !settings.privacySiteExceptions.some((ex) => {
-                        try {
-                          const h = new URL(active.url).hostname;
-                          return h === ex || h.endsWith(`.${ex}`);
-                        } catch {
-                          return false;
-                        }
-                      })
-                    }
-                    onToggleProtection={(on) => {
-                      try {
-                        const h = new URL(active?.url || '').hostname.replace(/^www\./, '');
-                        const base = h.split('.').slice(-2).join('.');
-                        if (!on) {
-                          patchSettings({
-                            privacySiteExceptions: [
-                              ...new Set([...(settings.privacySiteExceptions || []), base || h]),
-                            ],
-                          });
-                          void window.shell?.privacyExceptionAdd?.(base || h);
-                          const el = currentView();
-                          try {
-                            el?.reloadIgnoringCache?.();
-                          } catch {
-                            el?.reload?.();
-                          }
-                        } else {
-                          patchSettings({
-                            privacySiteExceptions: (settings.privacySiteExceptions || []).filter(
-                              (x) => x !== base && x !== h,
-                            ),
-                          });
-                          void window.shell?.privacyExceptionRemove?.(base || h);
-                        }
-                      } catch {
-                        /* */
-                      }
-                    }}
-                    onDisableOnThisPage={() => {
-                      try {
-                        const h = new URL(active?.url || '').hostname.replace(/^www\./, '');
-                        const base = h.split('.').slice(-2).join('.');
-                        patchSettings({
-                          privacySiteExceptions: [
-                            ...new Set([...(settings.privacySiteExceptions || []), base || h]),
-                          ],
-                        });
-                        void window.shell?.privacyExceptionAdd?.(base || h);
-                        const el = currentView();
-                        try {
-                          el?.reloadIgnoringCache?.();
-                        } catch {
-                          el?.reload?.();
-                        }
-                      } catch {
-                        /* */
-                      }
-                    }}
-                    onForget={() => {
-                      void window.shell?.privacyForgetSite?.(active?.url || '');
-                      setShieldOpen(false);
-                    }}
-                  />
-                </Suspense>
-              )}
-            </div>
           </div>
         </form>
 
@@ -513,21 +362,126 @@ export function BrowserChrome({
         )}
 
         <div className="bar-actions">
+          {!activeIsTor ? (
+            <>
+              <browser-action-list
+                className="ext-browser-actions"
+                partition={
+                  windowMode === 'private' && getWindowPartition()
+                    ? getWindowPartition()!
+                    : 'persist:main'
+                }
+                tab={String(guestWc[activeId] || '')}
+                alignment="bottom left"
+              />
+              <button
+                type="button"
+                className="icon-btn"
+                title="Rozszerzenia"
+                aria-label="Rozszerzenia"
+                onClick={() => navigateActive(EXTENSIONS_URL)}
+              >
+                <Puzzle size={16} strokeWidth={1.75} />
+              </button>
+            </>
+          ) : null}
+          <div className="bar-shield-wrap">
+            <button
+              type="button"
+              className={`icon-btn adblock-btn ${settings.adblockEnabled ? 'on' : ''}`}
+              title={
+                settings.adblockEnabled
+                  ? `Ochrona · dziś ${blockedToday} — kliknij panel tarczy`
+                  : 'Ochrona wyłączona'
+              }
+              onClick={() => setShieldOpen((v) => !v)}
+            >
+              <Shield size={16} strokeWidth={1.75} />
+              {settings.adblockEnabled && blockedToday > 0 ? (
+                <span className="adblock-count">{Math.min(99, blockedToday)}</span>
+              ) : null}
+            </button>
+            {!activeIsTor && (
+              <Suspense fallback={null}>
+                <ShieldPanel
+                  open={shieldOpen}
+                  onClose={() => setShieldOpen(false)}
+                  pageUrl={active?.url || ''}
+                  blockedToday={blockedToday}
+                  protectionOn={
+                    !!active?.url &&
+                    !settings.privacySiteExceptions.some((ex) => {
+                      try {
+                        const h = new URL(active.url).hostname;
+                        return h === ex || h.endsWith(`.${ex}`);
+                      } catch {
+                        return false;
+                      }
+                    })
+                  }
+                  onToggleProtection={(on) => {
+                    try {
+                      const h = new URL(active?.url || '').hostname.replace(/^www\./, '');
+                      const base = h.split('.').slice(-2).join('.');
+                      if (!on) {
+                        patchSettings({
+                          privacySiteExceptions: [
+                            ...new Set([...(settings.privacySiteExceptions || []), base || h]),
+                          ],
+                        });
+                        void window.shell?.privacyExceptionAdd?.(base || h);
+                        const el = currentView();
+                        try {
+                          el?.reloadIgnoringCache?.();
+                        } catch {
+                          el?.reload?.();
+                        }
+                      } else {
+                        patchSettings({
+                          privacySiteExceptions: (settings.privacySiteExceptions || []).filter(
+                            (x) => x !== base && x !== h,
+                          ),
+                        });
+                        void window.shell?.privacyExceptionRemove?.(base || h);
+                      }
+                    } catch {
+                      /* */
+                    }
+                  }}
+                  onDisableOnThisPage={() => {
+                    try {
+                      const h = new URL(active?.url || '').hostname.replace(/^www\./, '');
+                      const base = h.split('.').slice(-2).join('.');
+                      patchSettings({
+                        privacySiteExceptions: [
+                          ...new Set([...(settings.privacySiteExceptions || []), base || h]),
+                        ],
+                      });
+                      void window.shell?.privacyExceptionAdd?.(base || h);
+                      const el = currentView();
+                      try {
+                        el?.reloadIgnoringCache?.();
+                      } catch {
+                        el?.reload?.();
+                      }
+                    } catch {
+                      /* */
+                    }
+                  }}
+                  onForget={() => {
+                    void window.shell?.privacyForgetSite?.(active?.url || '');
+                    setShieldOpen(false);
+                  }}
+                />
+              </Suspense>
+            )}
+          </div>
           <DownloadsButton
             onOpenAll={() => {
               if (activeIsTor) return;
               navigateActive(DOWNLOADS_URL);
             }}
           />
-          <MetricsDot onOpenTaskMgr={() => setTaskMgrOpen(true)} />
-          <button
-            type="button"
-            className="icon-btn"
-            title="Ustawienia (Ctrl+,)"
-            onClick={() => setSettingsTab('general')}
-          >
-            <Settings2 size={16} strokeWidth={1.75} />
-          </button>
           <AppMenu actions={menuActions} />
         </div>
       </div>

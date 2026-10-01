@@ -124,6 +124,7 @@ export function useAppMenuActions({
     sidebarMode: (settings.sidebarMode || (settings.showSidebar ? 'on' : 'off')) as SidebarMode,
     setSidebarMode: (mode) => patchSettings({ sidebarMode: mode }),
     openPasswords: () => setSettingsTab('passwords'),
+    openSitePermissions: () => setSettingsTab('privacy'),
     openHistory: () => {
       if (activeIsTor) return;
       navigateActive(HISTORY_URL);

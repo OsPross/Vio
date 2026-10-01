@@ -359,7 +359,6 @@ export function AppChrome({
           bookmarkPop={bookmarkPop}
           setBookmarkPop={setBookmarkPop}
           bookmarkStarRef={bookmarkStarRef}
-          pwForPage={pwForPage}
           shieldOpen={shieldOpen}
           setShieldOpen={setShieldOpen}
           blockedToday={blockedToday}

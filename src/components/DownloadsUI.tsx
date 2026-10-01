@@ -333,8 +333,8 @@ export function DownloadsButton({ onOpenAll }: ButtonProps) {
     <div className="dl-btn-wrap" ref={wrapRef}>
       <button
         type="button"
-        className={`icon-btn dl-btn ${active.length ? 'busy' : ''}`}
-        title="Pobrania"
+        className={`icon-btn dl-btn ${active.length ? 'busy' : 'idle'}`}
+        title={active.length ? `Pobrania (${active.length})` : 'Pobrania'}
         onClick={() => setOpen((v) => !v)}
       >
         {active.length ? (
@@ -342,7 +342,7 @@ export function DownloadsButton({ onOpenAll }: ButtonProps) {
         ) : (
           <Download size={16} strokeWidth={1.75} />
         )}
-        {active.length > 0 && <span className="dl-badge">{active.length}</span>}
+        {active.length > 0 && <span className="dl-badge">{active.length > 9 ? '9+' : active.length}</span>}
       </button>
       {open && (
         <div className="dl-panel">

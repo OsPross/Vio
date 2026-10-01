@@ -17,6 +17,7 @@ import {
   Eye,
   FileDown,
   FileText,
+  Fingerprint,
   Fullscreen,
   History,
   Info,
@@ -47,6 +48,7 @@ export type AppMenuActions = {
   newTorWindow: () => void;
   setSidebarMode: (mode: SidebarMode) => void;
   openPasswords: () => void;
+  openSitePermissions: () => void;
   openHistory: () => void;
   openBookmarks: () => void;
   openDownloads: () => void;
@@ -192,8 +194,16 @@ export function AppMenu({ actions }: Props) {
       kind: 'action',
       id: 'passwords',
       label: 'Hasła',
+      shortcut: acceleratorForMenuId('passwords'),
       icon: <KeyRound size={16} strokeWidth={1.75} />,
       run: () => actions.openPasswords(),
+    },
+    {
+      kind: 'action',
+      id: 'permissions',
+      label: 'Uprawnienia stron',
+      icon: <Fingerprint size={16} strokeWidth={1.75} />,
+      run: () => actions.openSitePermissions(),
     },
     {
       kind: 'action',
@@ -349,6 +359,7 @@ export function AppMenu({ actions }: Props) {
       kind: 'action',
       id: 'settings',
       label: 'Ustawienia',
+      shortcut: acceleratorForMenuId('settings'),
       icon: <Settings2 size={16} strokeWidth={1.75} />,
       run: () => actions.openSettings(),
     },
