@@ -4,23 +4,64 @@
  * Paths:
  * 1. target=_blank / disposition foreground|background-tab → new tab (deny + onOpenUrl)
  * 2. window.open with width/height/popup features OR about:blank OAuth → real BrowserWindow,
- *    SAME session as opener (cookies + window.opener / postMessage)
+ *    SAME session as opener (cookies + window.opener / postMessage) + thin URL chrome
  * 3. window.open without recent user gesture → deny + shell:popup-blocked
  * 4. Tor: never create chrome popup windows — open as Tor tab in same partition instead
  */
 'use strict';
 
-const { BrowserWindow } = require('electron');
+const path = require('node:path');
+const { BrowserWindow, WebContentsView, ipcMain } = require('electron');
 
 const GESTURE_MS = 5000;
+const TOOLBAR_H = 36;
 const OAUTH_HOST_RE =
   /(?:^|\.)((accounts|login|signin|oauth|auth|sso)\.)|(google\.com|googleapis\.com|gstatic\.com|microsoftonline\.com|live\.com|login\.microsoftonline\.com|github\.com|discord\.com|discordapp\.com|apple\.com|facebook\.com|twitter\.com|x\.com|okta\.com|auth0\.com)/i;
+
+/** Multi-part public suffixes (fallback when tldts unavailable). */
+const MULTI_TLD = new Set([
+  'co.uk',
+  'org.uk',
+  'ac.uk',
+  'gov.uk',
+  'co.jp',
+  'com.au',
+  'com.br',
+  'co.nz',
+  'com.pl',
+  'net.pl',
+  'org.pl',
+  'com.tr',
+]);
 
 /** @type {WeakMap<import('electron').WebContents, number>} */
 const lastGestureAt = new WeakMap();
 
 /** origin → allow popups without gesture */
 const allowedPopupOrigins = new Set();
+
+/** @type {WeakMap<import('electron').BrowserWindow, Set<import('electron').BrowserWindow>>} */
+const popupsByHostWindow = new WeakMap();
+
+const DARK_SCROLLBAR_CSS = `
+html, body {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, #f2f3f5 22%, transparent) transparent;
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar { width: 8px; height: 8px; }
+html::-webkit-scrollbar-button, body::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+html::-webkit-scrollbar-track, body::-webkit-scrollbar-track { background: transparent; }
+html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, #f2f3f5 18%, transparent);
+  border-radius: 999px;
+}
+html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, #f2f3f5 30%, transparent);
+}
+html::-webkit-scrollbar-corner, body::-webkit-scrollbar-corner { background: transparent; }
+`.trim();
+
+let chromeIpcWired = false;
 
 function noteGesture(wc) {
   if (!wc || wc.isDestroyed()) return;
@@ -72,6 +113,289 @@ function isPopupAllowedForOrigin(origin) {
 }
 
 /**
+ * Registrable domain (eTLD+1) for Chrome-style host highlighting.
+ * @param {string} hostname
+ */
+function registrableDomain(hostname) {
+  const host = String(hostname || '')
+    .replace(/\.$/, '')
+    .toLowerCase();
+  if (!host || host === 'localhost' || /^[\d.]+$/.test(host) || host.includes(':')) return host;
+  try {
+    const tldts = require('tldts-experimental');
+    const d = tldts.getDomain(host);
+    if (d) return d;
+  } catch {
+    /* */
+  }
+  const parts = host.split('.').filter(Boolean);
+  if (parts.length <= 2) return host;
+  const last2 = parts.slice(-2).join('.');
+  if (MULTI_TLD.has(last2) && parts.length >= 3) return parts.slice(-3).join('.');
+  return last2;
+}
+
+function hostWindowForWebContents(wc) {
+  if (!wc || wc.isDestroyed()) return null;
+  try {
+    const direct = BrowserWindow.fromWebContents(wc);
+    if (direct && !direct.isDestroyed()) return direct;
+  } catch {
+    /* */
+  }
+  try {
+    if (wc.hostWebContents && !wc.hostWebContents.isDestroyed()) {
+      const host = BrowserWindow.fromWebContents(wc.hostWebContents);
+      if (host && !host.isDestroyed()) return host;
+    }
+  } catch {
+    /* */
+  }
+  try {
+    if (typeof wc.getOwnerBrowserWindow === 'function') {
+      const owner = wc.getOwnerBrowserWindow();
+      if (owner && !owner.isDestroyed()) return owner;
+    }
+  } catch {
+    /* */
+  }
+  return null;
+}
+
+function trackPopupChild(openerWc, childWin) {
+  const host = hostWindowForWebContents(openerWc);
+  if (!host || !childWin || childWin.isDestroyed()) return;
+  let set = popupsByHostWindow.get(host);
+  if (!set) {
+    set = new Set();
+    popupsByHostWindow.set(host, set);
+    host.once('closed', () => {
+      const kids = popupsByHostWindow.get(host);
+      if (!kids) return;
+      for (const child of kids) {
+        try {
+          if (child && !child.isDestroyed()) child.close();
+        } catch {
+          /* */
+        }
+      }
+      kids.clear();
+    });
+  }
+  set.add(childWin);
+  childWin.once('closed', () => {
+    try {
+      set.delete(childWin);
+    } catch {
+      /* */
+    }
+  });
+}
+
+function ensureChromeIpc() {
+  if (chromeIpcWired) return;
+  chromeIpcWired = true;
+  ipcMain.on('djxxr-popup-chrome-ready', (event) => {
+    try {
+      const chromeWc = event.sender;
+      const win = BrowserWindow.fromWebContents(chromeWc);
+      const pageWc = win && !win.isDestroyed() ? win.__djxxrPopupPageWc : null;
+      if (pageWc && !pageWc.isDestroyed()) {
+        pushChromeUpdate(win, pageWc);
+      }
+    } catch (err) {
+      console.warn('[popup] chrome-ready', err);
+    }
+  });
+}
+
+/**
+ * @param {import('electron').BrowserWindow} win
+ * @param {import('electron').WebContents} pageWc
+ */
+async function readCertSummary(pageWc) {
+  try {
+    const url = pageWc.getURL();
+    if (!/^https:/i.test(url)) return null;
+    const origin = new URL(url).origin;
+    const dbg = pageWc.debugger;
+    if (!dbg.isAttached()) {
+      try {
+        dbg.attach('1.3');
+        pageWc.__djxxrDbgAttached = true;
+      } catch {
+        return null;
+      }
+    }
+    try {
+      await dbg.sendCommand('Network.enable');
+    } catch {
+      /* */
+    }
+    try {
+      const r = await dbg.sendCommand('Network.getCertificate', { origin });
+      const table = r && (r.tableNames || r.certificates);
+      // Electron/CDP variants: { certificates: Certificate[] } or encoded
+      const certs = Array.isArray(r?.certificates) ? r.certificates : null;
+      if (certs && certs[0]) {
+        const c = certs[0];
+        return {
+          subjectName: c.subjectName || c.subject?.CN || '',
+          issuerName: c.issuerName || c.issuer?.CN || '',
+          validExpiry: c.validExpiry || c.validTo || '',
+        };
+      }
+      void table;
+    } catch {
+      /* Network.getCertificate may be missing — fall through */
+    }
+    try {
+      const st = await dbg.sendCommand('Security.getDisplayedSecureOriginCertificateChain');
+      const chain = st?.certificates || st?.certificateChain;
+      if (Array.isArray(chain) && chain[0]) {
+        const c = chain[0];
+        return {
+          subjectName: c.subjectName || '',
+          issuerName: c.issuerName || '',
+          validExpiry: c.validExpiry || '',
+        };
+      }
+    } catch {
+      /* */
+    }
+  } catch {
+    /* */
+  }
+  return null;
+}
+
+function chromePayloadFromUrl(url, cert) {
+  let host = '';
+  let secure = false;
+  try {
+    const u = new URL(url);
+    host = u.host || u.hostname || '';
+    secure = u.protocol === 'https:';
+  } catch {
+    host = '';
+    secure = false;
+  }
+  return {
+    url: String(url || ''),
+    host,
+    registrable: registrableDomain(host.split(':')[0]),
+    secure,
+    cert: cert || null,
+  };
+}
+
+function pushChromeUpdate(win, pageWc) {
+  if (!win || win.isDestroyed() || !pageWc || pageWc.isDestroyed()) return;
+  const chromeView = win.__djxxrPopupChromeView;
+  if (!chromeView || chromeView.webContents.isDestroyed()) return;
+  const url = (() => {
+    try {
+      return pageWc.getURL();
+    } catch {
+      return '';
+    }
+  })();
+  const payload = chromePayloadFromUrl(url, win.__djxxrPopupCert || null);
+  try {
+    const titleHost = payload.host || 'djxxr';
+    win.setTitle(titleHost);
+  } catch {
+    /* */
+  }
+  try {
+    chromeView.webContents.send('djxxr-popup-chrome-update', payload);
+  } catch {
+    /* */
+  }
+  void readCertSummary(pageWc).then((cert) => {
+    if (!cert || win.isDestroyed()) return;
+    win.__djxxrPopupCert = cert;
+    const next = chromePayloadFromUrl(url, cert);
+    try {
+      chromeView.webContents.send('djxxr-popup-chrome-update', next);
+    } catch {
+      /* */
+    }
+  });
+}
+
+/**
+ * Thin read-only URL bar above the guest page (WebContentsView).
+ * @param {import('electron').BrowserWindow} childWin
+ */
+function attachPopupUrlChrome(childWin) {
+  if (!childWin || childWin.isDestroyed() || childWin.__djxxrPopupChrome) return;
+  childWin.__djxxrPopupChrome = true;
+  ensureChromeIpc();
+
+  const pageWc = childWin.webContents;
+  childWin.__djxxrPopupPageWc = pageWc;
+
+  let chromeView;
+  try {
+    chromeView = new WebContentsView({
+      webPreferences: {
+        preload: path.join(__dirname, 'popup-chrome-preload.cjs'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+        spellcheck: false,
+      },
+    });
+    chromeView.setBackgroundColor('#10131a');
+    childWin.contentView.addChildView(chromeView);
+    childWin.__djxxrPopupChromeView = chromeView;
+    chromeView.webContents.loadFile(path.join(__dirname, 'popup-chrome.html'));
+  } catch (err) {
+    console.warn('[popup] chrome view', err);
+    return;
+  }
+
+  const layout = () => {
+    if (childWin.isDestroyed()) return;
+    try {
+      const [cw, ch] = childWin.getContentSize();
+      const root = childWin.contentView;
+      chromeView.setBounds({ x: 0, y: 0, width: cw, height: TOOLBAR_H });
+      for (const v of root.children) {
+        if (v !== chromeView) {
+          v.setBounds({ x: 0, y: TOOLBAR_H, width: cw, height: Math.max(50, ch - TOOLBAR_H) });
+        }
+      }
+    } catch (err) {
+      console.warn('[popup] layout', err);
+    }
+  };
+
+  layout();
+  childWin.on('resize', layout);
+  // First paint sometimes before children settle
+  setTimeout(layout, 0);
+  setTimeout(layout, 50);
+
+  const refresh = () => pushChromeUpdate(childWin, pageWc);
+  pageWc.on('did-navigate', refresh);
+  pageWc.on('did-navigate-in-page', refresh);
+  pageWc.on('did-redirect-navigation', refresh);
+  pageWc.on('page-title-updated', refresh);
+  pageWc.on('dom-ready', () => {
+    refresh();
+    try {
+      void pageWc.insertCSS(DARK_SCROLLBAR_CSS);
+    } catch {
+      /* */
+    }
+  });
+  pageWc.on('did-finish-load', refresh);
+  refresh();
+}
+
+/**
  * Track clicks / keys so we can approximate Chromium's user-activation for popups.
  * @param {import('electron').WebContents} wc
  */
@@ -81,9 +405,8 @@ function attachGestureTracker(wc) {
   wc.on('before-input-event', (_e, input) => {
     if (input.type === 'keyDown' || input.type === 'mouseDown') noteGesture(wc);
   });
-  // Mouse clicks in page don't always hit before-input; also watch DOM via preload-less IPC-free poll:
   wc.on('dom-ready', () => {
-    noteGesture(wc); // soft: navigation interaction
+    noteGesture(wc);
   });
   wc.on('input-event', (_e, input) => {
     try {
@@ -131,7 +454,6 @@ function handleWindowOpen(openerWc, ctx) {
     disposition === 'background-tab' ||
     disposition === 'default';
 
-  // --- Regular _blank / tab dispositions → new tab
   if (tabDisposition && !popupFeatures) {
     if (r.ok === true && (/^https?:/i.test(url) || /^file:\/\//i.test(url))) {
       if (ctx.onOpenUrl) ctx.onOpenUrl(url, { background });
@@ -143,7 +465,6 @@ function handleWindowOpen(openerWc, ctx) {
     return { action: 'deny' };
   }
 
-  // --- Tor: never spawn chrome BrowserWindow popups (keep traffic in Tor partition tabs)
   if (torMode) {
     if (r.ok === true && (/^https?:/i.test(url) || blank)) {
       if (!blank && ctx.onOpenUrl) ctx.onOpenUrl(url, { background: false });
@@ -152,11 +473,8 @@ function handleWindowOpen(openerWc, ctx) {
     return { action: 'deny' };
   }
 
-  // --- Decide if this should be a real popup window
-  const wantsRealPopup =
-    disposition === 'new-window' && (popupFeatures || oauth || blank);
+  const wantsRealPopup = disposition === 'new-window' && (popupFeatures || oauth || blank);
 
-  // window.open(url) with features empty — treat as tab when gestured; else may be spam
   if (disposition === 'new-window' && !wantsRealPopup) {
     if (r.ok === true && /^https?:/i.test(url)) {
       if (ctx.onOpenUrl) ctx.onOpenUrl(url, { background: false });
@@ -166,8 +484,6 @@ function handleWindowOpen(openerWc, ctx) {
   }
 
   if (wantsRealPopup && (blank || (r.ok === true && /^https?:/i.test(url)))) {
-    // OAuth/SSO hosts + about:blank: allow without gesture (click often misses before-input).
-    // Ungated spam usually isn't on accounts.google.com / github.com/login.
     const gestured =
       hasRecentGesture(openerWc) ||
       isPopupAllowedForOrigin(openerOrigin) ||
@@ -194,14 +510,16 @@ function handleWindowOpen(openerWc, ctx) {
       height,
       openerId: openerWc.id,
       sessionSame: true,
+      chrome: true,
     });
 
     return {
       action: 'allow',
       overrideBrowserWindowOptions: {
         width,
-        height,
+        height: height + TOOLBAR_H,
         autoHideMenuBar: true,
+        backgroundColor: '#08090c',
         title: 'djxxr',
         webPreferences: {
           session: openerWc.session,
@@ -227,7 +545,7 @@ function handleWindowOpen(openerWc, ctx) {
 }
 
 /**
- * After allow, wire child for close + optional nav logging.
+ * After allow, wire child for chrome + close + optional nav logging.
  * @param {import('electron').WebContents} openerWc
  * @param {(child: import('electron').BrowserWindow) => void} [onChild]
  */
@@ -245,7 +563,10 @@ function attachDidCreateWindow(openerWc, onChild) {
     } catch {
       /* */
     }
-    // window.close() from page works on BrowserWindow; ensure navigation stays http(s)
+
+    trackPopupChild(openerWc, childWin);
+    attachPopupUrlChrome(childWin);
+
     childWin.webContents.setWindowOpenHandler((d) =>
       handleWindowOpen(childWin.webContents, {
         url: d.url,
@@ -279,8 +600,12 @@ module.exports = {
   attachGestureTracker,
   handleWindowOpen,
   attachDidCreateWindow,
+  attachPopupUrlChrome,
   allowPopupsForOrigin,
   isPopupAllowedForOrigin,
   looksLikeOauthUrl,
+  registrableDomain,
   GESTURE_MS,
+  TOOLBAR_H,
+  DARK_SCROLLBAR_CSS,
 };

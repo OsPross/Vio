@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:;" />
+    <title>popup-chrome</title>
+    <style>
+      :root {
+        --bg: #08090c;
+        --chrome: #10131a;
+        --fg: #f2f3f5;
+        --fg-2: #9aa1ad;
+        --fg-3: #5c6573;
+        --line: rgba(255, 255, 255, 0.07);
+        --accent: #8ab4f8;
+        --danger: #f28b82;
+        --ok: #81c995;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: var(--chrome);
+        color: var(--fg);
+        font: 12px/1.3 'Segoe UI', system-ui, sans-serif;
+        user-select: none;
+        -webkit-app-region: no-drag;
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 100%;
+        padding: 0 10px;
+        border-bottom: 1px solid var(--line);
+        background: var(--chrome);
+      }
+      .lock {
+        flex: 0 0 auto;
+        width: 16px;
+        height: 16px;
+        display: grid;
+        place-items: center;
+        color: var(--fg-2);
+      }
+      .lock.secure {
+        color: var(--ok);
+      }
+      .lock.insecure {
+        color: var(--danger);
+      }
+      .lock svg {
+        width: 14px;
+        height: 14px;
+        display: block;
+      }
+      .host {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        font-size: 12px;
+        letter-spacing: 0.01em;
+        cursor: default;
+        border-radius: 4px;
+        padding: 3px 6px;
+        margin: 0 -6px;
+      }
+      .host:hover {
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .host .dim {
+        color: var(--fg-3);
+      }
+      .host .reg {
+        color: var(--fg);
+        font-weight: 600;
+      }
+      .panel {
+        display: none;
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        top: 32px;
+        z-index: 5;
+        background: #161a24;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        max-height: calc(100vh - 40px);
+        overflow: auto;
+      }
+      .panel.open {
+        display: block;
+      }
+      .panel h1 {
+        margin: 0 0 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--fg);
+      }
+      .panel .url {
+        word-break: break-all;
+        color: var(--accent);
+        font-size: 11px;
+        margin-bottom: 8px;
+        user-select: text;
+        cursor: text;
+      }
+      .panel .meta {
+        color: var(--fg-2);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .panel .meta strong {
+        color: var(--fg);
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bar" id="bar" title="Kliknij, aby zobaczyć pełny adres">
+      <span class="lock" id="lock" aria-hidden="true"></span>
+      <div class="host" id="host" role="button" tabindex="0"></div>
+    </div>
+    <div class="panel" id="panel" role="dialog" aria-label="Informacje o stronie">
+      <h1 id="panel-title">Połączenie</h1>
+      <div class="url" id="panel-url"></div>
+      <div class="meta" id="panel-meta"></div>
+    </div>
+    <script>
+      const lockEl = document.getElementById('lock');
+      const hostEl = document.getElementById('host');
+      const panel = document.getElementById('panel');
+      const panelTitle = document.getElementById('panel-title');
+      const panelUrl = document.getElementById('panel-url');
+      const panelMeta = document.getElementById('panel-meta');
+
+      const ICON_LOCK =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+      const ICON_UNLOCK =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>';
+
+      let state = {
+        url: '',
+        host: '',
+        registrable: '',
+        secure: false,
+        cert: null,
+      };
+
+      function renderHost() {
+        const host = state.host || '';
+        const reg = state.registrable || host;
+        if (!host) {
+          hostEl.innerHTML = '<span class="dim">about:blank</span>';
+          return;
+        }
+        const idx = host === reg ? 0 : host.length - reg.length;
+        const prefix = idx > 0 ? host.slice(0, idx) : '';
+        const domain = idx > 0 ? host.slice(idx) : host;
+        hostEl.innerHTML =
+          (prefix ? '<span class="dim">' + escapeHtml(prefix) + '</span>' : '') +
+          '<span class="reg">' +
+          escapeHtml(domain) +
+          '</span>';
+      }
+
+      function renderLock() {
+        lockEl.className = 'lock ' + (state.secure ? 'secure' : state.url ? 'insecure' : '');
+        lockEl.innerHTML = state.secure ? ICON_LOCK : ICON_UNLOCK;
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function apply(payload) {
+        state = Object.assign(state, payload || {});
+        renderHost();
+        renderLock();
+        if (panel.classList.contains('open')) fillPanel();
+      }
+
+      function fillPanel() {
+        panelUrl.textContent = state.url || 'about:blank';
+        if (state.secure) {
+          panelTitle.textContent = 'Połączenie jest bezpieczne';
+        } else if (/^https:/i.test(state.url)) {
+          panelTitle.textContent = 'Połączenie HTTPS';
+        } else {
+          panelTitle.textContent = 'Połączenie nie jest bezpieczne';
+        }
+        const lines = [];
+        if (state.host) lines.push('<div><strong>Host:</strong> ' + escapeHtml(state.host) + '</div>');
+        if (state.cert) {
+          if (state.cert.subjectName) {
+            lines.push('<div><strong>Wystawiony dla:</strong> ' + escapeHtml(state.cert.subjectName) + '</div>');
+          }
+          if (state.cert.issuerName) {
+            lines.push('<div><strong>Wystawca:</strong> ' + escapeHtml(state.cert.issuerName) + '</div>');
+          }
+          if (state.cert.validExpiry) {
+            lines.push('<div><strong>Ważny do:</strong> ' + escapeHtml(state.cert.validExpiry) + '</div>');
+          }
+        } else if (state.secure) {
+          lines.push('<div>Certyfikat TLS aktywny (szczegóły niedostępne).</div>');
+        } else {
+          lines.push('<div>Brak szyfrowania TLS albo strona lokalna.</div>');
+        }
+        panelMeta.innerHTML = lines.join('');
+      }
+
+      function togglePanel() {
+        const open = !panel.classList.contains('open');
+        panel.classList.toggle('open', open);
+        if (open) fillPanel();
+      }
+
+      hostEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePanel();
+      });
+      lockEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePanel();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && panel.classList.contains('open')) {
+          panel.classList.remove('open');
+        }
+      });
+      document.addEventListener('click', (e) => {
+        if (!panel.contains(e.target) && !hostEl.contains(e.target) && !lockEl.contains(e.target)) {
+          panel.classList.remove('open');
+        }
+      });
+
+      window.__djxxrPopupChrome = { apply };
+      if (window.popupChrome) {
+        window.popupChrome.onUpdate((payload) => apply(payload));
+        window.popupChrome.ready();
+      }
+    </script>
+  </body>
+</html>

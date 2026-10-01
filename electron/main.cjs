@@ -167,12 +167,19 @@ function wireGuestNavigation(guestWc) {
     },
     onPopupWindow: (childWin) => {
       try {
-        certificate.attachCertificateHandler(childWin.webContents, {
-          getMainWindow: () => childWin,
-          torMode: false,
-        });
+        // Same guest wiring as a tab: nav guards, PPM, privacy harden, spellcheck, cert.
+        // Adblock already applies via opener.session. No webview-preload (not a <webview>).
+        wireGuestNavigation(childWin.webContents);
       } catch (err) {
-        console.warn('[popup] cert attach', err);
+        console.warn('[popup] wire guest', err);
+        try {
+          certificate.attachCertificateHandler(childWin.webContents, {
+            getMainWindow: () => childWin,
+            torMode: false,
+          });
+        } catch (e2) {
+          console.warn('[popup] cert attach', e2);
+        }
       }
     },
   });
