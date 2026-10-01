@@ -297,6 +297,7 @@ declare global {
           openTabs?: { id: string; title: string; url: string }[];
           shortcuts?: { id: string; label: string; url: string }[];
           bangs?: { key: string; label: string }[];
+          bookmarks?: { title?: string; url: string }[];
           suggestHistory?: boolean;
           suggestBangs?: boolean;
           limit?: number;
@@ -472,6 +473,10 @@ declare global {
       }>;
       homeBgClear: () => Promise<{ ok: boolean }>;
       onHttpsWarn: (cb: (payload: { httpUrl: string; httpsUrl?: string; errorCode?: number }) => void) => () => void;
+      pictureInPicture: (
+        webContentsId: number,
+        opts?: { enterOnly?: boolean },
+      ) => Promise<{ ok: boolean; result?: string; error?: string }>;
       savePage: (
         webContentsId: number,
         opts?: { forcePath?: string },
