@@ -45,7 +45,7 @@ function register(deps) {
           width: 520,
           height: 680,
           autoHideMenuBar: true,
-          title: 'djxxr',
+          title: 'Vio',
           webPreferences: {
             session: opener.session,
             contextIsolation: true,

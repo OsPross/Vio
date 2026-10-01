@@ -25,7 +25,7 @@ export function AboutPage() {
 
   const lines = info
     ? [
-        `djxxr ${info.appVersion}`,
+        `Vio ${info.appVersion}`,
         `Electron ${info.electron}`,
         `Chromium ${info.chrome}`,
         `Node ${info.node}`,
@@ -43,7 +43,7 @@ export function AboutPage() {
 
   return (
     <InternalPage
-      title="O djxxr"
+      title="O Vio"
       subtitle="Wersje, skróty i ścieżki profilu"
       toolbar={
         <button type="button" className="sbtn ghost" onClick={() => void copy()}>
@@ -58,7 +58,7 @@ export function AboutPage() {
             <img src="./vio-256.png" alt="" width={48} height={48} />
           </div>
           <div>
-            <h2>djxxr</h2>
+            <h2>Vio</h2>
             <p className="muted">Prywatna przeglądarka na Electronie</p>
           </div>
         </div>

@@ -53,8 +53,7 @@ function createCreateWindow(deps) {
       minHeight: 480,
       show: false,
       backgroundColor: bootMode === 'private' ? '#0e1016' : '#12151c',
-      title:
-        bootMode === 'private' ? 'Prywatne — djxxr' : bootMode === 'tor' ? 'Tor — djxxr' : 'djxxr',
+      title: bootMode === 'private' ? 'Prywatne — Vio' : bootMode === 'tor' ? 'Tor — Vio' : 'Vio',
       icon: path.join(electronDir, '..', 'build', 'icon.ico'),
       titleBarStyle: 'hidden',
       titleBarOverlay: {

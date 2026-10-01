@@ -268,10 +268,10 @@ export function useIpcEvents({
       useStore.setState({ tabs: [], activeId: '', closedTabs: [] });
       setSessionReady(true);
       if (m === 'private') {
-        document.title = 'Prywatne — djxxr';
+        document.title = 'Prywatne — Vio';
         useStore.getState().newPrivateTab(HOME_URL);
       } else if (m === 'tor') {
-        document.title = 'Tor — djxxr';
+        document.title = 'Tor — Vio';
         void openTorTab();
       }
     };

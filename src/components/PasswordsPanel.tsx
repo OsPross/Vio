@@ -260,7 +260,7 @@ export function PasswordsPanel() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'djxxr-passwords.csv';
+    a.download = 'vio-passwords.csv';
     a.click();
     URL.revokeObjectURL(url);
     setExportMaster('');

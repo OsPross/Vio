@@ -100,7 +100,7 @@ export function SettingsPage() {
           <Monitor size={16} strokeWidth={1.75} />
           <div>
             <strong>Ustawienia</strong>
-            <span>{settings.appName || 'Przeglądarka'}</span>
+            <span>{settings.appName || 'Vio'}</span>
           </div>
         </div>
 

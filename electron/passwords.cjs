@@ -1072,7 +1072,7 @@ function getPageScript() {
       fontFamily: 'system-ui,sans-serif',
     });
     iconHost.textContent = '🔑';
-    iconHost.title = 'djxxr — konta';
+    iconHost.title = 'Vio — konta';
     let menu = null;
     const closeMenu = () => {
       if (menu) {

@@ -2,6 +2,9 @@ const { app, BrowserWindow, ipcMain, shell, session, dialog, nativeTheme } = req
 const path = require('path');
 const fs = require('fs');
 
+// Keep profile at moja-przegladarka even when productName is Vio (before any userData use).
+app.setPath('userData', path.join(app.getPath('appData'), 'moja-przegladarka'));
+
 /** Perf bench wall-clock (measurement only). */
 global.__DJXXR_PERF_T0 = Date.now();
 global.__DJXXR_REQUIRE_TIMES__ = {};

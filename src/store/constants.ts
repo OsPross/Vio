@@ -246,7 +246,7 @@ export const DEFAULT_SETTINGS: Settings = {
   uiDensity: 'comfortable',
   openExternalInApp: true,
   newTabIsSearch: true,
-  appName: 'Przeglądarka',
+  appName: 'Vio',
   omniboxPlaceholder: 'Szukaj, !yt, adres…  (Ctrl+L)',
   homeHeadline: '',
   homeSubline: '',

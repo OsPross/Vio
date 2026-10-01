@@ -340,7 +340,7 @@ export function AppMenu({ actions }: Props) {
     {
       kind: 'action',
       id: 'about',
-      label: 'Pomoc / O djxxr',
+      label: 'Pomoc / O Vio',
       icon: <Info size={16} strokeWidth={1.75} />,
       run: () => actions.openAbout(),
     },

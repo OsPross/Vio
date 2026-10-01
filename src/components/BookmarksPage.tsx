@@ -343,7 +343,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
   };
 
   const onExport = async () => {
-    const html = exportNetscapeBookmarksHtml(bookmarkFolders, bookmarks, 'Zakładki djxxr');
+    const html = exportNetscapeBookmarksHtml(bookmarkFolders, bookmarks, 'Zakładki Vio');
     try {
       if (window.shell?.bookmarksSaveExport) {
         const res = await window.shell.bookmarksSaveExport(html);

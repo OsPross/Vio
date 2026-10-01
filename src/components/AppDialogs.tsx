@@ -55,7 +55,7 @@ export function AboutDialog({ info, onClose }: AboutProps) {
       <div
         className="app-dialog"
         role="dialog"
-        aria-label="O djxxr"
+        aria-label="O Vio"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="about-hero" style={{ marginBottom: 12 }}>
@@ -63,7 +63,7 @@ export function AboutDialog({ info, onClose }: AboutProps) {
             <img src="./vio-256.png" alt="" width={48} height={48} />
           </div>
           <div>
-            <h2>djxxr</h2>
+            <h2>Vio</h2>
             <p className="app-dialog-sub">Prywatna przeglądarka na Electronie</p>
           </div>
         </div>

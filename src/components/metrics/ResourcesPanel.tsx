@@ -95,7 +95,7 @@ export function ResourcesPanel({ active }: { active: boolean }) {
           </div>
           <div className="mx-card">
             <div className="mx-card-head">
-              <span>CPU djxxr</span>
+              <span>CPU Vio</span>
               <strong>
                 <AnimatedNumber value={data?.browser.cpu ?? 0} digits={1} suffix="%" />
               </strong>
@@ -110,7 +110,7 @@ export function ResourcesPanel({ active }: { active: boolean }) {
           </div>
           <div className="mx-card">
             <div className="mx-card-head">
-              <span>RAM djxxr</span>
+              <span>RAM Vio</span>
               <strong>
                 <AnimatedNumber value={data?.browser.memMb ?? 0} digits={0} suffix=" MB" />
               </strong>
@@ -309,7 +309,7 @@ export function HomeResourcesWidget({ active }: { active: boolean }) {
         />
       </div>
       <div className="mx-home-row">
-        <span>djxxr</span>
+        <span>Vio</span>
         <strong>
           <AnimatedNumber value={data?.browser.memMb ?? 0} digits={0} suffix=" MB" />
         </strong>

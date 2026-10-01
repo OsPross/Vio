@@ -174,7 +174,7 @@ export function CrashRestoreOffer({
   return (
     <div className="session-crash-banner" role="alertdialog">
       <div className="session-crash-text">
-        <strong>Przeglądarka została nieoczekiwanie zamknięta.</strong>
+        <strong>Vio została nieoczekiwanie zamknięta.</strong>
         <span> Przywrócić karty?</span>
       </div>
       <div className="session-crash-actions">

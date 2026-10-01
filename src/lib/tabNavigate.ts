@@ -16,7 +16,7 @@ export function titleForInternalUrl(url: string, tor: boolean): string {
   if (url === DOWNLOADS_URL) return 'Pobrania';
   if (url === BOOKMARKS_URL) return 'Zakładki';
   if (url === EXTENSIONS_URL) return 'Rozszerzenia';
-  if (url === ABOUT_URL || url === 'about:about') return 'O djxxr';
+  if (url === ABOUT_URL || url === 'about:about') return 'O Vio';
   if (url === HOME_URL || url === TOR_HOME_URL) return tor ? 'Tor' : 'Nowa karta';
   return '…';
 }

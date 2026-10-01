@@ -57,7 +57,7 @@
   },
   "build": {
     "appId": "local.djxxr.przegladarka",
-    "productName": "Moja Przeglądarka",
+    "productName": "Vio",
     "directories": {
       "output": "release"
     },
@@ -89,7 +89,9 @@
       "allowToChangeInstallationDirectory": true,
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico"
+      "installerHeaderIcon": "build/icon.ico",
+      "shortcutName": "Vio",
+      "uninstallDisplayName": "Vio"
     }
   }
 }

@@ -283,7 +283,7 @@ function pushChromeUpdate(win, pageWc) {
   })();
   const payload = chromePayloadFromUrl(url, win.__djxxrPopupCert || null);
   try {
-    const titleHost = payload.host || 'djxxr';
+    const titleHost = payload.host || 'Vio';
     win.setTitle(titleHost);
   } catch {
     /* */
@@ -501,7 +501,7 @@ function handleWindowOpen(openerWc, ctx) {
         height: height + TOOLBAR_H,
         autoHideMenuBar: true,
         backgroundColor: '#08090c',
-        title: 'djxxr',
+        title: 'Vio',
         webPreferences: {
           session: openerWc.session,
           contextIsolation: true,

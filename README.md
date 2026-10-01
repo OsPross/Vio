@@ -1,4 +1,4 @@
-# Moja Przeglądarka (djxxr)
+# Vio
 
 Własna przeglądarka desktop na Electron + Vite + React (Windows).
 

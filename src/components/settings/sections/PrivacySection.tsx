@@ -311,7 +311,7 @@ export function PrivacySection() {
 
       <SettingsGroup title="Fingerprinting i WebRTC">
         <Toggle
-          label="User-Agent jak Chrome (bez Electron/djxxr)"
+          label="User-Agent jak Chrome (bez Electron/Vio)"
           on={settings.privacyChromeUa}
           onChange={(v) => patchSettings({ privacyChromeUa: v })}
         />
