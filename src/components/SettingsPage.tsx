@@ -290,6 +290,12 @@ export function SettingsPage() {
                     on={settings.openExternalInApp}
                     onChange={(v) => patchSettings({ openExternalInApp: v })}
                   />
+                  <Toggle
+                    label="Obraz w obrazie przy zmianie karty"
+                    hint="Gdy wychodzisz z karty z odtwarzanym wideo, włącz PiP (Alt+P lub ikona omniboxa). PiP pozostaje na poziomie systemu po ukryciu karty."
+                    on={settings.autoPipOnTabSwitch}
+                    onChange={(v) => patchSettings({ autoPipOnTabSwitch: v })}
+                  />
                 </SettingsGroup>
               </div>
             )}

@@ -82,6 +82,12 @@ contextBridge.exposeInMainWorld('shell', {
   weatherSuggest: (opts) => ipcRenderer.invoke('shell:weather-suggest', opts || {}),
   homeBgPick: () => ipcRenderer.invoke('shell:home-bg-pick'),
   homeBgClear: () => ipcRenderer.invoke('shell:home-bg-clear'),
+  notesList: (opts) => ipcRenderer.invoke('shell:notes-list', opts || {}),
+  notesGet: (id) => ipcRenderer.invoke('shell:notes-get', id),
+  notesCreate: (opts) => ipcRenderer.invoke('shell:notes-create', opts || {}),
+  notesUpdate: (id, patch) => ipcRenderer.invoke('shell:notes-update', id, patch || {}),
+  notesDelete: (id) => ipcRenderer.invoke('shell:notes-delete', id),
+  notesMigrateLegacy: (text) => ipcRenderer.invoke('shell:notes-migrate-legacy', text),
   onHttpsWarn: (cb) => {
     const handler = (_e, payload) => cb(payload);
     ipcRenderer.on('shell:https-warn', handler);
@@ -197,6 +203,8 @@ contextBridge.exposeInMainWorld('shell', {
     ipcRenderer.on('shell:permission-ask', handler);
     return () => ipcRenderer.removeListener('shell:permission-ask', handler);
   },
+  pictureInPicture: (webContentsId, opts) =>
+    ipcRenderer.invoke('shell:picture-in-picture', webContentsId, opts || {}),
   savePage: (webContentsId, opts) => ipcRenderer.invoke('shell:save-page', webContentsId, opts || {}),
   printToPdf: (webContentsId, opts) => ipcRenderer.invoke('shell:print-to-pdf', webContentsId, opts || {}),
   printPage: (webContentsId, opts) => ipcRenderer.invoke('shell:print', webContentsId, opts || {}),

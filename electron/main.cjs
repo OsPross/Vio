@@ -11,6 +11,7 @@ const torDaemon = require('./tor-daemon.cjs');
 const privacy = require('./privacy.cjs');
 const faviconCache = require('./favicon-cache.cjs');
 const history = require('./history.cjs');
+const notes = require('./notes.cjs');
 const appSession = require('./session.cjs');
 const downloads = require('./downloads.cjs');
 const homeBg = require('./home-bg.cjs');
@@ -18,6 +19,7 @@ const contextMenu = require('./context-menu.cjs');
 const windowMode = require('./window-mode.cjs');
 const certificate = require('./certificate.cjs');
 const shortcutsGuest = require('./shortcuts-guest.cjs');
+const pip = require('./pip.cjs');
 const bookmarksImport = require('./bookmarks-import.cjs');
 const spellcheck = require('./spellcheck.cjs');
 const { webContents: electronWebContents } = require('electron');
@@ -26,6 +28,7 @@ const { webContents: electronWebContents } = require('electron');
 privacy.applyBootSwitches();
 const boot = perf.applyBootSwitches();
 history.init();
+notes.init();
 downloads.init();
 
 /** @type {BrowserWindow | null} */
@@ -935,6 +938,7 @@ ipcMain.handle('shell:bookmarks-read-profile', wrapApp((_e, profilePath) => {
 }));
 
 homeBg.register(ipcMain, wrapApp);
+notes.register(ipcMain, wrapApp);
 
 ipcMain.handle('shell:session-load', wrapApp(() => appSession.load()));
 ipcMain.handle('shell:session-status', wrapApp(() => appSession.getStatus()));
@@ -1409,6 +1413,17 @@ function suggestedSaveName(wc, ext) {
   const base = sanitizeDownloadBase(title, host || 'page');
   return `${base}.${ext}`;
 }
+
+ipcMain.handle(
+  'shell:picture-in-picture',
+  wrapApp(async (_event, webContentsId, opts) => {
+    const wc = guestWebContentsById(webContentsId);
+    if (!wc) return { ok: false, error: 'no-guest' };
+    return pip.runPictureInPicture(wc, {
+      enterOnly: Boolean(opts && opts.enterOnly),
+    });
+  }),
+);
 
 ipcMain.handle(
   'shell:print',

@@ -419,6 +419,8 @@ export type Settings = {
   showBookmarksBar: boolean;
   /** Ciemne paski przewijania w treści stron (webview) */
   darkPageScrollbars: boolean;
+  /** Enter PiP when switching away from a tab with playing video */
+  autoPipOnTabSwitch: boolean;
 };
 
 type State = {
@@ -691,6 +693,7 @@ export const DEFAULT_SETTINGS: Settings = {
   zoomFactors: {},
   showBookmarksBar: false,
   darkPageScrollbars: true,
+  autoPipOnTabSwitch: false,
 };
 
 export function engineLabel(id: SearchEngine): string {
@@ -1197,6 +1200,22 @@ export function applyThemeToDom(settings: Settings) {
     const accent = settings.useThemeAccent ? t.accent : settings.accent;
     root.style.setProperty('--accent', accent);
     root.style.setProperty('--accent-dim', `${accent}24`);
+    if (settings.theme === 'paper') {
+      root.style.setProperty('--notes-surface', 'color-mix(in srgb, var(--bg-elev) 96%, #fff 4%)');
+      root.style.setProperty('--notes-list-hover', 'color-mix(in srgb, var(--fg) 6%, transparent)');
+      root.style.setProperty('--notes-list-active', 'color-mix(in srgb, var(--accent) 14%, var(--bg-elev))');
+      root.style.setProperty('--notes-toolbar', 'color-mix(in srgb, var(--fg) 5%, transparent)');
+    } else if (settings.theme === 'midnight') {
+      root.style.setProperty('--notes-surface', 'color-mix(in srgb, var(--bg-elev) 55%, transparent)');
+      root.style.setProperty('--notes-list-hover', 'color-mix(in srgb, var(--fg) 7%, transparent)');
+      root.style.setProperty('--notes-list-active', 'color-mix(in srgb, var(--accent) 18%, transparent)');
+      root.style.setProperty('--notes-toolbar', 'color-mix(in srgb, var(--fg) 4%, transparent)');
+    } else {
+      root.style.setProperty('--notes-surface', 'color-mix(in srgb, var(--bg-elev) 70%, transparent)');
+      root.style.setProperty('--notes-list-hover', 'color-mix(in srgb, var(--fg) 6%, transparent)');
+      root.style.setProperty('--notes-list-active', 'color-mix(in srgb, var(--accent) 16%, transparent)');
+      root.style.setProperty('--notes-toolbar', 'color-mix(in srgb, var(--fg) 5%, transparent)');
+    }
     root.style.setProperty('--glass-blur', `${settings.glassBlur}px`);
     root.style.setProperty('--glass-alpha', String(settings.glassOpacity));
     root.dataset.theme = settings.theme;
@@ -1875,6 +1894,9 @@ export const useStore = create<State>()(
         }
         if (typeof mergedSettings.darkPageScrollbars !== 'boolean') {
           mergedSettings.darkPageScrollbars = true;
+        }
+        if (typeof mergedSettings.autoPipOnTabSwitch !== 'boolean') {
+          mergedSettings.autoPipOnTabSwitch = false;
         }
         const bookmarkFolders = Array.isArray(p.bookmarkFolders) ? p.bookmarkFolders : current.bookmarkFolders;
         const folders = [...bookmarkFolders];

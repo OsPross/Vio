@@ -32,6 +32,7 @@ const GUEST_MATCHERS = [
   (i) => ctrlOnly(i) && /^[1-9]$/.test(i.key),
   (i) => ctrlOnly(i) && keyEq(i, 'l'),
   (i) => altOnly(i) && keyEq(i, 'd'),
+  (i) => altOnly(i) && keyEq(i, 'p'),
   (i) => !isMod(i) && !i.shift && !i.alt && i.key === 'F6',
   (i) => ctrlOnly(i) && keyEq(i, 'r'),
   (i) => !isMod(i) && !i.shift && !i.alt && i.key === 'F5',
