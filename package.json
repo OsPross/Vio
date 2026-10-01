@@ -51,6 +51,7 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "scripts/perf-bench.cjs",
       "package.json"
     ],
     "win": {

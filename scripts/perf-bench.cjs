@@ -32,7 +32,16 @@ const SITES_10 = [
 ];
 
 function outDir() {
-  const d = path.join(__dirname, '..', 'tmp-verify', 'perf');
+  let d;
+  try {
+    if (app.isPackaged) {
+      d = path.join(app.getPath('userData'), 'perf-bench');
+    } else {
+      d = path.join(__dirname, '..', 'tmp-verify', 'perf');
+    }
+  } catch {
+    d = path.join(__dirname, '..', 'tmp-verify', 'perf');
+  }
   fs.mkdirSync(d, { recursive: true });
   return d;
 }
@@ -549,11 +558,19 @@ async function run(getMainWindow) {
     }
     return st.tabs.length;
   })()`);
-  await sleep(12_000);
+  await sleep(20_000);
   result.scenarios.tabs30 = {
     ...snap(),
     tabCount: await evalInApp(`window.__DJXXR_STORE__?.getState?.().tabs.length`),
   };
+  console.log(
+    '[perf-bench] tabs30 mem',
+    result.scenarios.tabs30.totalMemMb,
+    'MB guests',
+    result.scenarios.tabs30.guests?.count,
+    'wc',
+    result.scenarios.tabs30.guests?.webContentsCount,
+  );
 
   // --- open+close 20 tabs listener delta ---
   const beforeOc = snapshotListeners();
