@@ -693,6 +693,8 @@ export function App() {
   const [pwForPage, setPwForPage] = useState(0);
   const [taskMgrOpen, setTaskMgrOpen] = useState(false);
   const [guestWc, setGuestWc] = useState<Record<string, number>>({});
+  const tabMediaRef = useRef<Record<string, { hasVideo: boolean; playing: boolean }>>({});
+  const prevActiveIdRef = useRef(activeId);
   const [hotTabs, setHotTabs] = useState<Record<string, number>>({});
   const [permAsk, setPermAsk] = useState<{
     askId: string;
@@ -1686,9 +1688,14 @@ export function App() {
             }
             return true;
           }
-          case 'focusOmnibox':
-            document.getElementById('omnibox-input')?.focus();
+          case 'focusOmnibox': {
+            const el = document.getElementById('omnibox-input') as HTMLInputElement | null;
+            if (el) {
+              el.focus();
+              el.select();
+            }
             return true;
+          }
           case 'reload':
           case 'hardReload': {
             if (isHome || isTorHome || isInternalAbout) return true;
