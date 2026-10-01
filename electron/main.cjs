@@ -500,6 +500,20 @@ function createWindow(optsExtra = {}) {
   mouseNav.attachAppCommandFallback(bw);
   mouseNav.attachSideButtons(bw.webContents, { host: bw, label: `host:${bw.id}` });
 
+  const pushMetricsVisibility = () => {
+    try {
+      const visible = !bw.isDestroyed() && bw.isVisible() && !bw.isMinimized();
+      metrics.setWindowVisible(visible);
+    } catch {
+      /* */
+    }
+  };
+  bw.on('show', pushMetricsVisibility);
+  bw.on('hide', pushMetricsVisibility);
+  bw.on('minimize', pushMetricsVisibility);
+  bw.on('restore', pushMetricsVisibility);
+  pushMetricsVisibility();
+
   if (!secondary && win.isMaximized) {
     try {
       bw.maximize();
@@ -1493,6 +1507,22 @@ ipcMain.handle(
 ipcMain.handle(
   'shell:metrics-unsubscribe',
   wrapApp(() => metrics.unsubscribe()),
+);
+ipcMain.handle(
+  'shell:metrics-subscribe-live',
+  wrapApp(() => metrics.subscribeLive()),
+);
+ipcMain.handle(
+  'shell:metrics-unsubscribe-live',
+  wrapApp(() => metrics.unsubscribeLive()),
+);
+ipcMain.handle(
+  'shell:metrics-subscribe-discard',
+  wrapApp(() => metrics.subscribeDiscard()),
+);
+ipcMain.handle(
+  'shell:metrics-unsubscribe-discard',
+  wrapApp(() => metrics.unsubscribeDiscard()),
 );
 ipcMain.handle(
   'shell:metrics-set-guests',

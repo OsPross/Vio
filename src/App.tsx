@@ -893,7 +893,13 @@ export function App() {
     taskMgrOpen ||
     (view === 'settings' && settingsTab === 'resources') ||
     (isHome && settings.homeShowStats);
-  const metricsData = useMetrics(metricsActive, settings.perfLowPowerClock);
+  // CPU hot-tab hints: sample slowly when discard is on and nobody watches the UI
+  const metricsDiscardActive = Boolean(settings.perfDiscardTabs) && !metricsActive;
+  const metricsData = useMetrics(
+    metricsActive || metricsDiscardActive,
+    settings.perfLowPowerClock,
+    metricsActive ? 'live' : 'discard',
+  );
 
   const metricsGuests: MetricsGuest[] = tabs
     .filter((t) => t.url !== HOME_URL && !t.url.startsWith('about:') && !t.discarded)
@@ -905,7 +911,7 @@ export function App() {
       favicon: t.favicon,
       webContentsId: guestWc[t.id] ?? null,
     }));
-  useMetricsGuests(metricsActive, metricsGuests);
+  useMetricsGuests(metricsActive || metricsDiscardActive, metricsGuests);
 
   useEffect(() => {
     if (!metricsData?.rows) return;

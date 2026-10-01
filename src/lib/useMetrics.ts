@@ -1,58 +1,121 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MetricsGuest, MetricsPayload } from './metricsTypes';
 
-let refCount = 0;
+let liveRefCount = 0;
+let discardRefCount = 0;
 let unsubPush: (() => void) | null = null;
 let latest: MetricsPayload | null = null;
 const listeners = new Set<(p: MetricsPayload | null) => void>();
 
+function payloadKey(p: MetricsPayload | null) {
+  if (!p) return '';
+  return JSON.stringify({
+    sysCpu: Math.round(p.system?.cpu ?? 0),
+    sysMem: Math.round(p.system?.memPercent ?? 0),
+    appCpu: Math.round(p.browser?.cpu ?? 0),
+    appMem: Math.round(p.browser?.memMb ?? 0),
+    rows: (p.rows || []).map((r) => [r.id, Math.round(r.cpu), Math.round(r.memMb ?? 0)]),
+  });
+}
+
 function emit(p: MetricsPayload | null) {
+  if (p && latest && payloadKey(p) === payloadKey(latest)) {
+    latest = p;
+    return;
+  }
   latest = p;
   for (const l of listeners) l(p);
 }
 
-async function acquire() {
-  refCount += 1;
-  if (refCount === 1) {
-    unsubPush = window.shell?.onMetrics?.((payload) => {
+async function ensurePushChannel() {
+  if (unsubPush) return;
+  unsubPush =
+    window.shell?.onMetrics?.((payload) => {
       emit(payload as MetricsPayload);
     }) ?? null;
-    await window.shell?.metricsSubscribe?.();
+}
+
+async function acquireLive() {
+  liveRefCount += 1;
+  await ensurePushChannel();
+  if (liveRefCount === 1) {
+    if (window.shell?.metricsSubscribeLive) await window.shell.metricsSubscribeLive();
+    else await window.shell?.metricsSubscribe?.();
   }
 }
 
-async function release() {
-  refCount = Math.max(0, refCount - 1);
-  if (refCount === 0) {
-    unsubPush?.();
-    unsubPush = null;
-    await window.shell?.metricsUnsubscribe?.();
+async function releaseLive() {
+  liveRefCount = Math.max(0, liveRefCount - 1);
+  if (liveRefCount === 0) {
+    if (window.shell?.metricsUnsubscribeLive) await window.shell.metricsUnsubscribeLive();
+    else await window.shell?.metricsUnsubscribe?.();
+    if (discardRefCount === 0) {
+      unsubPush?.();
+      unsubPush = null;
+    }
   }
 }
 
-/** Shared live metrics — only samples in main while ≥1 consumer is mounted. */
-export function useMetrics(active: boolean, lowPower = false) {
+async function acquireDiscard() {
+  discardRefCount += 1;
+  await ensurePushChannel();
+  if (discardRefCount === 1) {
+    await window.shell?.metricsSubscribeDiscard?.();
+  }
+}
+
+async function releaseDiscard() {
+  discardRefCount = Math.max(0, discardRefCount - 1);
+  if (discardRefCount === 0) {
+    await window.shell?.metricsUnsubscribeDiscard?.();
+    if (liveRefCount === 0) {
+      unsubPush?.();
+      unsubPush = null;
+    }
+  }
+}
+
+/**
+ * Shared metrics.
+ * mode 'live' = task mgr / widgets (≈2s); 'discard' = hot-tab hints (≈15s).
+ * UI setState only when rounded values change.
+ */
+export function useMetrics(active: boolean, lowPower = false, mode: 'live' | 'discard' = 'live') {
   const [data, setData] = useState<MetricsPayload | null>(() => (active ? latest : null));
   const activeRef = useRef(active);
+  const lastKeyRef = useRef('');
 
   useEffect(() => {
     activeRef.current = active;
     if (!active) {
       setData(null);
+      lastKeyRef.current = '';
       return;
     }
     const on = (p: MetricsPayload | null) => {
-      if (activeRef.current) setData(p);
+      if (!activeRef.current) return;
+      const key = payloadKey(p);
+      if (key === lastKeyRef.current) return;
+      lastKeyRef.current = key;
+      setData(p);
     };
     listeners.add(on);
-    if (latest) setData(latest);
-    void acquire();
-    void window.shell?.metricsLowPower?.(lowPower);
+    if (latest) {
+      lastKeyRef.current = payloadKey(latest);
+      setData(latest);
+    }
+    if (mode === 'live') {
+      void acquireLive();
+      void window.shell?.metricsLowPower?.(lowPower);
+    } else {
+      void acquireDiscard();
+    }
     return () => {
       listeners.delete(on);
-      void release();
+      if (mode === 'live') void releaseLive();
+      else void releaseDiscard();
     };
-  }, [active, lowPower]);
+  }, [active, lowPower, mode]);
 
   return data;
 }

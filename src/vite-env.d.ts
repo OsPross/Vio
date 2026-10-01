@@ -234,6 +234,10 @@ declare global {
       webviewPreload: () => Promise<string>;
       metricsSubscribe: () => Promise<{ ok: boolean; subscribers: number; intervalMs: number }>;
       metricsUnsubscribe: () => Promise<{ ok: boolean; subscribers: number }>;
+      metricsSubscribeLive: () => Promise<{ ok: boolean; subscribers: number; intervalMs?: number; mode?: string }>;
+      metricsUnsubscribeLive: () => Promise<{ ok: boolean; subscribers: number }>;
+      metricsSubscribeDiscard: () => Promise<{ ok: boolean; subscribers: number; intervalMs?: number; mode?: string }>;
+      metricsUnsubscribeDiscard: () => Promise<{ ok: boolean; subscribers: number }>;
       metricsSetGuests: (list: {
         id: string;
         kind: 'tab' | 'side';

@@ -6,6 +6,7 @@ const { app, webContents } = require('electron');
 const HISTORY_MAX = 60;
 const DEFAULT_INTERVAL_MS = 2000;
 const LOW_POWER_INTERVAL_MS = 5000;
+const DISCARD_INTERVAL_MS = 15_000;
 
 /** @typedef {{ id: string, kind: 'tab'|'side'|'browser'|'gpu'|'utility'|'unknown', title?: string, url?: string, favicon?: string, webContentsId?: number|null }} GuestInfo */
 
@@ -20,8 +21,13 @@ let guests = [];
 let timer = null;
 let intervalMs = DEFAULT_INTERVAL_MS;
 let subscribers = 0;
+/** Live UI watchers (task mgr / widgets) vs discard-only sampling */
+let liveWatchers = 0;
+let discardWatchers = 0;
+let windowVisible = true;
 /** @type {((payload: object) => void) | null} */
 let pushFn = null;
+let lastPushKey = '';
 
 /** @type {object[]} */
 const history = [];
@@ -76,7 +82,7 @@ function setGuests(list) {
 }
 
 function setIntervalMs(ms) {
-  const next = Math.max(1000, Math.min(15_000, Number(ms) || DEFAULT_INTERVAL_MS));
+  const next = Math.max(1000, Math.min(30_000, Number(ms) || DEFAULT_INTERVAL_MS));
   if (next === intervalMs) return intervalMs;
   intervalMs = next;
   if (timer) {
@@ -87,7 +93,55 @@ function setIntervalMs(ms) {
 }
 
 function setLowPower(on) {
-  return setIntervalMs(on ? LOW_POWER_INTERVAL_MS : DEFAULT_INTERVAL_MS);
+  if (liveWatchers > 0) {
+    return setIntervalMs(on ? LOW_POWER_INTERVAL_MS : DEFAULT_INTERVAL_MS);
+  }
+  if (discardWatchers > 0) return setIntervalMs(DISCARD_INTERVAL_MS);
+  return intervalMs;
+}
+
+function recomputeSampling() {
+  if (liveWatchers + discardWatchers <= 0 || !windowVisible) {
+    stop();
+    return;
+  }
+  const want = liveWatchers > 0 ? (intervalMs === LOW_POWER_INTERVAL_MS ? LOW_POWER_INTERVAL_MS : DEFAULT_INTERVAL_MS) : DISCARD_INTERVAL_MS;
+  if (!timer) {
+    intervalMs = want;
+    start();
+    return;
+  }
+  if (intervalMs !== want) setIntervalMs(want);
+}
+
+function setWindowVisible(visible) {
+  windowVisible = Boolean(visible);
+  recomputeSampling();
+  return { ok: true, windowVisible, subscribers };
+}
+
+function subscribeLive() {
+  liveWatchers += 1;
+  recomputeSampling();
+  return { ok: true, subscribers: liveWatchers + discardWatchers, intervalMs, mode: 'live' };
+}
+
+function unsubscribeLive() {
+  liveWatchers = Math.max(0, liveWatchers - 1);
+  recomputeSampling();
+  return { ok: true, subscribers: liveWatchers + discardWatchers };
+}
+
+function subscribeDiscard() {
+  discardWatchers += 1;
+  recomputeSampling();
+  return { ok: true, subscribers: liveWatchers + discardWatchers, intervalMs, mode: 'discard' };
+}
+
+function unsubscribeDiscard() {
+  discardWatchers = Math.max(0, discardWatchers - 1);
+  recomputeSampling();
+  return { ok: true, subscribers: liveWatchers + discardWatchers };
 }
 
 function cpuTimesTotal(cpus) {
@@ -271,7 +325,7 @@ let lastGpu = { status: null, gpuDevice: null };
 let gpuTick = 0;
 
 async function tick() {
-  if (subscribers <= 0) return;
+  if (liveWatchers + discardWatchers <= 0 || !windowVisible) return;
   try {
     const snap = sampleSync();
     gpuTick++;
@@ -284,6 +338,16 @@ async function tick() {
       history: history.slice(),
       intervalMs,
     };
+    const key = JSON.stringify({
+      ts: Math.floor(snap.ts / 500),
+      sysCpu: Math.round(snap.system.cpu),
+      sysMem: Math.round(snap.system.memPercent),
+      appCpu: Math.round(snap.browser.cpu),
+      appMem: Math.round(snap.browser.memMb),
+      rows: (snap.rows || []).map((r) => [r.id, Math.round(r.cpu), Math.round(r.memMb)]),
+    });
+    if (key === lastPushKey) return;
+    lastPushKey = key;
     if (pushFn) pushFn(payload);
   } catch (err) {
     console.warn('[metrics] tick', err);
@@ -303,16 +367,14 @@ function stop() {
   }
 }
 
+/** @deprecated prefer subscribeLive / subscribeDiscard */
 function subscribe() {
-  subscribers += 1;
-  if (subscribers === 1) start();
-  return { ok: true, subscribers, intervalMs };
+  return subscribeLive();
 }
 
+/** @deprecated prefer unsubscribeLive / unsubscribeDiscard */
 function unsubscribe() {
-  subscribers = Math.max(0, subscribers - 1);
-  if (subscribers === 0) stop();
-  return { ok: true, subscribers };
+  return unsubscribeLive();
 }
 
 function init(opts = {}) {
@@ -327,7 +389,10 @@ function getSnapshot() {
     gpu: lastGpu,
     history: history.slice(),
     intervalMs,
-    subscribers,
+    subscribers: liveWatchers + discardWatchers,
+    liveWatchers,
+    discardWatchers,
+    windowVisible,
   };
 }
 
@@ -336,11 +401,17 @@ module.exports = {
   attachNetwork,
   subscribe,
   unsubscribe,
+  subscribeLive,
+  unsubscribeLive,
+  subscribeDiscard,
+  unsubscribeDiscard,
   setGuests,
   setIntervalMs,
   setLowPower,
+  setWindowVisible,
   getSnapshot,
   HISTORY_MAX,
   DEFAULT_INTERVAL_MS,
   LOW_POWER_INTERVAL_MS,
+  DISCARD_INTERVAL_MS,
 };
