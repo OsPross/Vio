@@ -599,40 +599,46 @@ async function run(getMainWindow) {
   };
   console.log('[perf-bench] after idle mem', result.scenarios.tabs10AfterIdle.totalMemMb, 'MB');
 
-  // --- grow to 30 tabs ---
-  console.log('[perf-bench] opening to 30 tabs…');
-  await evalInApp(`(() => {
-    const st = window.__DJXXR_STORE__.getState();
-    const need = 30 - st.tabs.length;
-    for (let i = 0; i < need; i++) {
-      st.newTab('https://example.com/?n=' + i, { background: true });
-    }
-    return st.tabs.length;
-  })()`);
-  console.log('[perf-bench] activating each of 30 tabs once…');
-  await evalInApp(`(async () => {
-    const st = window.__DJXXR_STORE__.getState();
-    const ids = st.tabs.map(t => t.id);
-    for (const id of ids) {
-      st.setActive(id);
-      await new Promise(r => setTimeout(r, 200));
-    }
-    if (ids[0]) st.setActive(ids[0]);
-    return { activated: ids.length };
-  })()`);
-  await sleep(20_000);
-  result.scenarios.tabs30 = {
-    ...snap(),
-    tabCount: await evalInApp(`window.__DJXXR_STORE__?.getState?.().tabs.length`),
-  };
-  console.log(
-    '[perf-bench] tabs30 mem',
-    result.scenarios.tabs30.totalMemMb,
-    'MB guests',
-    result.scenarios.tabs30.guests?.count,
-    'wc',
-    result.scenarios.tabs30.guests?.webContentsCount,
-  );
+  // --- grow to 30 tabs (optional; PERF_BENCH_MAX_TABS=10 skips) ---
+  const maxTabs = Math.max(10, Number(process.env.PERF_BENCH_MAX_TABS) || 30);
+  if (maxTabs >= 30) {
+    console.log('[perf-bench] opening to 30 tabs…');
+    await evalInApp(`(() => {
+      const st = window.__DJXXR_STORE__.getState();
+      const need = 30 - st.tabs.length;
+      for (let i = 0; i < need; i++) {
+        st.newTab('https://example.com/?n=' + i, { background: true });
+      }
+      return st.tabs.length;
+    })()`);
+    console.log('[perf-bench] activating each of 30 tabs once…');
+    await evalInApp(`(async () => {
+      const st = window.__DJXXR_STORE__.getState();
+      const ids = st.tabs.map(t => t.id);
+      for (const id of ids) {
+        st.setActive(id);
+        await new Promise(r => setTimeout(r, 200));
+      }
+      if (ids[0]) st.setActive(ids[0]);
+      return { activated: ids.length };
+    })()`);
+    await sleep(20_000);
+    result.scenarios.tabs30 = {
+      ...snap(),
+      tabCount: await evalInApp(`window.__DJXXR_STORE__?.getState?.().tabs.length`),
+    };
+    console.log(
+      '[perf-bench] tabs30 mem',
+      result.scenarios.tabs30.totalMemMb,
+      'MB guests',
+      result.scenarios.tabs30.guests?.count,
+      'wc',
+      result.scenarios.tabs30.guests?.webContentsCount,
+    );
+  } else {
+    console.log('[perf-bench] skip tabs30 (MAX_TABS=' + maxTabs + ')');
+    result.scenarios.tabs30 = { skipped: true, maxTabs };
+  }
 
   // --- open+close 20 tabs listener delta ---
   const beforeOc = snapshotListeners();
