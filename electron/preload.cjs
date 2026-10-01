@@ -177,6 +177,11 @@ contextBridge.exposeInMainWorld('shell', {
     ipcRenderer.on('shell:shortcut', handler);
     return () => ipcRenderer.removeListener('shell:shortcut', handler);
   },
+  onBrowserNav: (cb) => {
+    const handler = (_e, payload) => cb(payload || {});
+    ipcRenderer.on('shell:browser-nav', handler);
+    return () => ipcRenderer.removeListener('shell:browser-nav', handler);
+  },
   onPasswordsLocked: (cb) => {
     const handler = () => cb();
     ipcRenderer.on('shell:passwords-locked', handler);

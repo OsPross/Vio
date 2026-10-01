@@ -221,6 +221,7 @@ function TabWebview({
   darkPageScrollbars,
   appTheme,
   onMediaState,
+  onBrowserNav,
 }: {
   tab: Tab;
   active: boolean;
@@ -238,6 +239,7 @@ function TabWebview({
   darkPageScrollbars: boolean;
   appTheme: ThemeId;
   onMediaState?: (state: { hasVideo: boolean; playing: boolean }) => void;
+  onBrowserNav?: (dir: 'back' | 'forward') => void;
 }) {
   const ref = useRef<WebviewEl | null>(null);
   const scrollbarCssKeyRef = useRef<string | null>(null);
@@ -425,6 +427,11 @@ function TabWebview({
         });
         return;
       }
+      if (e.channel === 'djxxr-mouse-nav') {
+        const msg = e.args?.[0] as { dir?: string } | undefined;
+        if (msg?.dir === 'back' || msg?.dir === 'forward') onBrowserNav?.(msg.dir);
+        return;
+      }
       if (tab.mode === 'tor') return; // no password IPC in Tor
       if (e.channel !== 'djxxr-pw') return;
       const msg = e.args?.[0] as { type?: string; payload?: Record<string, unknown> } | undefined;
@@ -559,6 +566,7 @@ function TabWebview({
     onLoadFailed,
     onHtmlFullscreen,
     onMediaState,
+    onBrowserNav,
     applyPageScrollbars,
   ]);
 
@@ -1376,6 +1384,65 @@ export function App() {
     if (!url.startsWith('about:')) setDraft(url);
   }, []);
 
+  /** Debounced history nav — merges app-command + mouse X1/X2 so we don't go back twice */
+  const browserNavAt = useRef(0);
+  const doBrowserNav = useCallback((dir: 'back' | 'forward') => {
+    const now = Date.now();
+    if (now - browserNavAt.current < 120) return;
+    browserNavAt.current = now;
+    const st = useStore.getState();
+    if (st.view === 'settings') {
+      if (dir === 'back') st.setView('browser');
+      return;
+    }
+    const tab = st.tabs.find((t) => t.id === st.activeId);
+    if (!tab) return;
+    // Internal pages without webview: no-op (or settings already handled)
+    if (tab.url === HOME_URL || tab.url === TOR_HOME_URL || tab.url.startsWith('about:')) {
+      return;
+    }
+    const el = currentView();
+    try {
+      if (dir === 'back') el?.goBack?.();
+      else el?.goForward?.();
+    } catch {
+      /* */
+    }
+  }, []);
+
+  useEffect(() => {
+    const off = window.shell?.onBrowserNav?.((payload) => {
+      if (payload?.dir === 'back' || payload?.dir === 'forward') doBrowserNav(payload.dir);
+    });
+    return () => off?.();
+  }, [doBrowserNav]);
+
+  // Chrome UI fallback (settings / home) for mouse X1/X2 when focus is not in webview
+  useEffect(() => {
+    const onUp = (e: MouseEvent) => {
+      if (e.button === 3) {
+        e.preventDefault();
+        doBrowserNav('back');
+      } else if (e.button === 4) {
+        e.preventDefault();
+        doBrowserNav('forward');
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Backspace' || e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t?.isContentEditable) return;
+      e.preventDefault();
+    };
+    window.addEventListener('mouseup', onUp, true);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('mouseup', onUp, true);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [doBrowserNav]);
+
   const currentView = () => {
     const nodes = document.querySelectorAll('webview');
     for (const n of nodes) {
@@ -1638,10 +1705,10 @@ export function App() {
             return true;
           }
           case 'back':
-            if (!isHome && !isTorHome && !isHistoryPage) currentView()?.goBack?.();
+            doBrowserNav('back');
             return true;
           case 'forward':
-            if (!isHome && !isTorHome && !isHistoryPage) currentView()?.goForward?.();
+            doBrowserNav('forward');
             return true;
           case 'bookmarkPage':
             openBookmarkDialog();
@@ -1832,6 +1899,7 @@ export function App() {
       taskMgrOpen,
       togglePictureInPicture,
       view,
+      doBrowserNav,
     ],
   );
 
@@ -3367,6 +3435,7 @@ export function App() {
                 onMediaState={(st) => {
                   if (t.id === activeId) setPageHasVideo(Boolean(st.hasVideo || st.playing));
                 }}
+                onBrowserNav={(dir) => doBrowserNav(dir)}
                 onNav={(b, f, u, title) => onNav(b, f, u, title)}
                 onSaveOffer={setSaveOffer}
                 onGuestMeta={onGuestMeta}

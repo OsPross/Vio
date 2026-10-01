@@ -109,3 +109,44 @@ ipcRenderer.on('djxxr-pip-toggle', async () => {
     console.warn('[djxxr-pip]', err);
   }
 });
+
+function isEditableTarget(el) {
+  if (!el || el === document || el === document.documentElement) return false;
+  try {
+    const tag = el.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (el.isContentEditable) return true;
+    if (el.closest && el.closest('[contenteditable="true"]')) return true;
+  } catch {
+    /* */
+  }
+  return false;
+}
+
+// Mouse X1/X2 fallback (when app-command is not delivered into the guest)
+window.addEventListener(
+  'mouseup',
+  (e) => {
+    if (e.button === 3 || e.button === 4) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {
+        /* */
+      }
+      ipcRenderer.sendToHost('djxxr-mouse-nav', { dir: e.button === 3 ? 'back' : 'forward' });
+    }
+  },
+  true,
+);
+
+// Chrome: Backspace must NOT navigate history
+window.addEventListener(
+  'keydown',
+  (e) => {
+    if (e.key !== 'Backspace' || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (isEditableTarget(e.target)) return;
+    e.preventDefault();
+  },
+  true,
+);

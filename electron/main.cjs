@@ -416,6 +416,22 @@ function createWindow(optsExtra = {}) {
   if (!mainWindow || mainWindow.isDestroyed()) {
     mainWindow = bw;
   }
+
+  // Windows mouse X1/X2 (browser-backward / browser-forward) — single path to renderer
+  bw.on('app-command', (e, cmd) => {
+    if (cmd === 'browser-backward' || cmd === 'browser-forward') {
+      e.preventDefault();
+      try {
+        bw.webContents.send('shell:browser-nav', {
+          dir: cmd === 'browser-backward' ? 'back' : 'forward',
+          source: 'app-command',
+        });
+      } catch {
+        /* */
+      }
+    }
+  });
+
   if (!secondary && win.isMaximized) {
     try {
       bw.maximize();
