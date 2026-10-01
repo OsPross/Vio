@@ -620,9 +620,11 @@ Występują w THEMES, DEFAULT accent, części CSS (np. fallbacki `#000`, kolory
 | Vite warning: `useMetrics` static+dynamic import | build reporter |
 | Chunk JS > 500 kB | `index-*.js` ~765 kB |
 | `MODULE_TYPELESS_PACKAGE_JSON` w teście url-display | brak `"type":"module"` w package.json |
-| `@deprecated` torProxy global / set-proxy / presetHomeWidgets | martwe ścieżki migracji |
-| Skrypty `scripts/patch-*.cjs`, stare probe | możliwy martwy tooling |
-| Capture Tor stubuje IPC | nie mylić z produkcją |
+| `@deprecated` torProxy global / set-proxy / presetHomeWidgets | **usunięte** w cleanup (`set-proxy`, `torProxyEnabled`, `presetHomeWidgets`); `torProxyUrl` zostaje (SOCKS Tor) |
+| Skrypty `scripts/patch-*.cjs`, stare probe | **usunięte** (cleanup) |
+| Monolit `App.tsx` | w trakcie: `TabWebview` → `src/features/tabs/` (~3200 linii pozostało) |
+| Corrupt localStorage → biały ekran | **naprawione**: backup `.corrupt-*` + defaults |
+| Panel crash wywala całą UI | **złagodzone**: `ErrorBoundary` na settings/sidebar/about:* |
 
 TODO/FIXME w `src/` i `electron/`: praktycznie brak (poza @deprecated). Reszta w node_modules — ignorować.
 
@@ -639,7 +641,7 @@ test: OK.
 | Czas startu cold | **niepewne** (nie mierzone w tym przebiegu) |
 | RAM | IPC `shell:perf-memory` / metrics — **nie mierzone tu** |
 | Bundle renderer | ~764 kB JS / ~228 kB CSS (vite build) |
-| Ciężkie miejsca | `App.tsx` monolityczny; home widgets+motion; Ghostery listy; metrics polling gdy UI otwarte; wiele webview przy wielu kartach |
+| Ciężkie miejsca | `App.tsx` jeszcze duży (split w toku); home widgets+motion; Ghostery; metrics on-demand |
 
 Mechanizmy: `perfLazyTabs`, `perfDiscardTabs`, `perfBackgroundThrottling`, `perfLowPowerClock`, metrics low-power.
 
@@ -647,7 +649,16 @@ Mechanizmy: `perfLazyTabs`, `perfDiscardTabs`, `perfBackgroundThrottling`, `perf
 
 ## 10. Co zrobione od ostatniego raportu
 
-### Commity lokalne (`master`)
+### Cleanup round (stabilność / porządki) — 2026-10-01
+
+- Siatka: smoke R4/R5/R7 baseline + unit testy (store, shortcuts, popups, partitions, UA brands, tabNavigate).
+- ESLint + Prettier (`npm run lint` / `format`).
+- Martwy kod: `shell:set-proxy`, `torProxyEnabled`, `presetHomeWidgets`, probe/patch scripts; raporty → `docs/reports/`.
+- Split: `src/features/tabs/TabWebview.tsx`, `src/lib/tabNavigate.ts`, `src/lib/persistMerge.ts`.
+- Stabilność: ErrorBoundary, atomic write history/notes, main logger + uncaught handlers, corrupt localStorage recovery.
+- Docs: `docs/ARCHITECTURE.md`. Szczegóły: `docs/reports/RAPORT-CLEANUP.md`.
+
+### Commity lokalne (`master`) — wcześniejsze rundy
 
 | Hash | Message |
 |------|---------|
@@ -681,8 +692,9 @@ Mechanizmy: `perfLazyTabs`, `perfDiscardTabs`, `perfBackgroundThrottling`, `perf
 
 ## 11. Rekomendacje (kolejność)
 
-1. **Ręczny smoke w pełnym `electron:dev`** — kliknąć ≡ (private/tor/historia/zakładki), PPM na stronie, private window bez plików Partitions.
-2. **Code-split `App.tsx` / metrics** — obniżyć ~765 kB i warning Vite.
+1. **Dokończyć split `App.tsx` / `store.ts` / `SettingsPage` / `main.cjs` IPC** — cel App &lt; 300 linii (cleanup WIP).
+2. **Ręczny smoke w pełnym `electron:dev`** — kliknąć ≡ (private/tor/historia/zakładki), PPM na stronie, private window bez plików Partitions.
+3. **Code-split chunks** — obniżyć ~765 kB i warning Vite.
 3. **Dodać `"type": "module"` lub przenieść test url-display** — uciszyć MODULE_TYPELESS.
 4. **Smoke test E2E skrótów guest** — regresja before-input.
 5. **Uprościć dual adblock** — jasna ścieżka Ghostery-only vs legacy.
