@@ -51,6 +51,12 @@ function addHandler(win, s, event, listener, once) {
     set = new Set();
     s.handlers.set(event, set);
   }
+  for (const h of set) {
+    if (h === listener || h.__djxxrInner === listener) {
+      if (!once) return h;
+      if (h.__djxxrOnce) return h;
+    }
+  }
   const wrapped = once
     ? Object.assign(
         (...args) => {
@@ -104,6 +110,12 @@ function patchWindow(win) {
   };
   win.off = remove;
   win.removeListener = remove;
+
+  // Clear fanout Sets after closed (extensions observeWindow once('closed') re-stacks)
+  s.origOn('closed', () => {
+    s.handlers.clear();
+    s.attached.clear();
+  });
 
   win.__djxxrWinFanout = true;
 }

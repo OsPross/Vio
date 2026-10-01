@@ -63,6 +63,14 @@ function addHandler(wc, s, event, listener, once) {
     set = new Set();
     s.handlers.set(event, set);
   }
+  // Dedupe identical listener refs (re-observe / double addTab)
+  for (const h of set) {
+    if (h === listener || h.__djxxrInner === listener) {
+      if (!once) return h;
+      // once: keep a single pending once for same inner
+      if (h.__djxxrOnce) return h;
+    }
+  }
   const wrapped = once
     ? Object.assign((...args) => listener(...args), { __djxxrOnce: true, __djxxrInner: listener })
     : listener;
@@ -108,6 +116,12 @@ function patchWebContents(wc) {
   };
   wc.off = remove;
   wc.removeListener = remove;
+
+  // Drop fanout Sets when WC dies (WebNavigation observeTab never removes)
+  s.origOn('destroyed', () => {
+    s.handlers.clear();
+    s.attached.clear();
+  });
 
   wc.__djxxrWcFanout = true;
 }

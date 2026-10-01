@@ -671,8 +671,13 @@ app.whenReady().then(async () => {
   security.init();
   certificate.init();
 
-  // Backup: any webview webContents gets context menu + navigation wiring
+  // Backup: patch fanout BEFORE any guest listeners; then wire navigation
   app.on('web-contents-created', (_e, contents) => {
+    try {
+      require('./webcontents-events.cjs').patchWebContents(contents);
+    } catch (err) {
+      console.warn('[webcontents-events] patch', err && err.message);
+    }
     try {
       if (typeof contents.getType === 'function' && contents.getType() === 'webview') {
         console.log('[ctx-menu] web-contents-created webview', contents.id);
@@ -809,6 +814,13 @@ app.whenReady().then(async () => {
       void bench.run(() => mainWindow);
     } catch (err) {
       console.error('[perf-bench] failed to start', err);
+    }
+  } else if (!app.isPackaged && process.env.PERF_PROBE_LISTENERS === '1') {
+    try {
+      const probe = require('../scripts/probe-listeners.cjs');
+      void probe.run(() => mainWindow);
+    } catch (err) {
+      console.error('[probe-listeners] failed to start', err);
     }
   } else if (!app.isPackaged && process.env.PERF_PROBE_HEAP === '1') {
     try {
