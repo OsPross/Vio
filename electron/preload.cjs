@@ -192,8 +192,9 @@ contextBridge.exposeInMainWorld('shell', {
     ipcRenderer.on('shell:permission-ask', handler);
     return () => ipcRenderer.removeListener('shell:permission-ask', handler);
   },
-  savePage: (webContentsId) => ipcRenderer.invoke('shell:save-page', webContentsId),
-  printToPdf: (webContentsId) => ipcRenderer.invoke('shell:print-to-pdf', webContentsId),
+  savePage: (webContentsId, opts) => ipcRenderer.invoke('shell:save-page', webContentsId, opts || {}),
+  printToPdf: (webContentsId, opts) => ipcRenderer.invoke('shell:print-to-pdf', webContentsId, opts || {}),
+  printPage: (webContentsId) => ipcRenderer.invoke('shell:print', webContentsId),
   certificateRespond: (webContentsId, proceed, rememberHost) =>
     ipcRenderer.invoke('shell:certificate-respond', webContentsId, proceed, rememberHost),
   onCertificateError: (cb) => {

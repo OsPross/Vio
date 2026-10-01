@@ -468,7 +468,7 @@ function showGuestContextMenu(wc, params, deps) {
       accelerator: 'CmdOrCtrl+P',
       click: () => {
         try {
-          wc.print({});
+          wc.print({ printBackground: true });
         } catch (err) {
           console.error('[ctx] print', err);
         }

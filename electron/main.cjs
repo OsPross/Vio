@@ -1364,21 +1364,81 @@ ipcMain.handle(
   ),
 );
 
+function sanitizeDownloadBase(title, fallback) {
+  const raw = String(title || '').trim() || String(fallback || 'page');
+  const cleaned = raw
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return cleaned || 'page';
+}
+
+function suggestedSaveName(wc, ext) {
+  let title = '';
+  let url = '';
+  try {
+    title = wc.getTitle() || '';
+    url = wc.getURL() || '';
+  } catch {
+    /* */
+  }
+  let host = '';
+  try {
+    host = new URL(url).hostname.replace(/^www\./i, '');
+  } catch {
+    /* */
+  }
+  const base = sanitizeDownloadBase(title, host || 'page');
+  return `${base}.${ext}`;
+}
+
+ipcMain.handle(
+  'shell:print',
+  wrapApp(async (_event, webContentsId) => {
+    const wc = guestWebContentsById(webContentsId);
+    if (!wc) return { ok: false, error: 'no-guest' };
+    try {
+      // Print via guest webContents (webview.print() often shows blank preview).
+      await new Promise((resolve, reject) => {
+        wc.print({ silent: false, printBackground: true }, (success, failureReason) => {
+          if (success) resolve(true);
+          else reject(new Error(failureReason || 'print-failed'));
+        });
+      });
+      return { ok: true };
+    } catch (err) {
+      // Older Electron: print() may not take a callback — fire-and-forget
+      try {
+        wc.print({ printBackground: true });
+        return { ok: true, mode: 'fire' };
+      } catch (e2) {
+        return { ok: false, error: String(err?.message || e2?.message || err) };
+      }
+    }
+  }),
+);
+
 ipcMain.handle(
   'shell:save-page',
-  wrapApp(async (event, webContentsId) => {
+  wrapApp(async (event, webContentsId, opts) => {
     const wc = guestWebContentsById(webContentsId);
     if (!wc) return { ok: false, error: 'no-guest' };
     const parent = BrowserWindow.fromWebContents(event.sender);
-    const { canceled, filePath } = await dialog.showSaveDialog(parent || undefined, {
-      title: 'Zapisz stronę',
-      defaultPath: 'page.html',
-      filters: [
-        { name: 'Strona WWW', extensions: ['html', 'htm'] },
-        { name: 'Wszystkie pliki', extensions: ['*'] },
-      ],
-    });
-    if (canceled || !filePath) return { ok: false, canceled: true };
+    const suggested = suggestedSaveName(wc, 'html');
+    let filePath = opts && typeof opts.forcePath === 'string' ? opts.forcePath : null;
+    if (!filePath) {
+      const dlg = await dialog.showSaveDialog(parent || undefined, {
+        title: 'Zapisz stronę',
+        defaultPath: suggested,
+        filters: [
+          { name: 'Strona WWW', extensions: ['html', 'htm'] },
+          { name: 'Wszystkie pliki', extensions: ['*'] },
+        ],
+      });
+      if (dlg.canceled || !dlg.filePath) return { ok: false, canceled: true };
+      filePath = dlg.filePath;
+    }
     try {
       await wc.savePage(filePath, 'HTMLComplete');
       return { ok: true, filePath };
@@ -1390,21 +1450,26 @@ ipcMain.handle(
 
 ipcMain.handle(
   'shell:print-to-pdf',
-  wrapApp(async (event, webContentsId) => {
+  wrapApp(async (event, webContentsId, opts) => {
     const wc = guestWebContentsById(webContentsId);
     if (!wc) return { ok: false, error: 'no-guest' };
     const parent = BrowserWindow.fromWebContents(event.sender);
-    const { canceled, filePath } = await dialog.showSaveDialog(parent || undefined, {
-      title: 'Zapisz jako PDF',
-      defaultPath: 'page.pdf',
-      filters: [{ name: 'PDF', extensions: ['pdf'] }],
-    });
-    if (canceled || !filePath) return { ok: false, canceled: true };
+    const suggested = suggestedSaveName(wc, 'pdf');
+    let filePath = opts && typeof opts.forcePath === 'string' ? opts.forcePath : null;
+    if (!filePath) {
+      const dlg = await dialog.showSaveDialog(parent || undefined, {
+        title: 'Zapisz jako PDF',
+        defaultPath: suggested,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      });
+      if (dlg.canceled || !dlg.filePath) return { ok: false, canceled: true };
+      filePath = dlg.filePath;
+    }
     try {
       const data = await wc.printToPDF({ printBackground: true });
       const fs = require('node:fs');
       fs.writeFileSync(filePath, data);
-      return { ok: true, filePath };
+      return { ok: true, filePath, bytes: data.length };
     } catch (err) {
       return { ok: false, error: String(err?.message || err) };
     }

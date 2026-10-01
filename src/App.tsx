@@ -1477,6 +1477,20 @@ export function App() {
     void window.shell?.printToPdf?.(wcId);
   }, [guestWc]);
 
+  const printActivePage = useCallback(() => {
+    const id = useStore.getState().activeId;
+    const wcId = guestWc[id];
+    if (typeof wcId === 'number' && window.shell?.printPage) {
+      void window.shell.printPage(wcId);
+      return;
+    }
+    try {
+      currentView()?.print?.();
+    } catch {
+      void currentView()?.executeJavaScript?.('window.print()');
+    }
+  }, [guestWc]);
+
   useEffect(() => {
     if (!active || isHome || isTorHome || isInternalAbout) return;
     const host = hostFromPageUrl(active.url);
@@ -1660,11 +1674,7 @@ export function App() {
             window.setTimeout(() => document.getElementById('find-in-page-input')?.focus(), 0);
             return true;
           case 'print':
-            try {
-              currentView()?.print?.();
-            } catch {
-              void currentView()?.executeJavaScript?.('window.print()');
-            }
+            printActivePage();
             return true;
           case 'savePage':
             window.dispatchEvent(new CustomEvent('djxxr-save-page'));
@@ -1975,17 +1985,7 @@ export function App() {
       clearData: () => {
         void window.shell?.perfClearCache?.();
       },
-      print: () => {
-        try {
-          currentView()?.print?.();
-        } catch {
-          try {
-            currentView()?.executeJavaScript?.('window.print()');
-          } catch {
-            /* */
-          }
-        }
-      },
+      print: () => printActivePage(),
       zoom: (delta) => {
         bumpZoom(delta > 0 ? 0.1 : -0.1);
       },
@@ -2541,13 +2541,7 @@ export function App() {
                 toggleFullscreen: () => {
                   void window.shell?.windowToggleFullscreen?.();
                 },
-                print: () => {
-                  try {
-                    currentView()?.print?.();
-                  } catch {
-                    void currentView()?.executeJavaScript?.('window.print()');
-                  }
-                },
+                print: () => printActivePage(),
                 findInPage: () => setFindOpen(true),
                 savePage: () => {
                   window.dispatchEvent(new CustomEvent('djxxr-save-page'));

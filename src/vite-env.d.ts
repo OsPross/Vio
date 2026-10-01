@@ -473,10 +473,13 @@ declare global {
       onHttpsWarn: (cb: (payload: { httpUrl: string; httpsUrl?: string; errorCode?: number }) => void) => () => void;
       savePage: (
         webContentsId: number,
+        opts?: { forcePath?: string },
       ) => Promise<{ ok: boolean; canceled?: boolean; filePath?: string; error?: string }>;
       printToPdf: (
         webContentsId: number,
-      ) => Promise<{ ok: boolean; canceled?: boolean; filePath?: string; error?: string }>;
+        opts?: { forcePath?: string },
+      ) => Promise<{ ok: boolean; canceled?: boolean; filePath?: string; error?: string; bytes?: number }>;
+      printPage: (webContentsId: number) => Promise<{ ok: boolean; error?: string; mode?: string }>;
       certificateRespond: (
         webContentsId: number,
         proceed: boolean,
