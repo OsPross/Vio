@@ -43,14 +43,56 @@ function stamp() {
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
 }
 
+function listGuestWebContents() {
+  const guests = [];
+  for (const wc of webContents.getAllWebContents()) {
+    if (wc.isDestroyed?.()) continue;
+    let type = 'unknown';
+    try {
+      type = typeof wc.getType === 'function' ? wc.getType() : 'unknown';
+    } catch {
+      /* */
+    }
+    if (type !== 'webview') continue;
+    let osPid = null;
+    let procId = null;
+    let url = '';
+    try {
+      osPid = typeof wc.getOSProcessId === 'function' ? wc.getOSProcessId() : null;
+    } catch {
+      /* */
+    }
+    try {
+      procId = typeof wc.getProcessId === 'function' ? wc.getProcessId() : null;
+    } catch {
+      /* */
+    }
+    try {
+      url = String(wc.getURL?.() || '').slice(0, 160);
+    } catch {
+      /* */
+    }
+    guests.push({ wcId: wc.id, osPid, procId, url });
+  }
+  return guests;
+}
+
 function sampleMetrics(opts = {}) {
   const uiPid = opts.uiPid || null;
+  const guestMeta = listGuestWebContents();
+  const guestOsPids = new Set(guestMeta.map((g) => g.osPid).filter((p) => typeof p === 'number' && p > 0));
   const list = app.getAppMetrics();
   const byType = {};
   let totalWsKb = 0;
   let totalCpu = 0;
   let uiRenderer = null;
   const guests = [];
+  const guestByPid = new Map();
+  for (const g of guestMeta) {
+    if (typeof g.osPid !== 'number') continue;
+    if (!guestByPid.has(g.osPid)) guestByPid.set(g.osPid, []);
+    guestByPid.get(g.osPid).push(g);
+  }
   const processes = list.map((m) => {
     const type = String(m.type || 'unknown');
     const memKb = m.memory?.workingSetSize || 0;
@@ -71,19 +113,24 @@ function sampleMetrics(opts = {}) {
       sandboxed: Boolean(m.sandboxed),
       name: m.name || null,
       role: null,
+      guestUrls: null,
     };
     if (uiPid && m.pid === uiPid) {
       row.role = 'renderer-ui';
       uiRenderer = { pid: m.pid, type, cpu, memMb: row.memMb };
+    } else if (guestOsPids.has(m.pid)) {
+      row.role = 'guest';
+      row.guestUrls = (guestByPid.get(m.pid) || []).map((g) => g.url);
+      guests.push({ pid: m.pid, cpu, memMb: row.memMb, urls: row.guestUrls });
     } else if (type === 'Browser') {
       row.role = 'browser';
     } else if (type === 'GPU') {
       row.role = 'gpu';
     } else if (type === 'Utility') {
       row.role = 'utility';
-    } else if (type === 'Tab') {
-      row.role = 'guest';
-      guests.push({ pid: m.pid, cpu, memMb: row.memMb });
+    } else if (type === 'Tab' && !(uiPid && m.pid === uiPid)) {
+      // leftover Tab metrics not matched to a live webview OS pid
+      row.role = 'tab-unmatched';
     }
     return row;
   });
@@ -102,10 +149,13 @@ function sampleMetrics(opts = {}) {
     totalCpu: Math.round(totalCpu * 100) / 100,
     byType: types,
     uiRenderer,
+    guestWebContents: guestMeta,
     guests: {
       count: guests.length,
+      webContentsCount: guestMeta.length,
       memMb: guests.reduce((a, g) => a + g.memMb, 0),
       cpu: Math.round(guests.reduce((a, g) => a + g.cpu, 0) * 100) / 100,
+      processes: guests,
     },
     processes,
   };
@@ -381,22 +431,60 @@ async function run(getMainWindow) {
   // --- open 10 tabs ---
   console.log('[perf-bench] opening 10 tabs…');
   const open10Start = Date.now();
-  await evalInApp(`(() => {
+  const loadFails = [];
+  const failHook = (_e, contents) => {
+    try {
+      if (contents.getType?.() !== 'webview') return;
+      const onFail = (_ev, errorCode, errorDescription, validatedURL, isMainFrame) => {
+        if (!isMainFrame || errorCode === -3) return;
+        loadFails.push({
+          at: Date.now(),
+          wcId: contents.id,
+          errorCode,
+          errorDescription: String(errorDescription || ''),
+          url: String(validatedURL || ''),
+        });
+      };
+      contents.on('did-fail-load', onFail);
+    } catch {
+      /* */
+    }
+  };
+  app.on('web-contents-created', failHook);
+
+  await evalInApp(`(async () => {
     const st = window.__DJXXR_STORE__?.getState?.();
     if (!st) return { err: 'no-store' };
-    // keep one home, open rest as new tabs
     const urls = ${JSON.stringify(SITES_10)};
     st.updateTab(st.activeId, { url: urls[0] });
-    for (let i = 1; i < urls.length; i++) st.newTab(urls[i], { background: true });
-    return { tabs: st.tabs.length };
+    for (let i = 1; i < urls.length; i++) {
+      st.newTab(urls[i], { background: true });
+      await new Promise(r => setTimeout(r, 400));
+    }
+    return { tabs: window.__DJXXR_STORE__.getState().tabs.length };
   })()`);
-  await sleep(18_000); // allow loads
+  // Staggered settle — heavy sites (reddit/google) need more than 18s under load
+  const LOAD_WAIT_MS = Math.max(25_000, Number(process.env.PERF_BENCH_LOAD_WAIT_MS) || 45_000);
+  await sleep(LOAD_WAIT_MS);
+  try {
+    app.removeListener('web-contents-created', failHook);
+  } catch {
+    /* */
+  }
+  const tabLoadStatus = await evalInApp(`(() => {
+    const st = window.__DJXXR_STORE__?.getState?.();
+    if (!st) return { err: 'no-store' };
+    return st.tabs.map(t => ({ id: t.id, url: t.url, title: t.title, loadError: t.loadError || null }));
+  })()`);
   result.scenarios.tabs10 = {
     ...snap(),
     openMs: Date.now() - open10Start,
+    loadWaitMs: LOAD_WAIT_MS,
     tabCount: await evalInApp(`window.__DJXXR_STORE__?.getState?.().tabs.length`),
+    tabLoadStatus,
+    didFailLoad: loadFails.slice(0, 40),
   };
-  console.log('[perf-bench] tabs10 mem', result.scenarios.tabs10.totalMemMb, 'MB');
+  console.log('[perf-bench] tabs10 mem', result.scenarios.tabs10.totalMemMb, 'MB', 'guests', result.scenarios.tabs10.guests?.count);
 
   // --- tab switch & new tab timing ---
   const switchSamples = [];
