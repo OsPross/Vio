@@ -4,41 +4,55 @@ const fs = require('fs');
 
 /** Perf bench wall-clock (measurement only). */
 global.__DJXXR_PERF_T0 = Date.now();
+global.__DJXXR_REQUIRE_TIMES__ = {};
 
-const adblock = require('./adblock-plus.cjs');
-const perf = require('./perf.cjs');
-const passwords = require('./passwords.cjs');
-const metrics = require('./metrics.cjs');
-const security = require('./security.cjs');
-const tor = require('./tor.cjs');
-const torDaemon = require('./tor-daemon.cjs');
-const privacy = require('./privacy.cjs');
-const faviconCache = require('./favicon-cache.cjs');
-const history = require('./history.cjs');
-const notes = require('./notes.cjs');
-const appSession = require('./session.cjs');
-const downloads = require('./downloads.cjs');
-const homeBg = require('./home-bg.cjs');
-const contextMenu = require('./context-menu.cjs');
-const windowMode = require('./window-mode.cjs');
-const certificate = require('./certificate.cjs');
-const shortcutsGuest = require('./shortcuts-guest.cjs');
-const pip = require('./pip.cjs');
-const bookmarksImport = require('./bookmarks-import.cjs');
-const extensions = require('./extensions.cjs');
-const uaChrome = require('./ua-chrome.cjs');
-const mouseNav = require('./mouse-nav.cjs');
-const spellcheck = require('./spellcheck.cjs');
+function timedRequire(label, id) {
+  const t0 = Date.now();
+  const mod = require(id);
+  const ms = Date.now() - t0;
+  global.__DJXXR_REQUIRE_TIMES__[label] = (global.__DJXXR_REQUIRE_TIMES__[label] || 0) + ms;
+  return mod;
+}
+
+const adblock = timedRequire('adblock-plus', './adblock-plus.cjs');
+const perf = timedRequire('perf', './perf.cjs');
+const passwords = timedRequire('passwords', './passwords.cjs');
+const metrics = timedRequire('metrics', './metrics.cjs');
+const security = timedRequire('security', './security.cjs');
+const tor = timedRequire('tor', './tor.cjs');
+const torDaemon = timedRequire('tor-daemon', './tor-daemon.cjs');
+const privacy = timedRequire('privacy', './privacy.cjs');
+const faviconCache = timedRequire('favicon-cache', './favicon-cache.cjs');
+const history = timedRequire('history', './history.cjs');
+const notes = timedRequire('notes', './notes.cjs');
+const appSession = timedRequire('session', './session.cjs');
+const downloads = timedRequire('downloads', './downloads.cjs');
+const homeBg = timedRequire('home-bg', './home-bg.cjs');
+const contextMenu = timedRequire('context-menu', './context-menu.cjs');
+const windowMode = timedRequire('window-mode', './window-mode.cjs');
+const certificate = timedRequire('certificate', './certificate.cjs');
+const shortcutsGuest = timedRequire('shortcuts-guest', './shortcuts-guest.cjs');
+const pip = timedRequire('pip', './pip.cjs');
+const bookmarksImport = timedRequire('bookmarks-import', './bookmarks-import.cjs');
+const extensions = timedRequire('extensions', './extensions.cjs');
+const uaChrome = timedRequire('ua-chrome', './ua-chrome.cjs');
+const mouseNav = timedRequire('mouse-nav', './mouse-nav.cjs');
+const spellcheck = timedRequire('spellcheck', './spellcheck.cjs');
 const { webContents: electronWebContents } = require('electron');
 
 /** Boot switches MUST run before ready */
 privacy.applyBootSwitches();
 uaChrome.applyBootFallback();
 const boot = perf.applyBootSwitches();
+// Light inits only — heavy Ghostery lists / chrome-extensions / openpgp stay lazy
 history.init();
 notes.init();
 void extensions.init();
 downloads.init();
+
+if (!app.isPackaged && process.env.PERF_BENCH === '1') {
+  console.log('[boot] require times', JSON.stringify(global.__DJXXR_REQUIRE_TIMES__));
+}
 
 /** @type {ReturnType<typeof createWindow> | null} */
 let mainWindow = null;
@@ -416,6 +430,7 @@ function createWindow(optsExtra = {}) {
     height: secondary ? 800 : win.height || 900,
     minWidth: 720,
     minHeight: 480,
+    show: false,
     backgroundColor: bootMode === 'private' ? '#0e1016' : '#12151c',
     title:
       bootMode === 'private' ? 'Prywatne — djxxr' : bootMode === 'tor' ? 'Tor — djxxr' : 'djxxr',
@@ -447,6 +462,15 @@ function createWindow(optsExtra = {}) {
     opts.y = win.y;
   }
   const bw = new BrowserWindow(opts);
+  bw.once('ready-to-show', () => {
+    if (bw.isDestroyed()) return;
+    global.__DJXXR_PERF_WINDOW_VISIBLE_AT = Date.now();
+    try {
+      bw.show();
+    } catch {
+      /* */
+    }
+  });
   appWindows.add(bw);
   windowMode.setWindowMeta(bw, {
     mode: bootMode,
@@ -618,6 +642,8 @@ function guestWebContentsById(id) {
 }
 
 app.whenReady().then(async () => {
+  global.__DJXXR_PERF_READY_AT = Date.now();
+
   // FIRST: purge legacy Partitions/private before any session.fromPartition
   try {
     windowMode.purgeLegacyPrivatePartitionSync();
@@ -640,30 +666,7 @@ app.whenReady().then(async () => {
     }
   });
 
-  // Migration: never leave Tor daemon in Windows Startup by default
-  try {
-    torDaemon.removeAutostartShortcuts();
-  } catch (e) {
-    console.warn('[tor] autostart migrate', e);
-  }
-
   const ses = session.fromPartition('persist:main');
-  try {
-    extensions.initChromeApi({
-      getMainWindow: () => mainWindow,
-      onOpenUrl: (url, extra = {}) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('shell:open-url', {
-            url,
-            background: Boolean(extra.background),
-          });
-        }
-      },
-      createWindow: () => createWindow({ secondary: true }),
-    });
-  } catch (err) {
-    console.warn('[ext] initChromeApi', err);
-  }
   security.attachCsp(session.defaultSession, isDev);
   security.attachCsp(ses, false);
   security.attachPermissionHandlers(ses);
@@ -672,6 +675,7 @@ app.whenReady().then(async () => {
     mainWindow?.webContents.send('shell:permission-ask', req);
   });
 
+  // Fast path: attach session hooks then show window; heavy boot deferred
   adblock.attachToSession(ses);
   downloads.attachToSession(ses, { tor: false });
   downloads.setPushHandler((list) => {
@@ -688,25 +692,9 @@ app.whenReady().then(async () => {
       }
     },
   });
-  // Page editing spellcheck — must run AFTER privacy/perf (they must not disable it)
   spellcheck.applyToSession(ses, { tor: false });
   adblock.setBlockedListener((n) => {
     mainWindow?.webContents.send('shell:adblock-blocked', n);
-  });
-  void adblock.init({ updateLists: true }).then((r) => {
-    console.log('[adblock+]', r);
-  });
-  await perf.applySessionPerf(ses, { cacheMb: boot.cacheMb });
-  spellcheck.applyToSession(ses, { tor: false });
-
-  // Guest preload is set ONLY via will-attach-webview (security.attachWebviewGuard).
-  // Session-wide frame preloads were removed — they re-ran the guest script in the
-  // main frame AND every iframe (double contextBridge + unwanted iframe injection).
-
-  passwords.init({
-    onLock: () => {
-      mainWindow?.webContents.send('shell:passwords-locked');
-    },
   });
 
   metrics.init({
@@ -719,10 +707,48 @@ app.whenReady().then(async () => {
   metrics.attachNetwork(ses);
 
   createWindow();
+  global.__DJXXR_PERF_WINDOW_CREATED_AT = Date.now();
+
+  // Deferred: Ghostery lists, chrome-extensions, passwords, Tor autostart cleanup, session perf
+  setImmediate(() => {
+    try {
+      torDaemon.removeAutostartShortcuts();
+    } catch (e) {
+      console.warn('[tor] autostart migrate', e);
+    }
+    try {
+      extensions.initChromeApi({
+        getMainWindow: () => mainWindow,
+        onOpenUrl: (url, extra = {}) => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('shell:open-url', {
+              url,
+              background: Boolean(extra.background),
+            });
+          }
+        },
+        createWindow: () => createWindow({ secondary: true }),
+      });
+    } catch (err) {
+      console.warn('[ext] initChromeApi', err);
+    }
+    void adblock.init({ updateLists: true }).then((r) => {
+      console.log('[adblock+]', r);
+    });
+    void perf.applySessionPerf(ses, { cacheMb: boot.cacheMb }).then(() => {
+      spellcheck.applyToSession(ses, { tor: false });
+    });
+    passwords.init({
+      onLock: () => {
+        mainWindow?.webContents.send('shell:passwords-locked');
+      },
+    });
+    global.__DJXXR_PERF_HEAVY_DONE_AT = Date.now();
+  });
+
   // Smoke hooks: unpackaged (dev) only — never in built/installed app
   if (!app.isPackaged && process.env.PERF_BENCH === '1') {
     try {
-      global.__DJXXR_PERF_READY_AT = Date.now();
       const bench = require('../scripts/perf-bench.cjs');
       void bench.run(() => mainWindow);
     } catch (err) {

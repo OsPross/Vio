@@ -169,6 +169,19 @@ function snapshotListeners() {
       ...countEmitter(wc),
     };
   });
+  let windowFanout = null;
+  try {
+    const win = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed());
+    if (win) {
+      windowFanout = {
+        focus: win.listenerCount('focus'),
+        resized: win.listenerCount('resized'),
+        fanoutRegistry: require('../electron/window-events.cjs').counts(win),
+      };
+    }
+  } catch {
+    /* */
+  }
   return {
     at: Date.now(),
     ipcMain: countEmitter(ipcMain),
@@ -176,6 +189,7 @@ function snapshotListeners() {
     webContentsCount: wcs.length,
     webContents: perWc,
     webContentsListenersTotal: perWc.reduce((a, x) => a + x.listeners, 0),
+    windowFanout,
   };
 }
 
@@ -330,11 +344,19 @@ async function run(getMainWindow) {
     launchToReadyMs: Number(global.__DJXXR_PERF_READY_AT)
       ? Number(global.__DJXXR_PERF_READY_AT) - tLaunch
       : null,
-    launchToWindowVisibleMs: tVisible - tLaunch,
+    launchToWindowCreatedMs: Number(global.__DJXXR_PERF_WINDOW_CREATED_AT)
+      ? Number(global.__DJXXR_PERF_WINDOW_CREATED_AT) - tLaunch
+      : null,
+    launchToWindowVisibleMs: Number(global.__DJXXR_PERF_WINDOW_VISIBLE_AT)
+      ? Number(global.__DJXXR_PERF_WINDOW_VISIBLE_AT) - tLaunch
+      : tVisible - tLaunch,
     launchToInteractiveMs: Date.now() - tLaunch,
+    requireTimes: global.__DJXXR_REQUIRE_TIMES__ || null,
+    heavyDoneAt: global.__DJXXR_PERF_HEAVY_DONE_AT || null,
     renderer: interactive,
     appReadyAt: global.__DJXXR_PERF_READY_AT || null,
     launchAt: tLaunch,
+    packaged: app.isPackaged,
   };
   console.log('[perf-bench] startup', result.marks.launchToInteractiveMs, 'ms');
 
