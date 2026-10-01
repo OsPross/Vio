@@ -16,7 +16,6 @@ import {
   normalizeInput,
   useStore,
 } from './store';
-import type { TorStatusInfo } from './components/TorLanding';
 import { isEditableDomTarget } from './lib/shortcutsRegistry';
 import {
   TabContent,
@@ -41,6 +40,7 @@ import { useShortcuts } from './hooks/useShortcuts';
 import { useBindCommandHost } from './hooks/useAppMenuActions';
 import { useSessionPersist } from './hooks/useSessionPersist';
 import { useTabLifecycle, useTabMediaFlags } from './hooks/useTabLifecycle';
+import { useTorSession } from './hooks/useTorSession';
 
 /** Heavy routes / dialogs — not needed for first paint */
 const SettingsPage = lazy(() =>
@@ -112,10 +112,17 @@ export function App() {
   const [pwForPage, setPwForPage] = useState(0);
   const [taskMgrOpen, setTaskMgrOpen] = useState(false);
   const prevActiveIdRef = useRef(activeId);
-  const [torInfo, setTorInfo] = useState<TorStatusInfo | null>(null);
-  const [torBusy, setTorBusy] = useState(false);
-  const [torError, setTorError] = useState<string | null>(null);
-  const [torProgress, setTorProgress] = useState<string | null>(null);
+  const {
+    torInfo,
+    setTorInfo,
+    torBusy,
+    torError,
+    setTorError,
+    torProgress,
+    setTorProgress,
+    openTorTab,
+    requestNewIdentity,
+  } = useTorSession();
   const [shieldOpen, setShieldOpen] = useState(false);
   const [permRemember, setPermRemember] = useState(true);
   const [tabMenu, setTabMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
@@ -216,97 +223,6 @@ export function App() {
       patchSettings({ sidePanelOpen: false, activeSideAppId: null });
     }
   }, [activeIsTor, active?.id, settings.sidePanelOpen, patchSettings]);
-
-  const openTorTab = useCallback(
-    async (url?: string) => {
-      setTorBusy(true);
-      setTorError(null);
-      setTorProgress('Uruchamianie trybu Tor…');
-      try {
-        // Sync bridge prefs to daemon before start (embedded only)
-        void (await window.shell?.torBridges?.({
-          mode: settings.torBridgeMode,
-          customLines:
-            settings.torBridgeMode === 'custom'
-              ? settings.torBridgeLines
-                  .split(/\r?\n/)
-                  .map((l) => l.trim())
-                  .filter(Boolean)
-              : undefined,
-        }));
-        const st = await window.shell?.torStart?.({ proxyUrl: settings.torProxyUrl });
-        if (!st?.ok || !st.partition) {
-          setTorError(st?.error || 'Nie udało się uruchomić trybu Tor (fail-closed).');
-          setTorInfo(st || null);
-          setTorBusy(false);
-          setTorProgress(null);
-          return;
-        }
-        setTorInfo(st);
-        setTorProgress(null);
-        newTorTab({ url: url || TOR_HOME_URL, partition: st.partition });
-        setView('browser');
-      } catch (err) {
-        setTorError(String((err as Error)?.message || err));
-        setTorProgress(null);
-      } finally {
-        setTorBusy(false);
-      }
-    },
-    [settings.torProxyUrl, settings.torBridgeMode, settings.torBridgeLines, newTorTab, setView],
-  );
-
-  const requestNewIdentity = useCallback(async () => {
-    const torTabs = useStore.getState().tabs.filter((t) => t.mode === 'tor');
-    if (!torTabs.length && !torInfo?.active) return;
-    const ok = window.confirm(
-      'Nowa tożsamość zamknie wszystkie karty Tor, wyczyści sesję (ciasteczka, cache) i zbuduje nowy obwód.\n\nKontynuować?',
-    );
-    if (!ok) return;
-    setTorBusy(true);
-    setTorError(null);
-    setTorProgress('Nowa tożsamość…');
-    try {
-      for (const t of [...torTabs]) {
-        useStore.getState().closeTab(t.id);
-      }
-      const st = await window.shell?.torNewIdentity?.();
-      if (!st?.ok || !st.partition) {
-        setTorError((st?.error as string) || 'Nowa tożsamość nieudana');
-        setTorInfo(st || null);
-        setTorProgress(null);
-        return;
-      }
-      setTorInfo(st);
-      setTorProgress(null);
-      newTorTab({ url: TOR_HOME_URL, partition: String(st.partition) });
-      setView('browser');
-    } catch (err) {
-      setTorError(String((err as Error)?.message || err));
-      setTorProgress(null);
-    } finally {
-      setTorBusy(false);
-    }
-  }, [torInfo?.active, newTorTab, setView]);
-
-  useEffect(() => {
-    const onOpen = () => void openTorTab();
-    window.addEventListener('djxxr-open-tor', onOpen);
-    return () => window.removeEventListener('djxxr-open-tor', onOpen);
-  }, [openTorTab]);
-
-  useEffect(() => {
-    const onNewId = () => void requestNewIdentity();
-    window.addEventListener('djxxr-tor-new-identity', onNewId);
-    return () => window.removeEventListener('djxxr-tor-new-identity', onNewId);
-  }, [requestNewIdentity]);
-
-  useEffect(() => {
-    const hasTor = tabs.some((t) => t.mode === 'tor');
-    if (!hasTor && torInfo?.active) {
-      void window.shell?.torStop?.().then((st) => setTorInfo(st || null));
-    }
-  }, [tabs, torInfo?.active]);
 
   const runPictureInPictureOnTab = useCallback(
     (tabId: string, opts?: { enterOnly?: boolean }) => {
