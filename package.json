@@ -14,6 +14,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "electron:dev": "concurrently -k \"vite --host 127.0.0.1 --port 5173\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER=http://127.0.0.1:5173 electron .\"",
     "electron:build": "vite build && electron-builder --win",
+    "release": "npm run build && electron-builder --win --publish always",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     "@ghostery/adblocker": "^2.18.2",
     "@ghostery/adblocker-electron": "^2.18.2",
     "electron-chrome-extensions": "^4.9.0",
+    "electron-updater": "^6.8.9",
     "lucide-react": "^0.475.0",
     "motion": "^13.4.6",
     "openpgp": "^6.3.2",
@@ -65,11 +67,23 @@
       "scripts/perf-bench.cjs",
       "package.json"
     ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "REPLACE_WITH_YOUR_GITHUB_USER",
+        "repo": "djxxr-releases",
+        "releaseType": "release"
+      }
+    ],
     "win": {
       "target": [
         "nsis"
       ],
       "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     }
   }
 }

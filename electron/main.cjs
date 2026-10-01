@@ -282,6 +282,11 @@ app.whenReady().then(async () => {
   metrics.attachNetwork(ses);
 
   createWindow();
+  try {
+    require('./updater.cjs').scheduleStartupCheck();
+  } catch (err) {
+    console.warn('[updater] schedule', err && err.message);
+  }
   global.__DJXXR_PERF_WINDOW_CREATED_AT = Date.now();
 
   // Deferred: list refresh, chrome-extensions, passwords — then unlock guests if needed
@@ -549,3 +554,4 @@ require('./ipc/register-adblock.cjs').register(ipcDeps);
 require('./ipc/register-passwords.cjs').register(ipcDeps);
 require('./ipc/register-metrics.cjs').register(ipcDeps);
 require('./ipc/register-dev-sync.cjs').register(ipcDeps);
+require('./ipc/register-updater.cjs').register(ipcDeps);

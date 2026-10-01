@@ -1,0 +1,4 @@
+# Copy to dev-app-update.yml (gitignored) for local updater tests.
+# Serve a folder with latest.yml + installer, e.g. npx serve -p 4099 ./release
+provider: generic
+url: http://127.0.0.1:4099/
