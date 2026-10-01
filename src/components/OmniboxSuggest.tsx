@@ -528,8 +528,7 @@ export function OmniboxSuggest({
   }, [ghostVisible, value, ghostSuffix]);
 
   // Shortened display ONLY when blurred
-  const inputDisplayValue =
-    !focused && isHttpNavigableUrl(value) ? formatUrlPlain(value) : value;
+  const inputDisplayValue = !focused && isHttpNavigableUrl(value) ? formatUrlPlain(value) : value;
 
   return (
     <div className={`omnibox-suggest-wrap ${className || ''}`}>

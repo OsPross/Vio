@@ -60,7 +60,10 @@ export function CalendarWidget({ size, preview }: { size: 'S' | 'M' | 'L'; previ
           </span>
         ))}
         {cells.map((c, i) => (
-          <span key={i} className={`hw-cal-day ${c.isToday ? 'today' : ''} ${c.day ? '' : 'empty'}`}>
+          <span
+            key={i}
+            className={`hw-cal-day ${c.isToday ? 'today' : ''} ${c.day ? '' : 'empty'}`}
+          >
             {c.day ?? ''}
           </span>
         ))}

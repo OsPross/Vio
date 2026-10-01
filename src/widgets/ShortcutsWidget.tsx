@@ -102,7 +102,12 @@ function ShortcutForm({
       <strong id={formId}>{title}</strong>
       <label>
         Nazwa
-        <input ref={labelRef} value={label} onChange={(e) => setLabel(e.target.value)} spellCheck={false} />
+        <input
+          ref={labelRef}
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          spellCheck={false}
+        />
       </label>
       <label>
         Adres

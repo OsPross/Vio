@@ -27,12 +27,7 @@ export type ChromeImportResult = {
   bookmarks: Omit<Bookmark, 'id'>[];
 };
 
-function walkFolder(
-  node: ChromeNode,
-  parentId: string,
-  acc: ChromeImportResult,
-  folderId: string,
-) {
+function walkFolder(node: ChromeNode, parentId: string, acc: ChromeImportResult, folderId: string) {
   for (const child of node.children ?? []) {
     if (child.type === 'url' && child.url) {
       acc.bookmarks.push({

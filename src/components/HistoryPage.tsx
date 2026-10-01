@@ -195,7 +195,10 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
     return rows;
   }, [grouped]);
 
-  const itemRows = useMemo(() => flatRows.filter((r): r is Extract<FlatRow, { kind: 'item' }> => r.kind === 'item'), [flatRows]);
+  const itemRows = useMemo(
+    () => flatRows.filter((r): r is Extract<FlatRow, { kind: 'item' }> => r.kind === 'item'),
+    [flatRows],
+  );
 
   const rowOffsets = useMemo(() => {
     const offsets: number[] = [];
@@ -232,7 +235,10 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
     const viewTop = scrollTop;
     const viewBottom = scrollTop + viewportH;
     let start = 0;
-    while (start < flatRows.length && offsets[start] + (flatRows[start].kind === 'header' ? HEADER_H : ROW_H) < viewTop) {
+    while (
+      start < flatRows.length &&
+      offsets[start] + (flatRows[start].kind === 'header' ? HEADER_H : ROW_H) < viewTop
+    ) {
       start += 1;
     }
     start = Math.max(0, start - OVERSCAN);
@@ -351,7 +357,8 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
       title="Historia"
       subtitle={
         <span className="muted">
-          {total} {total === 1 ? 'wpis' : 'wpisów'} · tylko karty normalne (Tor nigdy nie jest zapisywany)
+          {total} {total === 1 ? 'wpis' : 'wpisów'} · tylko karty normalne (Tor nigdy nie jest
+          zapisywany)
         </span>
       }
       toolbar={
@@ -372,7 +379,11 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
               onChange={(id) => setClearRange(id as typeof clearRange)}
               aria-label="Zakres czyszczenia"
             />
-            <button type="button" className="history-sbtn secondary" onClick={() => void clearData()}>
+            <button
+              type="button"
+              className="history-sbtn secondary"
+              onClick={() => void clearData()}
+            >
               Wyczyść dane
             </button>
           </div>
@@ -382,7 +393,11 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
       {selectionActive && (
         <div className="history-toolbar">
           <span>{selected.size} zaznaczone</span>
-          <button type="button" className="history-sbtn danger-text" onClick={() => void removeSelected()}>
+          <button
+            type="button"
+            className="history-sbtn danger-text"
+            onClick={() => void removeSelected()}
+          >
             Usuń zaznaczone
           </button>
         </div>
@@ -425,7 +440,12 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
                     />
                   </label>
                   <img src={ico} alt="" className="history-fav" width={16} height={16} />
-                  <button type="button" className="history-main" onClick={() => onOpen(it.url)} title={it.url}>
+                  <button
+                    type="button"
+                    className="history-main"
+                    onClick={() => onOpen(it.url)}
+                    title={it.url}
+                  >
                     <span className="history-title">{it.title || hostOf(it.url)}</span>
                     <span className="history-url">{formatUrlPlain(it.url)}</span>
                   </button>

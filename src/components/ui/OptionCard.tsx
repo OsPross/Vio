@@ -19,7 +19,9 @@ export function OptionCard({
   return (
     <button
       type="button"
-      className={['ui-option-card', selected ? 'on' : '', className || ''].filter(Boolean).join(' ')}
+      className={['ui-option-card', selected ? 'on' : '', className || '']
+        .filter(Boolean)
+        .join(' ')}
       onClick={onSelect}
       aria-pressed={selected}
     >

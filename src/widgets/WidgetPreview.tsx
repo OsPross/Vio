@@ -35,9 +35,15 @@ export function WidgetPreview({
   };
 
   return (
-    <div className={['hw-gallery-preview-wrap', className || ''].filter(Boolean).join(' ')} aria-hidden>
+    <div
+      className={['hw-gallery-preview-wrap', className || ''].filter(Boolean).join(' ')}
+      aria-hidden
+    >
       <ScaledPreview width={width} height={height}>
-        <div className="hw-preview-virtual home-preview-virtual" style={{ width, height, position: 'relative' }}>
+        <div
+          className="hw-preview-virtual home-preview-virtual"
+          style={{ width, height, position: 'relative' }}
+        >
           <WidgetFrame title={meta.label} icon={Icon} className="hw-preview-frame">
             <WidgetBody widget={widget} size={size} preview reduced />
           </WidgetFrame>

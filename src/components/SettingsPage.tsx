@@ -53,7 +53,10 @@ type TabId =
   | 'resources'
   | 'advanced';
 
-const NAV: { title: string; items: { id: TabId; label: string; icon: typeof Home; hint: string }[] }[] = [
+const NAV: {
+  title: string;
+  items: { id: TabId; label: string; icon: typeof Home; hint: string }[];
+}[] = [
   {
     title: 'Przeglądarka',
     items: [
@@ -143,7 +146,8 @@ export function SettingsPage() {
   const motionOff =
     settings.perfReduceMotion ||
     !settings.uiMotion ||
-    (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    (typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   return (
     <div className="settings-page">
@@ -219,16 +223,21 @@ export function SettingsPage() {
               <div className="settings-stack">
                 <SettingsGroup title="Aplikacja">
                   <FieldRow label="Nazwa aplikacji">
-                    <Input value={settings.appName} onChange={(e) => patchSettings({ appName: e.target.value })} />
+                    <Input
+                      value={settings.appName}
+                      onChange={(e) => patchSettings({ appName: e.target.value })}
+                    />
                   </FieldRow>
                   <FieldRow label="Strona startowa" desc="about:home = wbudowana strona startowa">
-                    <Input value={settings.homepage}
+                    <Input
+                      value={settings.homepage}
                       onChange={(e) => patchSettings({ homepage: e.target.value })}
                       placeholder="about:home"
                     />
                   </FieldRow>
                   <FieldRow label="Placeholder omniboxa">
-                    <Input value={settings.omniboxPlaceholder}
+                    <Input
+                      value={settings.omniboxPlaceholder}
                       onChange={(e) => patchSettings({ omniboxPlaceholder: e.target.value })}
                     />
                   </FieldRow>
@@ -242,7 +251,8 @@ export function SettingsPage() {
                     onChange={(v) => patchSettings({ downloadsAskWhere: v })}
                   />
                   <FieldRow label="Folder pobierania" desc="Puste = folder Pobrane systemu">
-                    <Input value={settings.downloadsFolder || ''}
+                    <Input
+                      value={settings.downloadsFolder || ''}
                       onChange={(e) => patchSettings({ downloadsFolder: e.target.value })}
                       placeholder="np. C:\\Users\\…\\Downloads"
                     />
@@ -383,15 +393,44 @@ export function SettingsPage() {
                 </SettingsGroup>
 
                 <SettingsGroup title="Elementy">
-                  <Toggle label="Powitanie (gdy brak własnego nagłówka)" on={settings.homeShowGreeting} onChange={(v) => patchSettings({ homeShowGreeting: v })} />
-                  <Toggle label="Zegar" on={settings.homeShowClock} onChange={(v) => patchSettings({ homeShowClock: v })} />
-                  <Toggle label="Data" on={settings.homeShowDate} onChange={(v) => patchSettings({ homeShowDate: v })} />
-                  <Toggle label="Zegar 24h" on={settings.clock24h} onChange={(v) => patchSettings({ clock24h: v })} />
-                  <Toggle label="Nazwa aplikacji" on={settings.homeShowBrand} onChange={(v) => patchSettings({ homeShowBrand: v })} />
-                  <Toggle label="Nazwa silnika" on={settings.homeShowEngine} onChange={(v) => patchSettings({ homeShowEngine: v })} />
-                  <Toggle label="Skróty / aplikacje" on={settings.homeShowApps} onChange={(v) => patchSettings({ homeShowApps: v })} />
+                  <Toggle
+                    label="Powitanie (gdy brak własnego nagłówka)"
+                    on={settings.homeShowGreeting}
+                    onChange={(v) => patchSettings({ homeShowGreeting: v })}
+                  />
+                  <Toggle
+                    label="Zegar"
+                    on={settings.homeShowClock}
+                    onChange={(v) => patchSettings({ homeShowClock: v })}
+                  />
+                  <Toggle
+                    label="Data"
+                    on={settings.homeShowDate}
+                    onChange={(v) => patchSettings({ homeShowDate: v })}
+                  />
+                  <Toggle
+                    label="Zegar 24h"
+                    on={settings.clock24h}
+                    onChange={(v) => patchSettings({ clock24h: v })}
+                  />
+                  <Toggle
+                    label="Nazwa aplikacji"
+                    on={settings.homeShowBrand}
+                    onChange={(v) => patchSettings({ homeShowBrand: v })}
+                  />
+                  <Toggle
+                    label="Nazwa silnika"
+                    on={settings.homeShowEngine}
+                    onChange={(v) => patchSettings({ homeShowEngine: v })}
+                  />
+                  <Toggle
+                    label="Skróty / aplikacje"
+                    on={settings.homeShowApps}
+                    onChange={(v) => patchSettings({ homeShowApps: v })}
+                  />
                   <p className="muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
-                    Ostatnie / notatki / zasoby — dodaj widżet z FAB na stronie startowej (lub poniżej).
+                    Ostatnie / notatki / zasoby — dodaj widżet z FAB na stronie startowej (lub
+                    poniżej).
                   </p>
                   <Toggle
                     label="Widżet: ostatnio odwiedzone"
@@ -405,7 +444,18 @@ export function SettingsPage() {
                         homeWidgets: v
                           ? cur.some((w) => w.type === 'recent')
                             ? cur
-                            : [...cur, { id: `w-${Date.now().toString(36)}`, type: 'recent', size: 'M', anchor: 'center', x: 0, y: 2, settings: {} }]
+                            : [
+                                ...cur,
+                                {
+                                  id: `w-${Date.now().toString(36)}`,
+                                  type: 'recent',
+                                  size: 'M',
+                                  anchor: 'center',
+                                  x: 0,
+                                  y: 2,
+                                  settings: {},
+                                },
+                              ]
                           : cur.filter((w) => w.type !== 'recent'),
                       });
                     }}
@@ -422,7 +472,18 @@ export function SettingsPage() {
                         homeWidgets: v
                           ? cur.some((w) => w.type === 'notes')
                             ? cur
-                            : [...cur, { id: `w-${Date.now().toString(36)}`, type: 'notes', size: 'M', anchor: 'center', x: 0, y: 2, settings: {} }]
+                            : [
+                                ...cur,
+                                {
+                                  id: `w-${Date.now().toString(36)}`,
+                                  type: 'notes',
+                                  size: 'M',
+                                  anchor: 'center',
+                                  x: 0,
+                                  y: 2,
+                                  settings: {},
+                                },
+                              ]
                           : cur.filter((w) => w.type !== 'notes'),
                       });
                     }}
@@ -440,7 +501,18 @@ export function SettingsPage() {
                         homeWidgets: v
                           ? cur.some((w) => w.type === 'resources')
                             ? cur
-                            : [...cur, { id: `w-${Date.now().toString(36)}`, type: 'resources', size: 'M', anchor: 'center', x: 0, y: 2, settings: {} }]
+                            : [
+                                ...cur,
+                                {
+                                  id: `w-${Date.now().toString(36)}`,
+                                  type: 'resources',
+                                  size: 'M',
+                                  anchor: 'center',
+                                  x: 0,
+                                  y: 2,
+                                  settings: {},
+                                },
+                              ]
                           : cur.filter((w) => w.type !== 'resources'),
                       });
                     }}
@@ -460,26 +532,38 @@ export function SettingsPage() {
                   <Row label="Silnik">
                     <select
                       value={settings.searchEngine}
-                      onChange={(e) => patchSettings({ searchEngine: e.target.value as SearchEngine })}
+                      onChange={(e) =>
+                        patchSettings({ searchEngine: e.target.value as SearchEngine })
+                      }
                     >
                       <optgroup label="Web">
                         {SEARCH_ENGINES.filter((e) => e.group === 'web').map((e) => (
-                          <option key={e.id} value={e.id}>{e.label}</option>
+                          <option key={e.id} value={e.id}>
+                            {e.label}
+                          </option>
                         ))}
                       </optgroup>
                       <optgroup label="Prywatność">
                         {SEARCH_ENGINES.filter((e) => e.group === 'privacy').map((e) => (
-                          <option key={e.id} value={e.id}>{e.label}</option>
+                          <option key={e.id} value={e.id}>
+                            {e.label}
+                          </option>
                         ))}
                       </optgroup>
                       <optgroup label="Onion / darknet (clearnet)">
                         {SEARCH_ENGINES.filter((e) => e.group === 'onion').map((e) => (
-                          <option key={e.id} value={e.id}>{e.label}</option>
+                          <option key={e.id} value={e.id}>
+                            {e.label}
+                          </option>
                         ))}
                       </optgroup>
                       <optgroup label="Lokalne / własne">
-                        {SEARCH_ENGINES.filter((e) => e.group === 'local' || e.group === 'custom').map((e) => (
-                          <option key={e.id} value={e.id}>{e.label}</option>
+                        {SEARCH_ENGINES.filter(
+                          (e) => e.group === 'local' || e.group === 'custom',
+                        ).map((e) => (
+                          <option key={e.id} value={e.id}>
+                            {e.label}
+                          </option>
                         ))}
                       </optgroup>
                     </select>
@@ -495,7 +579,10 @@ export function SettingsPage() {
                     </FieldRow>
                   )}
                   {settings.searchEngine === 'custom' && (
-                    <FieldRow label="Własny URL wyszukiwania" desc="Użyj %s jako placeholder zapytania">
+                    <FieldRow
+                      label="Własny URL wyszukiwania"
+                      desc="Użyj %s jako placeholder zapytania"
+                    >
                       <Input
                         value={settings.customSearchUrl}
                         onChange={(e) => patchSettings({ customSearchUrl: e.target.value })}
@@ -507,15 +594,17 @@ export function SettingsPage() {
 
                 <SettingsGroup title="Tryb Tor">
                   <p className="tor-settings-note">
-                    <strong>Tryb Tor</strong> ukrywa IP i izoluje sesję (osobna partycja w pamięci, bez wspólnych
-                    ciasteczek z normalnymi kartami). <strong>To nie jest Tor Browser</strong> — nie daje takiej
-                    ochrony przed fingerprintingiem. Do spraw wrażliwych używaj oficjalnego Tor Browsera. Nie
+                    <strong>Tryb Tor</strong> ukrywa IP i izoluje sesję (osobna partycja w pamięci,
+                    bez wspólnych ciasteczek z normalnymi kartami).{' '}
+                    <strong>To nie jest Tor Browser</strong> — nie daje takiej ochrony przed
+                    fingerprintingiem. Do spraw wrażliwych używaj oficjalnego Tor Browsera. Nie
                     nazywamy tego trybu „anonimowym”.
                   </p>
                   <p className="tor-settings-note" style={{ marginTop: 8 }}>
-                    Na tym PC: <strong>Tor Browser</strong> (pulpit) do spraw wrażliwych oraz opcjonalny lokalny
-                    daemon SOCKS (<code>127.0.0.1:9050</code> / wbudowany Expert Bundle na <code>19050</code>). Autostart
-                    daemona w Windows jest <strong>wyłączony domyślnie</strong>.
+                    Na tym PC: <strong>Tor Browser</strong> (pulpit) do spraw wrażliwych oraz
+                    opcjonalny lokalny daemon SOCKS (<code>127.0.0.1:9050</code> / wbudowany Expert
+                    Bundle na <code>19050</code>). Autostart daemona w Windows jest{' '}
+                    <strong>wyłączony domyślnie</strong>.
                   </p>
                   <FieldRow
                     label="Preferowany SOCKS"
@@ -533,15 +622,20 @@ export function SettingsPage() {
                     on={settings.torDaemonAutostart}
                     onChange={(v) => {
                       patchSettings({ torDaemonAutostart: v });
-                      void window.shell?.torDaemonAutostart?.(v).then((r: { ok?: boolean; error?: string }) => {
-                        if (r && r.ok === false && v) {
-                          patchSettings({ torDaemonAutostart: false });
-                          window.alert(r.error || 'Nie udało się włączyć autostartu Tora');
-                        }
-                      });
+                      void window.shell
+                        ?.torDaemonAutostart?.(v)
+                        .then((r: { ok?: boolean; error?: string }) => {
+                          if (r && r.ok === false && v) {
+                            patchSettings({ torDaemonAutostart: false });
+                            window.alert(r.error || 'Nie udało się włączyć autostartu Tora');
+                          }
+                        });
                     }}
                   />
-                  <Row label="Otwórz kartę Tor" desc="Ctrl+Shift+N — fail-closed jeśli Tor nie wstanie">
+                  <Row
+                    label="Otwórz kartę Tor"
+                    desc="Ctrl+Shift+N — fail-closed jeśli Tor nie wstanie"
+                  >
                     <button
                       type="button"
                       className="sbtn primary"
@@ -582,7 +676,10 @@ export function SettingsPage() {
                     </select>
                   </FieldRow>
                   {settings.torBridgeMode === 'custom' && (
-                    <FieldRow label="Linie mostów" desc="Jeden most na linię (obfs4 / snowflake / meek_lite)">
+                    <FieldRow
+                      label="Linie mostów"
+                      desc="Jeden most na linię (obfs4 / snowflake / meek_lite)"
+                    >
                       <textarea
                         rows={5}
                         value={settings.torBridgeLines}
@@ -598,13 +695,21 @@ export function SettingsPage() {
                         }}
                         placeholder={'obfs4 IP:PORT FINGERPRINT cert=… iat-mode=0'}
                         spellCheck={false}
-                        style={{ width: '100%', fontFamily: 'var(--mono, monospace)', fontSize: 12 }}
+                        style={{
+                          width: '100%',
+                          fontFamily: 'var(--mono, monospace)',
+                          fontSize: 12,
+                        }}
                       />
                     </FieldRow>
                   )}
-                  <p className="muted" style={{ margin: '8px 2px 0', fontSize: 12, lineHeight: 1.4 }}>
-                    DNS: Chromium przy SOCKS5 wysyła hostname do proxy (≈ socks5h). Nowa tożsamość: Ctrl+Shift+U —
-                    zamyka karty Tor, wipe sesji, SIGNAL NEWNYM. Izolacja SOCKS Auth per domena niedostępna w Electron.
+                  <p
+                    className="muted"
+                    style={{ margin: '8px 2px 0', fontSize: 12, lineHeight: 1.4 }}
+                  >
+                    DNS: Chromium przy SOCKS5 wysyła hostname do proxy (≈ socks5h). Nowa tożsamość:
+                    Ctrl+Shift+U — zamyka karty Tor, wipe sesji, SIGNAL NEWNYM. Izolacja SOCKS Auth
+                    per domena niedostępna w Electron.
                   </p>
                 </SettingsGroup>
 
@@ -628,22 +733,44 @@ export function SettingsPage() {
                         <code>!{b.key}</code>
                         <span className="grow">{b.label}</span>
                         <span className="muted mono truncate">{b.url}</span>
-                        <button type="button" className="icon-btn sm" onClick={() => removeBang(b.key)} title="Usuń">
+                        <button
+                          type="button"
+                          className="icon-btn sm"
+                          onClick={() => removeBang(b.key)}
+                          title="Usuń"
+                        >
                           <Trash2 size={14} strokeWidth={1.75} />
                         </button>
                       </div>
                     ))}
                   </div>
                   <div className="sform">
-                    <Input placeholder="klucz" value={bangKey} onChange={(e) => setBangKey(e.target.value)} />
-                    <Input placeholder="nazwa" value={bangLabel} onChange={(e) => setBangLabel(e.target.value)} />
-                    <Input className="grow" placeholder="https://…?q=%s" value={bangUrl} onChange={(e) => setBangUrl(e.target.value)} />
+                    <Input
+                      placeholder="klucz"
+                      value={bangKey}
+                      onChange={(e) => setBangKey(e.target.value)}
+                    />
+                    <Input
+                      placeholder="nazwa"
+                      value={bangLabel}
+                      onChange={(e) => setBangLabel(e.target.value)}
+                    />
+                    <Input
+                      className="grow"
+                      placeholder="https://…?q=%s"
+                      value={bangUrl}
+                      onChange={(e) => setBangUrl(e.target.value)}
+                    />
                     <button
                       type="button"
                       className="sbtn primary"
                       onClick={() => {
                         if (!bangKey.trim() || !bangUrl.includes('%s')) return;
-                        addBang({ key: bangKey.trim(), label: bangLabel.trim() || bangKey, url: bangUrl.trim() });
+                        addBang({
+                          key: bangKey.trim(),
+                          label: bangLabel.trim() || bangKey,
+                          url: bangUrl.trim(),
+                        });
                         setBangKey('');
                         setBangLabel('');
                         setBangUrl('');
@@ -715,18 +842,31 @@ export function SettingsPage() {
                   {!settings.useThemeAccent && (
                     <Row label="Kolor akcentu">
                       <div className="sswatches">
-                        {['#6b9eff', '#e8eaef', '#7dcea0', '#e7a067', '#c39bd3', '#5dade2', '#f1948a', '#85929e', '#4db6e2', '#b388ff'].map(
-                          (c) => (
-                            <button
-                              key={c}
-                              type="button"
-                              className={`sswatch ${settings.accent === c ? 'on' : ''}`}
-                              style={{ background: c }}
-                              onClick={() => patchSettings({ accent: c })}
-                            />
-                          ),
-                        )}
-                        <input type="color" value={settings.accent} onChange={(e) => patchSettings({ accent: e.target.value })} />
+                        {[
+                          '#6b9eff',
+                          '#e8eaef',
+                          '#7dcea0',
+                          '#e7a067',
+                          '#c39bd3',
+                          '#5dade2',
+                          '#f1948a',
+                          '#85929e',
+                          '#4db6e2',
+                          '#b388ff',
+                        ].map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            className={`sswatch ${settings.accent === c ? 'on' : ''}`}
+                            style={{ background: c }}
+                            onClick={() => patchSettings({ accent: c })}
+                          />
+                        ))}
+                        <input
+                          type="color"
+                          value={settings.accent}
+                          onChange={(e) => patchSettings({ accent: e.target.value })}
+                        />
                       </div>
                     </Row>
                   )}
@@ -761,7 +901,11 @@ export function SettingsPage() {
                     disabled={!settings.uiGlass}
                     onChange={(n) => patchSettings({ glassOpacity: n / 100 })}
                   />
-                  <Toggle label="Płynne przejścia" on={settings.uiMotion} onChange={(v) => patchSettings({ uiMotion: v })} />
+                  <Toggle
+                    label="Płynne przejścia"
+                    on={settings.uiMotion}
+                    onChange={(v) => patchSettings({ uiMotion: v })}
+                  />
                   <Row label="Gęstość UI">
                     <Segmented
                       value={settings.uiDensity}
@@ -783,7 +927,9 @@ export function SettingsPage() {
                     label="Pokaż sidebar"
                     hint="Ctrl+B · Ctrl+Shift+M · Ctrl+Shift+G"
                     on={settings.showSidebar}
-                    onChange={(v) => patchSettings({ showSidebar: v, ...(v ? {} : { sidePanelOpen: false }) })}
+                    onChange={(v) =>
+                      patchSettings({ showSidebar: v, ...(v ? {} : { sidePanelOpen: false }) })
+                    }
                   />
                   <SliderRow
                     label="Szerokość panelu aplikacji"
@@ -802,15 +948,28 @@ export function SettingsPage() {
                       <div key={s.id} className="slist-row">
                         <strong>{s.label}</strong>
                         <span className="grow muted mono truncate">{s.url}</span>
-                        <button type="button" className="icon-btn sm" onClick={() => removeSideApp(s.id)}>
+                        <button
+                          type="button"
+                          className="icon-btn sm"
+                          onClick={() => removeSideApp(s.id)}
+                        >
                           <Trash2 size={14} strokeWidth={1.75} />
                         </button>
                       </div>
                     ))}
                   </div>
                   <div className="sform">
-                    <Input placeholder="Nazwa" value={saLabel} onChange={(e) => setSaLabel(e.target.value)} />
-                    <Input className="grow" placeholder="https://" value={saUrl} onChange={(e) => setSaUrl(e.target.value)} />
+                    <Input
+                      placeholder="Nazwa"
+                      value={saLabel}
+                      onChange={(e) => setSaLabel(e.target.value)}
+                    />
+                    <Input
+                      className="grow"
+                      placeholder="https://"
+                      value={saUrl}
+                      onChange={(e) => setSaUrl(e.target.value)}
+                    />
                     <button
                       type="button"
                       className="sbtn primary"
@@ -836,15 +995,28 @@ export function SettingsPage() {
                       <div key={s.id} className="slist-row">
                         <strong>{s.label}</strong>
                         <span className="grow muted mono truncate">{s.url}</span>
-                        <button type="button" className="icon-btn sm" onClick={() => removeShortcut(s.id)}>
+                        <button
+                          type="button"
+                          className="icon-btn sm"
+                          onClick={() => removeShortcut(s.id)}
+                        >
                           <Trash2 size={14} strokeWidth={1.75} />
                         </button>
                       </div>
                     ))}
                   </div>
                   <div className="sform">
-                    <Input placeholder="Nazwa" value={scLabel} onChange={(e) => setScLabel(e.target.value)} />
-                    <Input className="grow" placeholder="https://" value={scUrl} onChange={(e) => setScUrl(e.target.value)} />
+                    <Input
+                      placeholder="Nazwa"
+                      value={scLabel}
+                      onChange={(e) => setScLabel(e.target.value)}
+                    />
+                    <Input
+                      className="grow"
+                      placeholder="https://"
+                      value={scUrl}
+                      onChange={(e) => setScUrl(e.target.value)}
+                    />
                     <button
                       type="button"
                       className="sbtn primary"
@@ -930,9 +1102,9 @@ export function SettingsPage() {
                     ))}
                   </div>
                   <p className="muted" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.45 }}>
-                    Standardowa chroni przed reklamami i trackerami, ale zostawia SSO, YouTube, płatności i captchę.
-                    Ścisła jest mocniejsza i może psuć logowanie / banki — wtedy użyj tarczy: „Wyłącz ochronę dla tej
-                    strony”.
+                    Standardowa chroni przed reklamami i trackerami, ale zostawia SSO, YouTube,
+                    płatności i captchę. Ścisła jest mocniejsza i może psuć logowanie / banki —
+                    wtedy użyj tarczy: „Wyłącz ochronę dla tej strony”.
                   </p>
                 </SettingsGroup>
 
@@ -949,9 +1121,21 @@ export function SettingsPage() {
                     on={settings.adblockUpdateLists}
                     onChange={(v) => patchSettings({ adblockUpdateLists: v })}
                   />
-                  <Toggle label="Blokuj żądania reklam" on={settings.adblockNetwork} onChange={(v) => patchSettings({ adblockNetwork: v })} />
-                  <Toggle label="Blokuj trackery" on={settings.adblockTrackers} onChange={(v) => patchSettings({ adblockTrackers: v })} />
-                  <Toggle label="Filtry kosmetyczne (CSS)" on={settings.adblockCosmetic} onChange={(v) => patchSettings({ adblockCosmetic: v })} />
+                  <Toggle
+                    label="Blokuj żądania reklam"
+                    on={settings.adblockNetwork}
+                    onChange={(v) => patchSettings({ adblockNetwork: v })}
+                  />
+                  <Toggle
+                    label="Blokuj trackery"
+                    on={settings.adblockTrackers}
+                    onChange={(v) => patchSettings({ adblockTrackers: v })}
+                  />
+                  <Toggle
+                    label="Filtry kosmetyczne (CSS)"
+                    on={settings.adblockCosmetic}
+                    onChange={(v) => patchSettings({ adblockCosmetic: v })}
+                  />
                   <FieldRow label="Własne reguły" desc="Jedna na linię">
                     <textarea
                       className="stextarea"
@@ -964,7 +1148,10 @@ export function SettingsPage() {
                 </SettingsGroup>
 
                 <SettingsGroup title="Ciasteczka i śledzenie">
-                  <FieldRow label="Ciasteczka stron trzecich" desc="trackers = Standardowa · all = Ścisła (może psuć SSO)">
+                  <FieldRow
+                    label="Ciasteczka stron trzecich"
+                    desc="trackers = Standardowa · all = Ścisła (może psuć SSO)"
+                  >
                     <select
                       value={settings.privacyThirdPartyCookies}
                       onChange={(e) =>
@@ -984,7 +1171,11 @@ export function SettingsPage() {
                     on={settings.privacyStripTracking}
                     onChange={(v) => patchSettings({ privacyStripTracking: v })}
                   />
-                  <Toggle label="Sec-GPC: 1" on={settings.privacySecGpc} onChange={(v) => patchSettings({ privacySecGpc: v })} />
+                  <Toggle
+                    label="Sec-GPC: 1"
+                    on={settings.privacySecGpc}
+                    onChange={(v) => patchSettings({ privacySecGpc: v })}
+                  />
                   <Toggle
                     label="DNT: 1"
                     hint="Tylko Ścisła — większość serwisów i tak ignoruje"
@@ -1003,7 +1194,10 @@ export function SettingsPage() {
                     onChange={(v) => patchSettings({ privacyClearOnQuit: v })}
                   />
                   {settings.privacyClearOnQuit && (
-                    <FieldRow label="Wyjątki przy czyszczeniu" desc="Domeny do zachowania (jedna na linię)">
+                    <FieldRow
+                      label="Wyjątki przy czyszczeniu"
+                      desc="Domeny do zachowania (jedna na linię)"
+                    >
                       <textarea
                         className="stextarea"
                         rows={3}
@@ -1024,11 +1218,16 @@ export function SettingsPage() {
                 </SettingsGroup>
 
                 <SettingsGroup title="Szyfrowanie i DNS">
-                  <FieldRow label="HTTPS-Only" desc="upgrade = Standardowa · block = Ścisła (ostrzeżenie)">
+                  <FieldRow
+                    label="HTTPS-Only"
+                    desc="upgrade = Standardowa · block = Ścisła (ostrzeżenie)"
+                  >
                     <select
                       value={settings.privacyHttpsOnly}
                       onChange={(e) =>
-                        patchSettings({ privacyHttpsOnly: e.target.value as 'upgrade' | 'block' | 'off' })
+                        patchSettings({
+                          privacyHttpsOnly: e.target.value as 'upgrade' | 'block' | 'off',
+                        })
                       }
                     >
                       <option value="upgrade">Podnoś do HTTPS (cichy fallback)</option>
@@ -1036,7 +1235,10 @@ export function SettingsPage() {
                       <option value="off">Wyłączone</option>
                     </select>
                   </FieldRow>
-                  <FieldRow label="DNS over HTTPS" desc="automatic = Standardowa (fallback firmowy/hotel)">
+                  <FieldRow
+                    label="DNS over HTTPS"
+                    desc="automatic = Standardowa (fallback firmowy/hotel)"
+                  >
                     <select
                       value={settings.privacyDoh}
                       onChange={(e) =>
@@ -1117,7 +1319,9 @@ export function SettingsPage() {
                           className="icon-btn sm"
                           onClick={() => {
                             patchSettings({
-                              privacySiteExceptions: settings.privacySiteExceptions.filter((x) => x !== d),
+                              privacySiteExceptions: settings.privacySiteExceptions.filter(
+                                (x) => x !== d,
+                              ),
                             });
                             void window.shell?.privacyExceptionRemove?.(d);
                           }}
@@ -1199,7 +1403,8 @@ export function SettingsPage() {
                       type="button"
                       className="sbtn"
                       onClick={() => {
-                        if (confirm('Przywrócić domyślne ustawienia, bangs i skróty?')) resetSettings();
+                        if (confirm('Przywrócić domyślne ustawienia, bangs i skróty?'))
+                          resetSettings();
                       }}
                     >
                       Reset ustawień
@@ -1225,14 +1430,15 @@ export function SettingsPage() {
               <div className="settings-stack">
                 <SettingsGroup title="Status">
                   <FieldRow label="Aktualny silnik">
-                    <Input readOnly value={settings.searchEngine}  />
+                    <Input readOnly value={settings.searchEngine} />
                   </FieldRow>
                   <FieldRow label="Proxy (normalne karty)">
-                    <Input readOnly value="system — Tor tylko na kartach Tor"  />
+                    <Input readOnly value="system — Tor tylko na kartach Tor" />
                   </FieldRow>
                   <p className="snote">
-                    Skróty: <code>Ctrl+,</code> ustawienia · <code>Ctrl+B</code> sidebar · <code>Ctrl+T</code> karta ·{' '}
-                    <code>Ctrl+L</code> omnibox · <code>Shift+Esc</code> menedżer zadań.
+                    Skróty: <code>Ctrl+,</code> ustawienia · <code>Ctrl+B</code> sidebar ·{' '}
+                    <code>Ctrl+T</code> karta · <code>Ctrl+L</code> omnibox · <code>Shift+Esc</code>{' '}
+                    menedżer zadań.
                   </p>
                 </SettingsGroup>
                 <SettingsGroup title="Narzędzia deweloperskie">
@@ -1286,7 +1492,15 @@ function Row({ label, desc, children }: { label: string; desc?: string; children
   );
 }
 
-function FieldRow({ label, desc, children }: { label: string; desc?: string; children: ReactNode }) {
+function FieldRow({
+  label,
+  desc,
+  children,
+}: {
+  label: string;
+  desc?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="sr sr-field">
       <div className="sr-copy">
@@ -1383,7 +1597,9 @@ function SitePermissionsSection() {
   const entries = Object.entries(list);
   return (
     <SettingsGroup title="Uprawnienia stron">
-      {entries.length === 0 && <p className="snote">Brak zapisanych decyzji (kamera, mikrofon, lokalizacja…).</p>}
+      {entries.length === 0 && (
+        <p className="snote">Brak zapisanych decyzji (kamera, mikrofon, lokalizacja…).</p>
+      )}
       {entries.map(([origin, perms]) => (
         <div key={origin} className="slist-row" style={{ flexWrap: 'wrap', gap: 8 }}>
           <span className="grow mono">{origin}</span>

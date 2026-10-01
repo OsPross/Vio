@@ -112,7 +112,19 @@ function FileTypeIcon({ filename, size = 16 }: { filename: string; size?: number
   const vid = new Set(['.mp4', '.webm', '.mkv', '.avi', '.mov', '.m4v']);
   const aud = new Set(['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac']);
   const arc = new Set(['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2']);
-  const code = new Set(['.js', '.ts', '.tsx', '.jsx', '.py', '.rs', '.go', '.html', '.css', '.json', '.xml']);
+  const code = new Set([
+    '.js',
+    '.ts',
+    '.tsx',
+    '.jsx',
+    '.py',
+    '.rs',
+    '.go',
+    '.html',
+    '.css',
+    '.json',
+    '.xml',
+  ]);
   const sheet = new Set(['.xls', '.xlsx', '.csv']);
   const doc = new Set(['.pdf', '.doc', '.docx', '.odt', '.rtf', '.txt', '.md']);
   if (img.has(ext)) return <FileImage {...props} />;
@@ -153,7 +165,15 @@ function ProgressRing({ value, size = 18 }: { value: number; size?: number }) {
   const pct = Math.max(0, Math.min(1, value));
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="dl-ring" aria-hidden>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeOpacity={0.2} strokeWidth={2.5} />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity={0.2}
+        strokeWidth={2.5}
+      />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -181,42 +201,82 @@ function RowActions({ rec, compact }: { rec: DownloadRow; compact?: boolean }) {
   return (
     <div className="dl-actions">
       {rec.state === 'progressing' && (
-        <button type="button" className={btn} title="Wstrzymaj" onClick={() => void window.shell?.downloadsPause?.(rec.id)}>
+        <button
+          type="button"
+          className={btn}
+          title="Wstrzymaj"
+          onClick={() => void window.shell?.downloadsPause?.(rec.id)}
+        >
           <Pause size={13} />
         </button>
       )}
       {rec.state === 'paused' && (
-        <button type="button" className={btn} title="Wznów" onClick={() => void window.shell?.downloadsResume?.(rec.id)}>
+        <button
+          type="button"
+          className={btn}
+          title="Wznów"
+          onClick={() => void window.shell?.downloadsResume?.(rec.id)}
+        >
           <Play size={13} />
         </button>
       )}
       {busy && (
-        <button type="button" className={btn} title="Anuluj" onClick={() => void window.shell?.downloadsCancel?.(rec.id)}>
+        <button
+          type="button"
+          className={btn}
+          title="Anuluj"
+          onClick={() => void window.shell?.downloadsCancel?.(rec.id)}
+        >
           <X size={13} />
         </button>
       )}
       {canRetry(rec) && !rec.tor && (
-        <button type="button" className={btn} title="Ponów" onClick={() => void window.shell?.downloadsResume?.(rec.id)}>
+        <button
+          type="button"
+          className={btn}
+          title="Ponów"
+          onClick={() => void window.shell?.downloadsResume?.(rec.id)}
+        >
           <RotateCcw size={13} />
         </button>
       )}
       {done && (
         <>
-          <button type="button" className={btn} title="Otwórz" onClick={() => void window.shell?.downloadsOpen?.(rec.id)}>
+          <button
+            type="button"
+            className={btn}
+            title="Otwórz"
+            onClick={() => void window.shell?.downloadsOpen?.(rec.id)}
+          >
             <ExternalLink size={13} />
           </button>
-          <button type="button" className={btn} title="Pokaż w folderze" onClick={() => void window.shell?.downloadsShow?.(rec.id)}>
+          <button
+            type="button"
+            className={btn}
+            title="Pokaż w folderze"
+            onClick={() => void window.shell?.downloadsShow?.(rec.id)}
+          >
             <FolderOpen size={13} />
           </button>
         </>
       )}
       {rec.state === 'completed' && !rec.tor && rec.fileMissing && (
-        <button type="button" className={btn} title="Pokaż w folderze" onClick={() => void window.shell?.downloadsShow?.(rec.id)}>
+        <button
+          type="button"
+          className={btn}
+          title="Pokaż w folderze"
+          onClick={() => void window.shell?.downloadsShow?.(rec.id)}
+        >
           <FolderOpen size={13} />
         </button>
       )}
       {!busy && (
-        <button type="button" className={btn} title="Usuń z listy" onClick={() => void window.shell?.downloadsRemove?.(rec.id)}>
+        <button
+          type="button"
+          className={btn}
+          title="Usuń z listy"
+          onClick={() => void window.shell?.downloadsRemove?.(rec.id)}
+        >
           <Trash2 size={13} />
         </button>
       )}
@@ -277,7 +337,11 @@ export function DownloadsButton({ onOpenAll }: ButtonProps) {
         title="Pobrania"
         onClick={() => setOpen((v) => !v)}
       >
-        {active.length ? <ProgressRing value={ringValue} /> : <Download size={16} strokeWidth={1.75} />}
+        {active.length ? (
+          <ProgressRing value={ringValue} />
+        ) : (
+          <Download size={16} strokeWidth={1.75} />
+        )}
         {active.length > 0 && <span className="dl-badge">{active.length}</span>}
       </button>
       {open && (
@@ -383,7 +447,8 @@ export function DownloadsPage() {
       title="Pobrane"
       subtitle={
         <span className="muted">
-          {rows.length} {rows.length === 1 ? 'pozycja' : 'pozycji'} · Tor nie jest zapisywany na dysku
+          {rows.length} {rows.length === 1 ? 'pozycja' : 'pozycji'} · Tor nie jest zapisywany na
+          dysku
         </span>
       }
       toolbar={
@@ -432,13 +497,19 @@ export function DownloadsPage() {
                     </div>
                     <div className="dl-row-main">
                       <div className="dl-row-title">
-                        <span className={`dl-filename ${r.fileMissing ? 'dl-missing' : ''}`} title={r.filename}>
+                        <span
+                          className={`dl-filename ${r.fileMissing ? 'dl-missing' : ''}`}
+                          title={r.filename}
+                        >
                           {r.filename}
                         </span>
                         {r.risky ? <em className="dl-risk">Ryzykowny</em> : null}
                       </div>
                       <div className="dl-row-meta muted">
-                        <span>{fmtBytes(r.receivedBytes)}{r.totalBytes ? ` / ${fmtBytes(r.totalBytes)}` : ''}</span>
+                        <span>
+                          {fmtBytes(r.receivedBytes)}
+                          {r.totalBytes ? ` / ${fmtBytes(r.totalBytes)}` : ''}
+                        </span>
                         <span className="dl-dot">·</span>
                         <span title={r.url}>{sourceLabel(r.url)}</span>
                         <span className="dl-dot">·</span>

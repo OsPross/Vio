@@ -52,21 +52,27 @@ declare global {
       getWindowBoot: () => Promise<{
         mode: string;
         partition?: string | null;
-        restoreTabs?: {
-          url: string;
-          title?: string;
-          favicon?: string;
-          pinned?: boolean;
-          navHistory?: unknown;
-        }[] | null;
+        restoreTabs?:
+          | {
+              url: string;
+              title?: string;
+              favicon?: string;
+              pinned?: boolean;
+              navHistory?: unknown;
+            }[]
+          | null;
       }>;
       windowClosingAck: () => Promise<{ ok: boolean }>;
       onWindowClosing: (cb: () => void) => () => void;
-      onWindowBoot: (cb: (payload: { mode?: string; partition?: string | null }) => void) => () => void;
+      onWindowBoot: (
+        cb: (payload: { mode?: string; partition?: string | null }) => void,
+      ) => () => void;
       quitApp: () => Promise<{ ok: boolean }>;
       windowToggleFullscreen: () => Promise<{ ok: boolean; fullScreen?: boolean }>;
       openExternal: (url: string) => Promise<void>;
-      setProxy: (proxyRules: string | null) => Promise<{ ok: boolean; mode: string; rules?: string; note?: string }>;
+      setProxy: (
+        proxyRules: string | null,
+      ) => Promise<{ ok: boolean; mode: string; rules?: string; note?: string }>;
       torStart: (opts?: { proxyUrl?: string }) => Promise<{
         ok: boolean;
         active?: boolean;
@@ -100,7 +106,11 @@ declare global {
         ok: boolean;
         exitIp?: string | null;
         exitCountry?: string | null;
-        circuits?: { id: string; status: string; path: { fingerprint: string; nickname: string | null }[] }[];
+        circuits?: {
+          id: string;
+          status: string;
+          path: { fingerprint: string; nickname: string | null }[];
+        }[];
         error?: string;
         limitation?: string;
       }>;
@@ -116,9 +126,13 @@ declare global {
         dnsMode?: string;
         note?: string;
       }>;
-      torDaemonAutostart: (enabled: boolean) => Promise<{ ok: boolean; enabled?: boolean; path?: string; error?: string }>;
+      torDaemonAutostart: (
+        enabled: boolean,
+      ) => Promise<{ ok: boolean; enabled?: boolean; path?: string; error?: string }>;
       torDaemonStatus: () => Promise<Record<string, unknown>>;
-      onTorProgress: (cb: (ev: { phase?: string; message?: string; percent?: number }) => void) => () => void;
+      onTorProgress: (
+        cb: (ev: { phase?: string; message?: string; percent?: number }) => void,
+      ) => () => void;
       adblockConfig: (next?: {
         enabled?: boolean;
         network?: boolean;
@@ -143,7 +157,9 @@ declare global {
       }>;
       adblockCosmetic: () => Promise<string>;
       adblockPageScript: (pageUrl: string) => Promise<string>;
-      perfBoot: (next?: Record<string, unknown>) => Promise<Record<string, unknown> & { needsRestart?: boolean }>;
+      perfBoot: (
+        next?: Record<string, unknown>,
+      ) => Promise<Record<string, unknown> & { needsRestart?: boolean }>;
       perfApplySession: (opts?: {
         cacheMb?: number;
         backgroundThrottling?: boolean;
@@ -160,15 +176,30 @@ declare global {
         color?: string;
         symbolColor?: string;
         height?: number;
-      }) => Promise<{ ok: boolean; color?: string; symbolColor?: string; height?: number; error?: string }>;
+      }) => Promise<{
+        ok: boolean;
+        color?: string;
+        symbolColor?: string;
+        height?: number;
+        error?: string;
+      }>;
       setNativeTheme: (source: 'dark' | 'light' | 'system') => Promise<{ ok: boolean }>;
       passwordsStatus: () => Promise<PwStatus>;
-      passwordsSetup: (master: string, remember?: boolean) => Promise<PwStatus & { rememberError?: string }>;
-      passwordsUnlock: (master: string, remember?: boolean | null) => Promise<PwStatus & { rememberError?: string }>;
+      passwordsSetup: (
+        master: string,
+        remember?: boolean,
+      ) => Promise<PwStatus & { rememberError?: string }>;
+      passwordsUnlock: (
+        master: string,
+        remember?: boolean | null,
+      ) => Promise<PwStatus & { rememberError?: string }>;
       passwordsLock: () => Promise<{ ok: boolean; reason?: string }>;
       passwordsList: (q?: string) => Promise<PwPublicEntry[] | { ok: false; error?: string }>;
-      passwordsGet: (id: string) => Promise<
-        (PwPublicEntry & { password: string; totpSecret: string; ok?: boolean; error?: string }) | { ok: false; error?: string }
+      passwordsGet: (
+        id: string,
+      ) => Promise<
+        | (PwPublicEntry & { password: string; totpSecret: string; ok?: boolean; error?: string })
+        | { ok: false; error?: string }
       >;
       passwordsFind: (pageUrl: string) => Promise<PwPublicEntry[] | { ok: false; error?: string }>;
       passwordsAutofill: (
@@ -188,7 +219,9 @@ declare global {
         patch: Record<string, unknown>,
       ) => Promise<PwPublicEntry | { ok: false; error?: string }>;
       passwordsRemove: (id: string) => Promise<{ ok: boolean; error?: string }>;
-      passwordsNeverAdd: (origin: string) => Promise<{ ok: boolean; neverSave?: string[]; error?: string }>;
+      passwordsNeverAdd: (
+        origin: string,
+      ) => Promise<{ ok: boolean; neverSave?: string[]; error?: string }>;
       passwordsNeverList: () => Promise<string[] | { ok: false; error?: string }>;
       passwordsNeverRemove: (origin: string) => Promise<{ ok: boolean; error?: string }>;
       passwordsShouldSave: (
@@ -196,10 +229,22 @@ declare global {
         username: string,
         password: string,
       ) => Promise<
-        | { offer: boolean; reason?: string; mode?: string; id?: string; origin?: string; username?: string }
+        | {
+            offer: boolean;
+            reason?: string;
+            mode?: string;
+            id?: string;
+            origin?: string;
+            username?: string;
+          }
         | { ok: false; error?: string }
       >;
-      passwordsConfirmSave: () => Promise<{ id?: string; origin?: string; ok?: boolean; error?: string }>;
+      passwordsConfirmSave: () => Promise<{
+        id?: string;
+        origin?: string;
+        ok?: boolean;
+        error?: string;
+      }>;
       passwordsDismissSave: () => Promise<{ ok: boolean; error?: string }>;
       passwordsGenerate: (opts?: Record<string, unknown>) => Promise<{
         password: string;
@@ -210,7 +255,9 @@ declare global {
         error?: string;
       }>;
       passwordsStrength: (pw: string) => Promise<{ score: number; label: string; length: number }>;
-      passwordsTotp: (id: string) => Promise<{ code: string; remaining: number } | { ok: false; error?: string }>;
+      passwordsTotp: (
+        id: string,
+      ) => Promise<{ code: string; remaining: number } | { ok: false; error?: string }>;
       passwordsCopy: (id: string) => Promise<{ ok: boolean; clearMs?: number; error?: string }>;
       passwordsAudit: () => Promise<{
         total: number;
@@ -234,18 +281,30 @@ declare global {
       webviewPreload: () => Promise<string>;
       metricsSubscribe: () => Promise<{ ok: boolean; subscribers: number; intervalMs: number }>;
       metricsUnsubscribe: () => Promise<{ ok: boolean; subscribers: number }>;
-      metricsSubscribeLive: () => Promise<{ ok: boolean; subscribers: number; intervalMs?: number; mode?: string }>;
+      metricsSubscribeLive: () => Promise<{
+        ok: boolean;
+        subscribers: number;
+        intervalMs?: number;
+        mode?: string;
+      }>;
       metricsUnsubscribeLive: () => Promise<{ ok: boolean; subscribers: number }>;
-      metricsSubscribeDiscard: () => Promise<{ ok: boolean; subscribers: number; intervalMs?: number; mode?: string }>;
+      metricsSubscribeDiscard: () => Promise<{
+        ok: boolean;
+        subscribers: number;
+        intervalMs?: number;
+        mode?: string;
+      }>;
       metricsUnsubscribeDiscard: () => Promise<{ ok: boolean; subscribers: number }>;
-      metricsSetGuests: (list: {
-        id: string;
-        kind: 'tab' | 'side';
-        title?: string;
-        url?: string;
-        favicon?: string;
-        webContentsId?: number | null;
-      }[]) => Promise<{ ok: boolean }>;
+      metricsSetGuests: (
+        list: {
+          id: string;
+          kind: 'tab' | 'side';
+          title?: string;
+          url?: string;
+          favicon?: string;
+          webContentsId?: number | null;
+        }[],
+      ) => Promise<{ ok: boolean }>;
       metricsSetInterval: (ms: number) => Promise<{ ok: boolean; intervalMs: number }>;
       metricsLowPower: (on: boolean) => Promise<{ ok: boolean; intervalMs: number }>;
       metricsSnapshot: () => Promise<Record<string, unknown>>;
@@ -261,9 +320,7 @@ declare global {
       onAdblockBlocked: (cb: (n: number) => void) => () => void;
       onOpenUrl: (
         cb: (
-          payload:
-            | { url: string; tor?: boolean; private?: boolean; background?: boolean }
-            | string,
+          payload: { url: string; tor?: boolean; private?: boolean; background?: boolean } | string,
         ) => void,
       ) => () => void;
       onPopupBlocked: (
@@ -275,7 +332,13 @@ declare global {
         webContentsId?: number,
       ) => Promise<{ ok: boolean; via?: string; reason?: string }>;
       onContextAction: (
-        cb: (payload: { action?: string; url?: string; text?: string; tor?: boolean; private?: boolean }) => void,
+        cb: (payload: {
+          action?: string;
+          url?: string;
+          text?: string;
+          tor?: boolean;
+          private?: boolean;
+        }) => void,
       ) => () => void;
       setDevtoolsEnabled: (enabled: boolean) => Promise<{ ok: boolean; enabled: boolean }>;
       setShortcutTrap: (enabled: boolean) => Promise<{ ok: boolean; enabled?: boolean }>;
@@ -314,7 +377,10 @@ declare global {
         soft?: boolean;
         tor?: boolean;
       }) => Promise<{ ok: boolean; reason?: string; soft?: boolean }>;
-      historyRecordQuery: (q: string, opts?: { tor?: boolean }) => Promise<{ ok: boolean; reason?: string }>;
+      historyRecordQuery: (
+        q: string,
+        opts?: { tor?: boolean },
+      ) => Promise<{ ok: boolean; reason?: string }>;
       historyImportQueries: (
         items: { q: string; at?: number }[],
       ) => Promise<{ ok: boolean; imported?: number }>;
@@ -348,11 +414,7 @@ declare global {
         }[];
         tookMs?: number;
       }>;
-      historyList: (opts?: {
-        q?: string;
-        limit?: number;
-        offset?: number;
-      }) => Promise<{
+      historyList: (opts?: { q?: string; limit?: number; offset?: number }) => Promise<{
         total: number;
         items: {
           id: string;
@@ -369,7 +431,9 @@ declare global {
       historyDelete: (id: string) => Promise<{ ok: boolean }>;
       historyDeleteUrl: (url: string) => Promise<{ ok: boolean }>;
       historyDeleteDomain: (host: string) => Promise<{ ok: boolean; removed?: number }>;
-      historyClear: (opts?: { range?: 'hour' | 'day' | 'week' | 'all' | number }) => Promise<{ ok: boolean }>;
+      historyClear: (opts?: {
+        range?: 'hour' | 'day' | 'week' | 'all' | number;
+      }) => Promise<{ ok: boolean }>;
       historyRemoveQuery: (q: string) => Promise<{ ok: boolean }>;
       spellcheckConfig: (next?: { enabled?: boolean }) => Promise<{
         ok: boolean;
@@ -419,7 +483,9 @@ declare global {
         savedAt: number;
         hasSession: boolean;
       }>;
-      sessionSave: (snapshot: Record<string, unknown>) => Promise<{ ok: boolean; count?: number; closed?: number }>;
+      sessionSave: (
+        snapshot: Record<string, unknown>,
+      ) => Promise<{ ok: boolean; count?: number; closed?: number }>;
       sessionClear: () => Promise<{ ok: boolean }>;
       sessionDismissCrash: () => Promise<{ ok: boolean }>;
       sessionMarkClean: () => Promise<{ ok: boolean }>;
@@ -472,7 +538,10 @@ declare global {
           fileMissing?: boolean;
         }[]
       >;
-      downloadsConfig: (next?: { folder?: string; askWhere?: boolean }) => Promise<{ folder: string; askWhere: boolean }>;
+      downloadsConfig: (next?: {
+        folder?: string;
+        askWhere?: boolean;
+      }) => Promise<{ folder: string; askWhere: boolean }>;
       downloadsPause: (id: string) => Promise<{ ok: boolean; error?: string }>;
       downloadsResume: (id: string) => Promise<{ ok: boolean; error?: string }>;
       downloadsCancel: (id: string) => Promise<{ ok: boolean }>;
@@ -482,14 +551,12 @@ declare global {
       downloadsShow: (id: string) => Promise<{ ok: boolean; error?: string }>;
       downloadsDrag: (id: string) => Promise<{ ok: boolean; error?: string }>;
       onDownloadsChanged: (cb: (list: unknown[]) => void) => () => void;
-      bookmarksDiscoverProfiles: () => Promise<{ browser: string; path: string; exists: boolean }[]>;
+      bookmarksDiscoverProfiles: () => Promise<
+        { browser: string; path: string; exists: boolean }[]
+      >;
       bookmarksReadProfile: (profilePath: string) => Promise<string>;
       searchSuggest: (q: string) => Promise<string[]>;
-      weatherFetch: (opts: {
-        location?: string;
-        lat?: number;
-        lon?: number;
-      }) => Promise<{
+      weatherFetch: (opts: { location?: string; lat?: number; lon?: number }) => Promise<{
         ok: boolean;
         error?: string;
         place?: { name: string; country: string; admin1: string; lat: number; lon: number };
@@ -515,7 +582,14 @@ declare global {
       weatherSuggest: (opts: { q: string }) => Promise<{
         ok: boolean;
         error?: string;
-        places: { name: string; country: string; admin1: string; lat: number; lon: number; label: string }[];
+        places: {
+          name: string;
+          country: string;
+          admin1: string;
+          lat: number;
+          lon: number;
+          label: string;
+        }[];
       }>;
       homeBgPick: () => Promise<{
         ok: boolean;
@@ -619,18 +693,25 @@ declare global {
         error?: string;
         extension?: unknown;
       }>;
-      extensionsSetEnabled: (id: string, enabled: boolean) => Promise<{ ok: boolean; error?: string }>;
-      extensionsSetPrivate: (id: string, allow: boolean) => Promise<{ ok: boolean; error?: string }>;
-      extensionsSetPinned: (id: string, pinned: boolean) => Promise<{ ok: boolean; error?: string }>;
+      extensionsSetEnabled: (
+        id: string,
+        enabled: boolean,
+      ) => Promise<{ ok: boolean; error?: string }>;
+      extensionsSetPrivate: (
+        id: string,
+        allow: boolean,
+      ) => Promise<{ ok: boolean; error?: string }>;
+      extensionsSetPinned: (
+        id: string,
+        pinned: boolean,
+      ) => Promise<{ ok: boolean; error?: string }>;
       extensionsRemove: (id: string) => Promise<{ ok: boolean; error?: string }>;
       extensionsSelectTab: (webContentsId: number) => Promise<{ ok: boolean }>;
-      onExtensionsActivateTab: (
-        cb: (payload: { webContentsId: number }) => void,
+      onExtensionsActivateTab: (cb: (payload: { webContentsId: number }) => void) => () => void;
+      onExtensionsCloseTab: (cb: (payload: { webContentsId: number }) => void) => () => void;
+      onHttpsWarn: (
+        cb: (payload: { httpUrl: string; httpsUrl?: string; errorCode?: number }) => void,
       ) => () => void;
-      onExtensionsCloseTab: (
-        cb: (payload: { webContentsId: number }) => void,
-      ) => () => void;
-      onHttpsWarn: (cb: (payload: { httpUrl: string; httpsUrl?: string; errorCode?: number }) => void) => () => void;
       pictureInPicture: (
         webContentsId: number,
         opts?: { enterOnly?: boolean },
@@ -642,7 +723,13 @@ declare global {
       printToPdf: (
         webContentsId: number,
         opts?: { forcePath?: string },
-      ) => Promise<{ ok: boolean; canceled?: boolean; filePath?: string; error?: string; bytes?: number }>;
+      ) => Promise<{
+        ok: boolean;
+        canceled?: boolean;
+        filePath?: string;
+        error?: string;
+        bytes?: number;
+      }>;
       printPage: (
         webContentsId: number,
         opts?: { silent?: boolean },

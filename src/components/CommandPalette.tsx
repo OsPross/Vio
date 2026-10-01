@@ -97,7 +97,17 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
 
     if (mode === 'help') {
       return [
-        { kind: 'command' as const, score: 1, cmd: { id: 'help', title: '> polecenia · @ karty · # historia · ! bangs · ? pomoc', icon: Search, group: 'command' as const, run: () => {} } },
+        {
+          kind: 'command' as const,
+          score: 1,
+          cmd: {
+            id: 'help',
+            title: '> polecenia · @ karty · # historia · ! bangs · ? pomoc',
+            icon: Search,
+            group: 'command' as const,
+            run: () => {},
+          },
+        },
       ];
     }
 
@@ -114,7 +124,11 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
       for (const cmd of getCommands()) {
         if (cmd.when && !cmd.when(ctx)) continue;
         const hay = `${cmd.title} ${(cmd.keywords || []).join(' ')}`;
-        const score = query ? fuzzyScore(query, hay) : out.some((r) => r.kind === 'command' && r.cmd.id === cmd.id) ? -1 : 1;
+        const score = query
+          ? fuzzyScore(query, hay)
+          : out.some((r) => r.kind === 'command' && r.cmd.id === cmd.id)
+            ? -1
+            : 1;
         if (score >= 0) out.push({ kind: 'command', cmd, score });
       }
     }

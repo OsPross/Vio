@@ -76,12 +76,13 @@ export function TorLanding({
             <ShieldAlert size={18} strokeWidth={1.75} />
             <div>
               <p>
-                Tryb Tor ukrywa Twój adres IP przed odwiedzanymi stronami i izoluje sesję (osobna partycja w
-                pamięci, bez wspólnych ciasteczek z normalnymi kartami).
+                Tryb Tor ukrywa Twój adres IP przed odwiedzanymi stronami i izoluje sesję (osobna
+                partycja w pamięci, bez wspólnych ciasteczek z normalnymi kartami).
               </p>
               <p>
-                <strong>To nie jest Tor Browser.</strong> Nie chroni przed fingerprintingiem (canvas, fonty,
-                WebGL itd.) tak jak oficjalny Tor Browser. Do spraw wrażliwych używaj Tor Browsera.
+                <strong>To nie jest Tor Browser.</strong> Nie chroni przed fingerprintingiem
+                (canvas, fonty, WebGL itd.) tak jak oficjalny Tor Browser. Do spraw wrażliwych
+                używaj Tor Browsera.
               </p>
               <button type="button" className="sbtn primary" onClick={onDismissDisclaimer}>
                 Rozumiem
@@ -116,7 +117,13 @@ export function TorLanding({
             <span className="muted">Kraj</span>
             <strong>{info?.exitCountry || '—'}</strong>
           </div>
-          <button type="button" className="sbtn ghost" onClick={onRefresh} disabled={busy} title="Odśwież check.torproject.org">
+          <button
+            type="button"
+            className="sbtn ghost"
+            onClick={onRefresh}
+            disabled={busy}
+            title="Odśwież check.torproject.org"
+          >
             <RefreshCw size={14} strokeWidth={1.75} />
           </button>
           {onNewIdentity && (
@@ -139,7 +146,9 @@ export function TorLanding({
               <ol key={c.id} className="tor-circuit-path">
                 {c.path.map((h, i) => (
                   <li key={`${c.id}-${i}`}>
-                    <em>{i === 0 ? 'Strażnik' : i === c.path.length - 1 ? 'Wyjście' : 'Pośredni'}</em>
+                    <em>
+                      {i === 0 ? 'Strażnik' : i === c.path.length - 1 ? 'Wyjście' : 'Pośredni'}
+                    </em>
                     <code title={h.fingerprint}>{h.nickname || h.fingerprint.slice(0, 8)}</code>
                   </li>
                 ))}
@@ -179,18 +188,26 @@ export function TorLanding({
         </form>
 
         <div className="tor-quick">
-          <button type="button" className="sbtn" onClick={() => onStartBrowse('https://check.torproject.org/')}>
+          <button
+            type="button"
+            className="sbtn"
+            onClick={() => onStartBrowse('https://check.torproject.org/')}
+          >
             check.torproject.org
           </button>
-          <button type="button" className="sbtn" onClick={() => onStartBrowse('https://duckduckgo.com/')}>
+          <button
+            type="button"
+            className="sbtn"
+            onClick={() => onStartBrowse('https://duckduckgo.com/')}
+          >
             DuckDuckGo
           </button>
         </div>
 
         <p className="tor-fineprint muted">
-          Hasła, historia i side-apps są wyłączone. Przy braku zewnętrznego Tora aplikacja pobierze i uruchomi
-          wbudowany Tor Expert Bundle (pierwszy raz ~21 MB). To nie zastępuje Tor Browsera przy wrażliwych
-          sprawach.
+          Hasła, historia i side-apps są wyłączone. Przy braku zewnętrznego Tora aplikacja pobierze
+          i uruchomi wbudowany Tor Expert Bundle (pierwszy raz ~21 MB). To nie zastępuje Tor
+          Browsera przy wrażliwych sprawach.
         </p>
       </div>
     </div>

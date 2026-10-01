@@ -63,7 +63,13 @@ export type { Bang } from './lib/bangs';
 export { DEFAULT_BANGS, migrateBangsToDdg, resolveBang } from './lib/bangs';
 import { DEFAULT_BANGS, migrateBangsToDdg, resolveBang, type Bang } from './lib/bangs';
 export type Shortcut = { id: string; label: string; url: string };
-export type Bookmark = { id: string; title: string; url: string; folderId?: string; createdAt: number };
+export type Bookmark = {
+  id: string;
+  title: string;
+  url: string;
+  folderId?: string;
+  createdAt: number;
+};
 export type BookmarkFolder = { id: string; title: string; parentId?: string };
 export type HistoryItem = { q: string; at: number };
 export type SideApp = { id: string; label: string; url: string };
@@ -101,19 +107,14 @@ export const ACCENT_SWATCHES: { id: string; className: string; value: string }[]
   { id: '8', className: 'ui-swatch-8', value: '#2f6fed' },
 ];
 
-export type ThemeId = 'midnight' | 'graphite' | 'ocean' | 'forest' | 'ember' | 'violet' | 'slate' | 'paper';
+export type ThemeId =
+  'midnight' | 'graphite' | 'ocean' | 'forest' | 'ember' | 'violet' | 'slate' | 'paper';
 export type UiDensity = 'comfortable' | 'compact';
 export type HomeAppsStyle = 'icons' | 'list';
 export type PerfMode = 'balanced' | 'performance' | 'saver';
 
 export type HomeWidgetType =
-  | 'weather'
-  | 'notes'
-  | 'todo'
-  | 'calendar'
-  | 'recent'
-  | 'downloads'
-  | 'resources';
+  'weather' | 'notes' | 'todo' | 'calendar' | 'recent' | 'downloads' | 'resources';
 
 export type HomeWidgetSize = 'S' | 'M' | 'L';
 export type HomeWidgetAnchor = 'center' | 'left' | 'right';
@@ -209,7 +210,17 @@ export const SEARCH_ENGINES: {
 
 export const THEMES: Record<
   ThemeId,
-  { label: string; bg: string; elev: string; side: string; fg: string; fg2: string; fg3: string; line: string; accent: string }
+  {
+    label: string;
+    bg: string;
+    elev: string;
+    side: string;
+    fg: string;
+    fg2: string;
+    fg3: string;
+    line: string;
+    accent: string;
+  }
 > = {
   midnight: {
     label: 'Midnight',
@@ -471,7 +482,10 @@ type State = {
   /** Session bootstrap done */
   sessionReady: boolean;
 
-  newTab: (url?: string, opts?: { background?: boolean; besideId?: string; private?: boolean }) => void;
+  newTab: (
+    url?: string,
+    opts?: { background?: boolean; besideId?: string; private?: boolean },
+  ) => void;
   /** Create a Tor-mode tab bound to ephemeral partition from main */
   newTorTab: (opts: { url?: string; partition: string; background?: boolean }) => void;
   newPrivateTab: (url?: string) => void;
@@ -544,7 +558,15 @@ export const DEFAULT_BOOKMARK_FOLDERS: BookmarkFolder[] = [
 export function isBookmarkableUrl(url: string | undefined | null): boolean {
   if (!url) return false;
   if (url === HOME_URL || url === TOR_HOME_URL) return false;
-  if (url === HISTORY_URL || url === DOWNLOADS_URL || url === BOOKMARKS_URL || url === EXTENSIONS_URL || url === ABOUT_URL || url === ABOUT_URL_ALT) return false;
+  if (
+    url === HISTORY_URL ||
+    url === DOWNLOADS_URL ||
+    url === BOOKMARKS_URL ||
+    url === EXTENSIONS_URL ||
+    url === ABOUT_URL ||
+    url === ABOUT_URL_ALT
+  )
+    return false;
   if (url.startsWith('about:') || url.startsWith('view-source:')) return false;
   return /^https?:\/\//i.test(url) || /\.onion\b/i.test(url);
 }
@@ -870,8 +892,7 @@ export function placeNewHomeWidget(
 ): HomeWidget {
   const ch = normalizeHomeChrome(chrome);
   const shortcuts = ch.find((c) => c.id === 'shortcuts');
-  const scBottom =
-    (shortcuts?.y ?? 44) + Math.ceil(chromeSizeToPx('shortcuts').h / HOME_GRID_PX);
+  const scBottom = (shortcuts?.y ?? 44) + Math.ceil(chromeSizeToPx('shortcuts').h / HOME_GRID_PX);
   let y = scBottom + 3; // 24px
   for (const w of existing) {
     const bottom = w.y + widgetSizeCells(w.size).h;
@@ -1176,7 +1197,11 @@ export function searchHome(settings: Settings) {
 }
 
 /** Resolve bang — see `lib/bangs.ts`. Kept as thin wrapper for call sites with settings. */
-export function resolveBangWithSettings(raw: string, bangs: Bang[], _settings: Settings): string | null {
+export function resolveBangWithSettings(
+  raw: string,
+  bangs: Bang[],
+  _settings: Settings,
+): string | null {
   return resolveBang(raw, bangs);
 }
 
@@ -1228,17 +1253,32 @@ export function applyThemeToDom(settings: Settings) {
     if (settings.theme === 'paper') {
       root.style.setProperty('--notes-surface', 'color-mix(in srgb, var(--bg-elev) 96%, #fff 4%)');
       root.style.setProperty('--notes-list-hover', 'color-mix(in srgb, var(--fg) 6%, transparent)');
-      root.style.setProperty('--notes-list-active', 'color-mix(in srgb, var(--accent) 14%, var(--bg-elev))');
+      root.style.setProperty(
+        '--notes-list-active',
+        'color-mix(in srgb, var(--accent) 14%, var(--bg-elev))',
+      );
       root.style.setProperty('--notes-toolbar', 'color-mix(in srgb, var(--fg) 5%, transparent)');
     } else if (settings.theme === 'midnight') {
-      root.style.setProperty('--notes-surface', 'color-mix(in srgb, var(--bg-elev) 55%, transparent)');
+      root.style.setProperty(
+        '--notes-surface',
+        'color-mix(in srgb, var(--bg-elev) 55%, transparent)',
+      );
       root.style.setProperty('--notes-list-hover', 'color-mix(in srgb, var(--fg) 7%, transparent)');
-      root.style.setProperty('--notes-list-active', 'color-mix(in srgb, var(--accent) 18%, transparent)');
+      root.style.setProperty(
+        '--notes-list-active',
+        'color-mix(in srgb, var(--accent) 18%, transparent)',
+      );
       root.style.setProperty('--notes-toolbar', 'color-mix(in srgb, var(--fg) 4%, transparent)');
     } else {
-      root.style.setProperty('--notes-surface', 'color-mix(in srgb, var(--bg-elev) 70%, transparent)');
+      root.style.setProperty(
+        '--notes-surface',
+        'color-mix(in srgb, var(--bg-elev) 70%, transparent)',
+      );
       root.style.setProperty('--notes-list-hover', 'color-mix(in srgb, var(--fg) 6%, transparent)');
-      root.style.setProperty('--notes-list-active', 'color-mix(in srgb, var(--accent) 16%, transparent)');
+      root.style.setProperty(
+        '--notes-list-active',
+        'color-mix(in srgb, var(--accent) 16%, transparent)',
+      );
       root.style.setProperty('--notes-toolbar', 'color-mix(in srgb, var(--fg) 5%, transparent)');
     }
     root.style.setProperty('--glass-blur', `${settings.glassBlur}px`);
@@ -1259,18 +1299,21 @@ export function applyThemeToDom(settings: Settings) {
   const reduce =
     settings.perfReduceMotion ||
     !settings.uiMotion ||
-    (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    (typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   const doc = typeof document !== 'undefined' ? document : null;
   const canVT =
     !reduce &&
     !!doc &&
     'startViewTransition' in doc &&
-    typeof (doc as Document & { startViewTransition?: (cb: () => void) => void }).startViewTransition ===
-      'function';
+    typeof (doc as Document & { startViewTransition?: (cb: () => void) => void })
+      .startViewTransition === 'function';
 
   if (canVT) {
-    (doc as Document & { startViewTransition: (cb: () => void) => void }).startViewTransition(apply);
+    (doc as Document & { startViewTransition: (cb: () => void) => void }).startViewTransition(
+      apply,
+    );
     return;
   }
 
@@ -1373,9 +1416,7 @@ export const useStore = create<State>()(
       },
       muteTab: (id, muted) =>
         set((s) => ({
-          tabs: s.tabs.map((t) =>
-            t.id === id ? { ...t, muted: muted ?? !t.muted } : t,
-          ),
+          tabs: s.tabs.map((t) => (t.id === id ? { ...t, muted: muted ?? !t.muted } : t)),
         })),
       newTorTab: ({ url, partition, background }) => {
         const id = uid();
@@ -1516,8 +1557,7 @@ export const useStore = create<State>()(
         if (!entries.length) return;
         void window.shell?.sessionPushClosedWindow?.(entries);
       },
-      setClosedWindows: (wins) =>
-        set({ closedWindows: (wins || []).slice(0, MAX_CLOSED_WINDOWS) }),
+      setClosedWindows: (wins) => set({ closedWindows: (wins || []).slice(0, MAX_CLOSED_WINDOWS) }),
       closeOtherTabs: (id) => {
         const { tabs, closedTabs } = get();
         const keep = tabs.find((t) => t.id === id);
@@ -1604,7 +1644,9 @@ export const useStore = create<State>()(
         set({
           tabs: tabs.map((t) => (t.id === aid ? { ...t, discarded: false } : t)),
           activeId: aid,
-          closedTabs: (closed || []).filter((c) => c && !/\.onion\b/i.test(c.url)).slice(0, MAX_CLOSED_TABS),
+          closedTabs: (closed || [])
+            .filter((c) => c && !/\.onion\b/i.test(c.url))
+            .slice(0, MAX_CLOSED_TABS),
           sessionReady: true,
           view: 'browser',
         });
@@ -1642,7 +1684,11 @@ export const useStore = create<State>()(
           if ('sidebarMode' in p && p.sidebarMode) {
             next.showSidebar = p.sidebarMode !== 'off';
           } else if ('showSidebar' in p && typeof p.showSidebar === 'boolean') {
-            next.sidebarMode = p.showSidebar ? (next.sidebarMode === 'auto' ? 'auto' : 'on') : 'off';
+            next.sidebarMode = p.showSidebar
+              ? next.sidebarMode === 'auto'
+                ? 'auto'
+                : 'on'
+              : 'off';
           }
           if (touchesPrivacy && !('privacyPreset' in p) && next.privacyPreset !== 'custom') {
             next.privacyPreset = 'custom';
@@ -1665,7 +1711,10 @@ export const useStore = create<State>()(
       },
       addBang: (b) =>
         set((s) => ({
-          bangs: [...s.bangs.filter((x) => x.key !== b.key), { ...b, key: b.key.replace(/^!/, '') }],
+          bangs: [
+            ...s.bangs.filter((x) => x.key !== b.key),
+            { ...b, key: b.key.replace(/^!/, '') },
+          ],
         })),
       removeBang: (key) => set((s) => ({ bangs: s.bangs.filter((b) => b.key !== key) })),
       addShortcut: (s) =>
@@ -1702,7 +1751,10 @@ export const useStore = create<State>()(
       addBookmarkFolder: (f) => {
         const id = f.id ?? uid();
         set((s) => ({
-          bookmarkFolders: [...s.bookmarkFolders.filter((x) => x.id !== id), { id, title: f.title, parentId: f.parentId }],
+          bookmarkFolders: [
+            ...s.bookmarkFolders.filter((x) => x.id !== id),
+            { id, title: f.title, parentId: f.parentId },
+          ],
         }));
         return id;
       },
@@ -1764,7 +1816,9 @@ export const useStore = create<State>()(
           const fid = active.folderId ?? BOOKMARKS_OTHER_FOLDER_ID;
           if (fid !== (over.folderId ?? BOOKMARKS_OTHER_FOLDER_ID)) return s;
           const siblingIds = new Set(
-            s.bookmarks.filter((b) => (b.folderId ?? BOOKMARKS_OTHER_FOLDER_ID) === fid).map((b) => b.id),
+            s.bookmarks
+              .filter((b) => (b.folderId ?? BOOKMARKS_OTHER_FOLDER_ID) === fid)
+              .map((b) => b.id),
           );
           const siblings = s.bookmarks.filter((b) => siblingIds.has(b.id));
           const from = siblings.findIndex((b) => b.id === activeId);
@@ -1851,7 +1905,9 @@ export const useStore = create<State>()(
         let mergedSettings: Settings = { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) };
         mergedSettings.homeWidgets = migrateHomeWidgets(mergedSettings);
         mergedSettings.homeChrome = normalizeHomeChrome(mergedSettings.homeChrome);
-        mergedSettings = normalizeSettingsFields(mergedSettings as unknown as Record<string, unknown>) as unknown as Settings;
+        mergedSettings = normalizeSettingsFields(
+          mergedSettings as unknown as Record<string, unknown>,
+        ) as unknown as Settings;
         // Ensure derive path matches legacy when preset already set via normalizeSettingsFields
         if (!(p.settings as Settings | undefined)?.homeLayoutPreset) {
           mergedSettings.homeLayoutPreset = deriveHomeLayoutPreset(mergedSettings);
@@ -1867,7 +1923,9 @@ export const useStore = create<State>()(
           mergedSettings as unknown as Record<string, unknown>,
           storage,
         ) as unknown as Settings;
-        const bookmarkFolders = Array.isArray(p.bookmarkFolders) ? p.bookmarkFolders : current.bookmarkFolders;
+        const bookmarkFolders = Array.isArray(p.bookmarkFolders)
+          ? p.bookmarkFolders
+          : current.bookmarkFolders;
         const folders = [...bookmarkFolders];
         for (const def of DEFAULT_BOOKMARK_FOLDERS) {
           if (!folders.some((f) => f.id === def.id)) folders.unshift(def);

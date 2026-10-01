@@ -3,9 +3,15 @@ import type { ThemeId } from '../store';
 /** Injected into guest pages when darkPageScrollbars is on (not Tor). */
 export function pageScrollbarCss(theme: ThemeId): string {
   const light = theme === 'paper';
-  const thumb = light ? 'color-mix(in srgb, #1a1a1a 18%, transparent)' : 'color-mix(in srgb, #f2f3f5 18%, transparent)';
-  const thumbHover = light ? 'color-mix(in srgb, #1a1a1a 30%, transparent)' : 'color-mix(in srgb, #f2f3f5 30%, transparent)';
-  const track = light ? 'color-mix(in srgb, #1a1a1a 22%, transparent)' : 'color-mix(in srgb, #f2f3f5 22%, transparent)';
+  const thumb = light
+    ? 'color-mix(in srgb, #1a1a1a 18%, transparent)'
+    : 'color-mix(in srgb, #f2f3f5 18%, transparent)';
+  const thumbHover = light
+    ? 'color-mix(in srgb, #1a1a1a 30%, transparent)'
+    : 'color-mix(in srgb, #f2f3f5 30%, transparent)';
+  const track = light
+    ? 'color-mix(in srgb, #1a1a1a 22%, transparent)'
+    : 'color-mix(in srgb, #f2f3f5 22%, transparent)';
 
   return `
 html, body {

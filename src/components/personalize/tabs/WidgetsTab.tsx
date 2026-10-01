@@ -54,7 +54,13 @@ function SortableWidgetRow({
 
   return (
     <div ref={setNodeRef} className="pz-widget-row" style={style}>
-      <button type="button" className="pz-widget-grip" {...attributes} {...listeners} title="Przeciągnij">
+      <button
+        type="button"
+        className="pz-widget-grip"
+        {...attributes}
+        {...listeners}
+        title="Przeciągnij"
+      >
         <GripVertical size={14} />
       </button>
       <Icon size={15} strokeWidth={1.75} className="pz-widget-ico" />

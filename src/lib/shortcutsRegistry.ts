@@ -67,7 +67,8 @@ export type ChromeShortcutDef = {
 
 const isMod = (i: ShortcutInput) => i.ctrl || i.meta;
 
-const keyEq = (i: ShortcutInput, key: string) => i.key === key || i.key === key.toLowerCase() || i.key === key.toUpperCase();
+const keyEq = (i: ShortcutInput, key: string) =>
+  i.key === key || i.key === key.toLowerCase() || i.key === key.toUpperCase();
 
 function ctrlOnly(i: ShortcutInput) {
   return isMod(i) && !i.shift && !i.alt;
@@ -494,7 +495,9 @@ const ALLOWED_IN_EDITABLE = new Set<ShortcutHandlerKey>([
   'commandPalette',
 ]);
 
-export function chromeShortcutAllowedInEditable(handler: ShortcutHandlerKey | null | undefined): boolean {
+export function chromeShortcutAllowedInEditable(
+  handler: ShortcutHandlerKey | null | undefined,
+): boolean {
   return !!handler && ALLOWED_IN_EDITABLE.has(handler);
 }
 

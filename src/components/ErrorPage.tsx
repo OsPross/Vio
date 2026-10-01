@@ -11,7 +11,8 @@ type Props = {
 
 function headlineFor(errorCode: number, kind?: string, description?: string): string {
   if (kind === 'crash' || errorCode === -9001) return 'Ta strona przestała działać';
-  if (errorCode === -105 || errorCode === -106 || errorCode === -137) return 'Brak połączenia z internetem';
+  if (errorCode === -105 || errorCode === -106 || errorCode === -137)
+    return 'Brak połączenia z internetem';
   if (errorCode === -7 || errorCode === -118) return 'Przekroczono limit czasu połączenia';
   if (
     errorCode === -200 ||

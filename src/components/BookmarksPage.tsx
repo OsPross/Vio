@@ -18,11 +18,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   Bookmark,
@@ -175,7 +171,11 @@ function SortableRow({
       </label>
       <img src={favicon} alt="" width={16} height={16} />
       {editing ? (
-        <div className="bm-row-edit" style={{ gridColumn: '3 / 6' }} onPointerDown={(e) => e.stopPropagation()}>
+        <div
+          className="bm-row-edit"
+          style={{ gridColumn: '3 / 6' }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <Input
             ref={inputRef}
             value={draft}
@@ -433,7 +433,11 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
             />
           </label>
           <div className="bm-import-menu" ref={importRef}>
-            <button type="button" className="history-sbtn secondary" onClick={() => setImportOpen((v) => !v)}>
+            <button
+              type="button"
+              className="history-sbtn secondary"
+              onClick={() => setImportOpen((v) => !v)}
+            >
               <Upload size={14} /> Import
             </button>
             {importOpen && (
@@ -455,7 +459,12 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
               </div>
             )}
           </div>
-          <button type="button" className="history-sbtn secondary" onClick={onExport} disabled={!bookmarks.length}>
+          <button
+            type="button"
+            className="history-sbtn secondary"
+            onClick={onExport}
+            disabled={!bookmarks.length}
+          >
             <Download size={14} /> Eksport
           </button>
           <button type="button" className="history-sbtn secondary" onClick={newFolder}>
@@ -549,7 +558,11 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                 <p>Brak zakładek{q ? ' dla tego zapytania' : ''}.</p>
                 {emptyAll && !q ? (
                   <>
-                    <button type="button" className="history-sbtn secondary" onClick={() => setImportOpen(true)}>
+                    <button
+                      type="button"
+                      className="history-sbtn secondary"
+                      onClick={() => setImportOpen(true)}
+                    >
                       Importuj z Chrome/Brave
                     </button>
                     <p className="muted">Ctrl+D na stronie dodaje zakładkę</p>
@@ -559,7 +572,10 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                 )}
               </div>
             ) : (
-              <SortableContext items={filtered.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext
+                items={filtered.map((b) => b.id)}
+                strategy={verticalListSortingStrategy}
+              >
                 {filtered.map((b) => (
                   <SortableRow
                     key={b.id}
@@ -585,8 +601,16 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
 
         <DragOverlay>
           {dragBookmark ? (
-            <div className="bm-row" style={{ boxShadow: '0 8px 24px rgba(0,0,0,.35)', background: 'var(--bg-elev)' }}>
-              <img src={favicons[dragBookmark.url] || letterFavicon(dragBookmark.url)} alt="" width={16} height={16} />
+            <div
+              className="bm-row"
+              style={{ boxShadow: '0 8px 24px rgba(0,0,0,.35)', background: 'var(--bg-elev)' }}
+            >
+              <img
+                src={favicons[dragBookmark.url] || letterFavicon(dragBookmark.url)}
+                alt=""
+                width={16}
+                height={16}
+              />
               <span className="bm-row-title">{dragBookmark.title}</span>
             </div>
           ) : null}
@@ -610,7 +634,13 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
             style={{ left: ctx.x, top: ctx.y }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <button type="button" onClick={() => { onOpen(ctx.bookmark.url); setCtx(null); }}>
+            <button
+              type="button"
+              onClick={() => {
+                onOpen(ctx.bookmark.url);
+                setCtx(null);
+              }}
+            >
               Otwórz
             </button>
             <button
@@ -631,16 +661,30 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
             >
               Edytuj…
             </button>
-            <button type="button" className="danger-text" onClick={() => { removeBookmark(ctx.bookmark.id); setCtx(null); }}>
+            <button
+              type="button"
+              className="danger-text"
+              onClick={() => {
+                removeBookmark(ctx.bookmark.id);
+                setCtx(null);
+              }}
+            >
               Usuń
             </button>
             <hr />
-            <button type="button" onClick={() => setMoveMenuFor((v) => (v ? null : ctx.bookmark.id))}>
+            <button
+              type="button"
+              onClick={() => setMoveMenuFor((v) => (v ? null : ctx.bookmark.id))}
+            >
               Przenieś do folderu…
             </button>
             {moveMenuFor === ctx.bookmark.id && (
               <>
-                {[BOOKMARKS_BAR_FOLDER_ID, BOOKMARKS_OTHER_FOLDER_ID, ...userFolders.map((f) => f.id)].map((fid) => (
+                {[
+                  BOOKMARKS_BAR_FOLDER_ID,
+                  BOOKMARKS_OTHER_FOLDER_ID,
+                  ...userFolders.map((f) => f.id),
+                ].map((fid) => (
                   <button
                     key={fid}
                     type="button"

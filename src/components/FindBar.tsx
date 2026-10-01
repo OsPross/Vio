@@ -10,8 +10,7 @@ type Props = {
 };
 
 export function FindBar({ query, activeMatch, matchCount, onQueryChange, onClose, onNext }: Props) {
-  const counter =
-    matchCount > 0 ? `${activeMatch}/${matchCount}` : query.trim() ? '0/0' : '—';
+  const counter = matchCount > 0 ? `${activeMatch}/${matchCount}` : query.trim() ? '0/0' : '—';
 
   return (
     <div className="find-bar" role="search">

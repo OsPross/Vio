@@ -20,10 +20,7 @@ export function QrShareDialog({ url, onClose }: Props) {
         <h2>Udostępnij stronę</h2>
         <p className="app-dialog-sub">Lokalny kod — bez zapytań do sieci.</p>
         {svg ? (
-          <div
-            className="qr-frame"
-            dangerouslySetInnerHTML={{ __html: svg }}
-          />
+          <div className="qr-frame" dangerouslySetInnerHTML={{ __html: svg }} />
         ) : (
           <p className="app-dialog-note">Adres jest zbyt długi na kompaktowy kod — skopiuj link.</p>
         )}

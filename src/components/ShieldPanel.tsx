@@ -44,7 +44,11 @@ export function ShieldPanel({
     <div className="shield-panel" role="dialog" aria-label="Ochrona prywatności">
       <header className="shield-panel-head">
         <div className="shield-panel-title">
-          {protectionOn ? <Shield size={16} strokeWidth={1.75} /> : <ShieldOff size={16} strokeWidth={1.75} />}
+          {protectionOn ? (
+            <Shield size={16} strokeWidth={1.75} />
+          ) : (
+            <ShieldOff size={16} strokeWidth={1.75} />
+          )}
           <strong>{host || 'Strona'}</strong>
         </div>
         <button type="button" className="icon-btn sm" onClick={onClose} title="Zamknij">
@@ -78,7 +82,11 @@ export function ShieldPanel({
       </p>
 
       {protectionOn && (
-        <button type="button" className="sbtn primary shield-disable-site" onClick={onDisableOnThisPage}>
+        <button
+          type="button"
+          className="sbtn primary shield-disable-site"
+          onClick={onDisableOnThisPage}
+        >
           Wyłącz na tej stronie
         </button>
       )}

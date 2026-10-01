@@ -165,19 +165,41 @@ a:focus-visible,
 /* Soft background drift */
 .home.home-bg-soft.home-drift {
   background:
-    radial-gradient(ellipse 55% 45% at var(--drift-x, 18%) var(--drift-y, 12%), color-mix(in srgb, var(--accent) 14%, transparent), transparent 62%),
-    radial-gradient(ellipse 45% 40% at calc(100% - var(--drift-x, 18%)) calc(100% - var(--drift-y, 12%)), color-mix(in srgb, var(--accent) 8%, transparent), transparent 58%),
-    linear-gradient(165deg, color-mix(in srgb, var(--accent) 8%, var(--bg)) 0%, var(--bg) 42%, var(--bg) 100%);
-  background-size: 140% 140%, 140% 140%, 100% 100%;
+    radial-gradient(
+      ellipse 55% 45% at var(--drift-x, 18%) var(--drift-y, 12%),
+      color-mix(in srgb, var(--accent) 14%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 45% 40% at calc(100% - var(--drift-x, 18%)) calc(100% - var(--drift-y, 12%)),
+      color-mix(in srgb, var(--accent) 8%, transparent),
+      transparent 58%
+    ),
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--accent) 8%, var(--bg)) 0%,
+      var(--bg) 42%,
+      var(--bg) 100%
+    );
+  background-size:
+    140% 140%,
+    140% 140%,
+    100% 100%;
   animation: home-soft-drift 30s var(--ease-in-out) infinite alternate;
 }
 
 @keyframes home-soft-drift {
   from {
-    background-position: 0% 20%, 100% 80%, 0 0;
+    background-position:
+      0% 20%,
+      100% 80%,
+      0 0;
   }
   to {
-    background-position: 30% 0%, 70% 100%, 0 0;
+    background-position:
+      30% 0%,
+      70% 100%,
+      0 0;
   }
 }
 

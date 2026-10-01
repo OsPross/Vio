@@ -8,10 +8,7 @@ export function hostFromPageUrl(url: string): string | null {
   }
 }
 
-export function zoomFactorForHost(
-  factors: Record<string, number>,
-  host: string | null,
-): number {
+export function zoomFactorForHost(factors: Record<string, number>, host: string | null): number {
   if (!host) return 1;
   const v = factors[host];
   if (typeof v === 'number' && Number.isFinite(v)) {

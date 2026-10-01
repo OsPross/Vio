@@ -23,7 +23,15 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { BOOKMARKS_URL, DOWNLOADS_URL, EXTENSIONS_URL, HISTORY_URL, HOME_URL, THEMES, type ThemeId } from '../store';
+import {
+  BOOKMARKS_URL,
+  DOWNLOADS_URL,
+  EXTENSIONS_URL,
+  HISTORY_URL,
+  HOME_URL,
+  THEMES,
+  type ThemeId,
+} from '../store';
 
 export type CommandContext = {
   tor: boolean;
@@ -385,7 +393,10 @@ const RECENT_KEY = 'djxxr-cmd-recent';
 export function pushRecentCommand(id: string) {
   try {
     const prev = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-    const next = [id, ...(Array.isArray(prev) ? prev.filter((x: string) => x !== id) : [])].slice(0, 8);
+    const next = [id, ...(Array.isArray(prev) ? prev.filter((x: string) => x !== id) : [])].slice(
+      0,
+      8,
+    );
     localStorage.setItem(RECENT_KEY, JSON.stringify(next));
   } catch {
     /* */

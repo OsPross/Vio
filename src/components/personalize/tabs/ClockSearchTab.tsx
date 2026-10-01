@@ -1,4 +1,10 @@
-import { SEARCH_ENGINES, searchHome, useStore, type HomeClockStyle, type SearchEngine } from '../../../store';
+import {
+  SEARCH_ENGINES,
+  searchHome,
+  useStore,
+  type HomeClockStyle,
+  type SearchEngine,
+} from '../../../store';
 import { letterFavicon } from '../../../lib/favicon';
 import { Dropdown, Switch } from '../../ui';
 import { ClockStyleCard } from '../minis/ClockStyleCard';

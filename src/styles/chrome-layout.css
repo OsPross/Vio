@@ -443,7 +443,9 @@
   overflow: hidden;
   color: var(--fg-3);
   background: color-mix(in srgb, var(--fg) 5%, transparent);
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .home-engine-btn:hover,
@@ -666,7 +668,11 @@
   bottom: 18px !important;
   right: 18px !important;
   opacity: 0.55;
-  transition: opacity 0.2s ease, background 0.2s, color 0.2s, border-color 0.2s;
+  transition:
+    opacity 0.2s ease,
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
 }
 
 .home:hover .home-fab,

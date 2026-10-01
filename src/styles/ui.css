@@ -1,4 +1,4 @@
-/* Shared UI primitives ó tokens only */
+/* Shared UI primitives ÔøΩ tokens only */
 
 .ui-input {
   height: 34px;
@@ -67,7 +67,7 @@
   outline-offset: 1px;
 }
 
-/* Chrome UI ó no accidental text selection; inputs/notes keep selection */
+/* Chrome UI ÔøΩ no accidental text selection; inputs/notes keep selection */
 .pz-sheet,
 .pz-sheet-tabs,
 .pz-layout-card,
@@ -233,7 +233,9 @@
   overflow: hidden;
   border: 1.5px solid color-mix(in srgb, var(--line) 80%, transparent);
   background: var(--bg);
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
 }
 .ui-option-card.on .ui-option-preview {
   border-color: color-mix(in srgb, var(--accent) 70%, transparent);
@@ -340,14 +342,30 @@
   outline: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);
   outline-offset: 2px;
 }
-.ui-swatch-1 { --swatch: var(--swatch-1); }
-.ui-swatch-2 { --swatch: var(--swatch-2); }
-.ui-swatch-3 { --swatch: var(--swatch-3); }
-.ui-swatch-4 { --swatch: var(--swatch-4); }
-.ui-swatch-5 { --swatch: var(--swatch-5); }
-.ui-swatch-6 { --swatch: var(--swatch-6); }
-.ui-swatch-7 { --swatch: var(--swatch-7); }
-.ui-swatch-8 { --swatch: var(--swatch-8); }
+.ui-swatch-1 {
+  --swatch: var(--swatch-1);
+}
+.ui-swatch-2 {
+  --swatch: var(--swatch-2);
+}
+.ui-swatch-3 {
+  --swatch: var(--swatch-3);
+}
+.ui-swatch-4 {
+  --swatch: var(--swatch-4);
+}
+.ui-swatch-5 {
+  --swatch: var(--swatch-5);
+}
+.ui-swatch-6 {
+  --swatch: var(--swatch-6);
+}
+.ui-swatch-7 {
+  --swatch: var(--swatch-7);
+}
+.ui-swatch-8 {
+  --swatch: var(--swatch-8);
+}
 
 .ui-settings-row {
   display: flex;
@@ -388,7 +406,7 @@
   padding: 4px 14px;
 }
 
-/* Dark checkboxes ù no native white flush */
+/* Dark checkboxes ÔøΩ no native white flush */
 .ui-check,
 .history-check input[type='checkbox'],
 .bm-check input[type='checkbox'],

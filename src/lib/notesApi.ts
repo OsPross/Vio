@@ -28,7 +28,10 @@ export async function notesCreate(body = ''): Promise<NoteRecord | null> {
   return res.note;
 }
 
-export async function notesUpdate(id: string, patch: { body?: string; title?: string }): Promise<NoteRecord | null> {
+export async function notesUpdate(
+  id: string,
+  patch: { body?: string; title?: string },
+): Promise<NoteRecord | null> {
   const shell = window.shell;
   if (!shell?.notesUpdate) return null;
   const res = await shell.notesUpdate(id, patch);
@@ -43,7 +46,9 @@ export async function notesDelete(id: string): Promise<boolean> {
   return Boolean(res?.ok);
 }
 
-export async function notesMigrateLegacy(text: string): Promise<{ migrated: boolean; notes: NoteRecord[] }> {
+export async function notesMigrateLegacy(
+  text: string,
+): Promise<{ migrated: boolean; notes: NoteRecord[] }> {
   const shell = window.shell;
   if (!shell?.notesMigrateLegacy) return { migrated: false, notes: [] };
   const res = await shell.notesMigrateLegacy(text);

@@ -41,7 +41,9 @@ export function ResourcesPanel({ active }: { active: boolean }) {
   }, [data?.rows, sort]);
 
   const toggleSort = (key: SortKey) => {
-    setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === 'title' ? 1 : -1 }));
+    setSort((s) =>
+      s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === 'title' ? 1 : -1 },
+    );
   };
 
   const sleep = (id: string) => {
@@ -64,7 +66,13 @@ export function ResourcesPanel({ active }: { active: boolean }) {
                 <AnimatedNumber value={data?.system.cpu ?? 0} digits={1} suffix="%" />
               </strong>
             </div>
-            <Sparkline points={data?.history ?? []} field="sysCpu" maxHint={100} width={200} height={40} />
+            <Sparkline
+              points={data?.history ?? []}
+              field="sysCpu"
+              maxHint={100}
+              width={200}
+              height={40}
+            />
           </div>
           <div className="mx-card">
             <div className="mx-card-head">
@@ -92,7 +100,13 @@ export function ResourcesPanel({ active }: { active: boolean }) {
                 <AnimatedNumber value={data?.browser.cpu ?? 0} digits={1} suffix="%" />
               </strong>
             </div>
-            <Sparkline points={data?.history ?? []} field="appCpu" maxHint={100} width={200} height={40} />
+            <Sparkline
+              points={data?.history ?? []}
+              field="appCpu"
+              maxHint={100}
+              width={200}
+              height={40}
+            />
           </div>
           <div className="mx-card">
             <div className="mx-card-head">
@@ -130,10 +144,14 @@ export function ResourcesPanel({ active }: { active: boolean }) {
             <div className="sr">
               <div className="sr-text">
                 <div className="sr-label">Próbkowanie</div>
-                <div className="sr-hint">Tylko gdy ten widok / menedżer / widżet home jest otwarty</div>
+                <div className="sr-hint">
+                  Tylko gdy ten widok / menedżer / widżet home jest otwarty
+                </div>
               </div>
               <div className="sr-control">
-                <span className="sr-value">{data?.intervalMs ? `${data.intervalMs / 1000}s` : '—'}</span>
+                <span className="sr-value">
+                  {data?.intervalMs ? `${data.intervalMs / 1000}s` : '—'}
+                </span>
               </div>
             </div>
           </div>
@@ -176,7 +194,9 @@ export function ResourcesPanel({ active }: { active: boolean }) {
                           )}
                           <span>
                             <strong>{r.title || '—'}</strong>
-                            <em>{r.kind === 'tab' ? 'Karta' : r.kind === 'side' ? 'Sidebar' : r.kind}</em>
+                            <em>
+                              {r.kind === 'tab' ? 'Karta' : r.kind === 'side' ? 'Sidebar' : r.kind}
+                            </em>
                           </span>
                         </div>
                       </td>
@@ -187,12 +207,22 @@ export function ResourcesPanel({ active }: { active: boolean }) {
                       <td title={fmtBytes(r.netBytes)}>{r.netRate ? fmtBytes(r.netRate) : '—'}</td>
                       <td className="mx-actions">
                         {isTab && !sleeping && (
-                          <button type="button" className="sbtn ghost" title="Uśpij" onClick={() => sleep(r.id)}>
+                          <button
+                            type="button"
+                            className="sbtn ghost"
+                            title="Uśpij"
+                            onClick={() => sleep(r.id)}
+                          >
                             <Moon size={13} strokeWidth={1.75} />
                           </button>
                         )}
                         {isTab && (
-                          <button type="button" className="sbtn danger-text" title="Zamknij" onClick={() => kill(r.id, r.kind)}>
+                          <button
+                            type="button"
+                            className="sbtn danger-text"
+                            title="Zamknij"
+                            onClick={() => kill(r.id, r.kind)}
+                          >
                             <X size={13} strokeWidth={1.75} />
                           </button>
                         )}
@@ -222,7 +252,12 @@ export function TaskManagerOverlay({ open, onClose }: { open: boolean; onClose: 
   if (!open) return null;
   return (
     <div className="mx-overlay" role="dialog" aria-label="Menedżer zadań">
-      <button type="button" className="mx-overlay-backdrop" aria-label="Zamknij" onClick={onClose} />
+      <button
+        type="button"
+        className="mx-overlay-backdrop"
+        aria-label="Zamknij"
+        onClick={onClose}
+      />
       <div className="mx-overlay-panel">
         <header className="mx-overlay-head">
           <div>
@@ -252,14 +287,26 @@ export function HomeResourcesWidget({ active }: { active: boolean }) {
         <strong>
           <AnimatedNumber value={data?.system.cpu ?? 0} digits={0} suffix="%" />
         </strong>
-        <Sparkline points={data?.history ?? []} field="sysCpu" width={72} height={22} maxHint={100} />
+        <Sparkline
+          points={data?.history ?? []}
+          field="sysCpu"
+          width={72}
+          height={22}
+          maxHint={100}
+        />
       </div>
       <div className="mx-home-row">
         <span>RAM</span>
         <strong>
           <AnimatedNumber value={data?.system.memPercent ?? 0} digits={0} suffix="%" />
         </strong>
-        <Sparkline points={data?.history ?? []} field="sysMem" width={72} height={22} maxHint={100} />
+        <Sparkline
+          points={data?.history ?? []}
+          field="sysMem"
+          width={72}
+          height={22}
+          maxHint={100}
+        />
       </div>
       <div className="mx-home-row">
         <span>djxxr</span>

@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import {
   ArrowLeft,
   Bold,
@@ -72,7 +79,9 @@ function prefixLines(value: string, start: number, end: number, prefix: string) 
   const lineEndRaw = value.indexOf('\n', end);
   const lineEnd = lineEndRaw === -1 ? value.length : lineEndRaw;
   const block = value.slice(lineStart, lineEnd);
-  const lines = block.split('\n').map((line) => (line.startsWith(prefix) ? line : `${prefix}${line}`));
+  const lines = block
+    .split('\n')
+    .map((line) => (line.startsWith(prefix) ? line : `${prefix}${line}`));
   const nextBlock = lines.join('\n');
   const next = value.slice(0, lineStart) + nextBlock + value.slice(lineEnd);
   return { next, selStart: lineStart, selEnd: lineStart + nextBlock.length };
@@ -111,13 +120,7 @@ function sortNotes(list: NoteRow[]): NoteRow[] {
   });
 }
 
-export function NotesWidget({
-  size,
-  preview,
-}: {
-  size: 'S' | 'M' | 'L';
-  preview?: boolean;
-}) {
+export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?: boolean }) {
   const legacyNotes = useStore((s) => s.settings.homeNotes);
   const patchSettings = useStore((s) => s.patchSettings);
 
@@ -127,8 +130,10 @@ export function NotesWidget({
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [notes, setNotes] = useState<NoteRow[]>(preview ? PREVIEW_NOTES : []);
-  const [activeId, setActiveId] = useState<string | null>(preview ? PREVIEW_NOTES[0]?.id ?? null : null);
-  const [draft, setDraft] = useState(preview ? PREVIEW_NOTES[0]?.body ?? '' : '');
+  const [activeId, setActiveId] = useState<string | null>(
+    preview ? (PREVIEW_NOTES[0]?.id ?? null) : null,
+  );
+  const [draft, setDraft] = useState(preview ? (PREVIEW_NOTES[0]?.body ?? '') : '');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(!preview);
   const [saving, setSaving] = useState(false);
@@ -166,11 +171,14 @@ export function NotesWidget({
     return () => ro.disconnect();
   }, []);
 
-  const refreshList = useCallback(async (q?: string) => {
-    const list = (await notesList(q)) as NoteRow[];
-    setNotes(sortNotes(list.map((n) => ({ ...n, pinned: pinnedIds.has(n.id) }))));
-    return list;
-  }, [pinnedIds]);
+  const refreshList = useCallback(
+    async (q?: string) => {
+      const list = (await notesList(q)) as NoteRow[];
+      setNotes(sortNotes(list.map((n) => ({ ...n, pinned: pinnedIds.has(n.id) }))));
+      return list;
+    },
+    [pinnedIds],
+  );
 
   useEffect(() => {
     if (preview) return;
@@ -222,7 +230,9 @@ export function NotesWidget({
     setSaving(false);
     if (updated) {
       setNotes((prev) =>
-        sortNotes(prev.map((n) => (n.id === updated.id ? { ...n, ...updated, pinned: n.pinned } : n))),
+        sortNotes(
+          prev.map((n) => (n.id === updated.id ? { ...n, ...updated, pinned: n.pinned } : n)),
+        ),
       );
     }
   }, [preview]);
@@ -284,7 +294,9 @@ export function NotesWidget({
     if (!id) return;
     const title = noteTitleFromBody(value);
     setNotes((prev) =>
-      sortNotes(prev.map((n) => (n.id === id ? { ...n, body: value, title, updatedAt: Date.now() } : n))),
+      sortNotes(
+        prev.map((n) => (n.id === id ? { ...n, body: value, title, updatedAt: Date.now() } : n)),
+      ),
     );
     scheduleSave();
   };
@@ -321,9 +333,7 @@ export function NotesWidget({
       else next.add(id);
       return next;
     });
-    setNotes((prev) =>
-      sortNotes(prev.map((n) => (n.id === id ? { ...n, pinned: !n.pinned } : n))),
-    );
+    setNotes((prev) => sortNotes(prev.map((n) => (n.id === id ? { ...n, pinned: !n.pinned } : n))));
     setCtxMenu(null);
   };
 
@@ -378,7 +388,10 @@ export function NotesWidget({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!rootRef.current?.contains(document.activeElement) && document.activeElement !== rootRef.current) {
+      if (
+        !rootRef.current?.contains(document.activeElement) &&
+        document.activeElement !== rootRef.current
+      ) {
         // allow when focus inside notes panel
         if (!rootRef.current?.contains(e.target as Node)) return;
       }
@@ -567,19 +580,44 @@ export function NotesWidget({
               ) : (
                 <>
                   <div className="hw-notes-toolbar">
-                    <button type="button" className="hw-notes-tool" title="Pogrubienie" disabled={preview} onClick={() => format('bold')}>
+                    <button
+                      type="button"
+                      className="hw-notes-tool"
+                      title="Pogrubienie"
+                      disabled={preview}
+                      onClick={() => format('bold')}
+                    >
                       <Bold size={14} />
                     </button>
-                    <button type="button" className="hw-notes-tool" title="Lista" disabled={preview} onClick={() => format('list')}>
+                    <button
+                      type="button"
+                      className="hw-notes-tool"
+                      title="Lista"
+                      disabled={preview}
+                      onClick={() => format('list')}
+                    >
                       <List size={14} />
                     </button>
-                    <button type="button" className="hw-notes-tool" title="Checkbox" disabled={preview} onClick={() => format('check')}>
+                    <button
+                      type="button"
+                      className="hw-notes-tool"
+                      title="Checkbox"
+                      disabled={preview}
+                      onClick={() => format('check')}
+                    >
                       <CheckSquare size={14} />
                     </button>
                     <span className="hw-notes-toolbar-spacer" />
-                    <span className="hw-notes-save-hint">{saving ? 'Zapisywanie…' : preview ? '' : 'Autosave'}</span>
+                    <span className="hw-notes-save-hint">
+                      {saving ? 'Zapisywanie…' : preview ? '' : 'Autosave'}
+                    </span>
                     {!preview && activeNote && (
-                      <button type="button" className="hw-notes-tool danger" title="Usuń" onClick={() => confirmDelete()}>
+                      <button
+                        type="button"
+                        className="hw-notes-tool danger"
+                        title="Usuń"
+                        onClick={() => confirmDelete()}
+                      >
                         <Trash2 size={14} />
                       </button>
                     )}
@@ -588,7 +626,7 @@ export function NotesWidget({
                     <div className="hw-notes-editor-inner">
                       <input
                         className="hw-notes-title-input"
-                        value={preview ? PREVIEW_NOTES[0]?.title ?? titleLine : titleLine}
+                        value={preview ? (PREVIEW_NOTES[0]?.title ?? titleLine) : titleLine}
                         readOnly={preview}
                         placeholder="Tytuł"
                         aria-label="Tytuł notatki"
@@ -601,7 +639,11 @@ export function NotesWidget({
                       <textarea
                         ref={areaRef}
                         className="hw-notes-body"
-                        value={preview ? (PREVIEW_NOTES[0]?.body.split(/\r?\n/).slice(1).join('\n') ?? '') : bodyRest}
+                        value={
+                          preview
+                            ? (PREVIEW_NOTES[0]?.body.split(/\r?\n/).slice(1).join('\n') ?? '')
+                            : bodyRest
+                        }
                         readOnly={preview}
                         onChange={(e) => {
                           const t = titleLine || 'Nowa notatka';
@@ -637,7 +679,12 @@ export function NotesWidget({
             <Copy size={14} />
             Duplikuj
           </button>
-          <button type="button" role="menuitem" className="danger" onClick={() => confirmDelete(ctxMenu.id)}>
+          <button
+            type="button"
+            role="menuitem"
+            className="danger"
+            onClick={() => confirmDelete(ctxMenu.id)}
+          >
             <Trash2 size={14} />
             Usuń
           </button>

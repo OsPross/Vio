@@ -74,7 +74,12 @@ export function sizePx(size: WidgetSizeId): number {
   return SML.find((s) => s.id === size)?.px ?? 300;
 }
 
-export function sizeForType(type: HomeWidgetType, size: WidgetSizeId = WIDGET_REGISTRY[type].defaultSize) {
+export function sizeForType(
+  type: HomeWidgetType,
+  size: WidgetSizeId = WIDGET_REGISTRY[type].defaultSize,
+) {
   const meta = WIDGET_REGISTRY[type];
-  return meta.sizes.find((s) => s.id === size) ?? meta.sizes.find((s) => s.id === meta.defaultSize)!;
+  return (
+    meta.sizes.find((s) => s.id === size) ?? meta.sizes.find((s) => s.id === meta.defaultSize)!
+  );
 }

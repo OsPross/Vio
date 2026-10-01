@@ -524,7 +524,8 @@ export function AppMenu({ actions }: Props) {
       lastMouse.current = { x, y };
 
       const inWrap = x >= wr.left - 2 && x <= wr.right + 2 && y >= wr.top - 2 && y <= wr.bottom + 2;
-      const inPanel = x >= pr.left - 2 && x <= pr.right + 2 && y >= pr.top - 2 && y <= pr.bottom + 2;
+      const inPanel =
+        x >= pr.left - 2 && x <= pr.right + 2 && y >= pr.top - 2 && y <= pr.bottom + 2;
       if (inWrap || inPanel) {
         clearCloseSubTimer();
         return;

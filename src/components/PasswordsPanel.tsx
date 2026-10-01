@@ -92,7 +92,9 @@ export function PasswordsPanel() {
   const [query, setQuery] = useState('');
   const [entries, setEntries] = useState<PwPublic[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [detail, setDetail] = useState<(PwPublic & { password: string; totpSecret: string }) | null>(null);
+  const [detail, setDetail] = useState<
+    (PwPublic & { password: string; totpSecret: string }) | null
+  >(null);
   const [showPw, setShowPw] = useState(false);
   const [totp, setTotp] = useState<{ code: string; remaining: number } | null>(null);
   const [panel, setPanel] = useState<'list' | 'generator' | 'audit' | 'import'>('list');
@@ -109,7 +111,13 @@ export function PasswordsPanel() {
   } | null>(null);
   const [exportMaster, setExportMaster] = useState('');
   const [neverList, setNeverList] = useState<string[]>([]);
-  const [draft, setDraft] = useState({ origin: '', username: '', password: '', note: '', totpSecret: '' });
+  const [draft, setDraft] = useState({
+    origin: '',
+    username: '',
+    password: '',
+    note: '',
+    totpSecret: '',
+  });
   const [busy, setBusy] = useState(false);
 
   const refreshStatus = useCallback(async () => {
@@ -274,7 +282,9 @@ export function PasswordsPanel() {
     setError('');
     const res = await window.shell?.passwordsAdd?.(draft);
     if (!res || ('ok' in res && res.ok === false)) {
-      setError(('error' in (res || {}) && (res as { error?: string }).error) || 'Nie udało się dodać');
+      setError(
+        ('error' in (res || {}) && (res as { error?: string }).error) || 'Nie udało się dodać',
+      );
       return;
     }
     setDraft({ origin: '', username: '', password: '', note: '', totpSecret: '' });
@@ -310,7 +320,10 @@ export function PasswordsPanel() {
     return (
       <>
         <SettingsGroup title="Utwórz sejf">
-          <SettingsRow label="Hasło główne" hint="Minimum 8 znaków. Nie da się odzyskać — zapamiętaj je.">
+          <SettingsRow
+            label="Hasło główne"
+            hint="Minimum 8 znaków. Nie da się odzyskać — zapamiętaj je."
+          >
             <Input
               type="password"
               autoComplete="new-password"
@@ -337,9 +350,18 @@ export function PasswordsPanel() {
               aria-label="Zapamiętaj"
             />
           </SettingsRow>
-          {error ? <p className="snote" style={{ color: 'var(--danger)' }}>{error}</p> : null}
+          {error ? (
+            <p className="snote" style={{ color: 'var(--danger)' }}>
+              {error}
+            </p>
+          ) : null}
           <div className="slist-row" style={{ justifyContent: 'flex-end', gap: 8 }}>
-            <button type="button" className="sbtn" disabled={busy || master.length < 8} onClick={() => void onSetup()}>
+            <button
+              type="button"
+              className="sbtn"
+              disabled={busy || master.length < 8}
+              onClick={() => void onSetup()}
+            >
               Utwórz sejf
             </button>
           </div>
@@ -363,7 +385,10 @@ export function PasswordsPanel() {
               }}
             />
           </SettingsRow>
-          <SettingsRow label="Zapamiętaj na tym urządzeniu" hint="DPAPI — każdy z dostępem do konta Windows może otworzyć sejf.">
+          <SettingsRow
+            label="Zapamiętaj na tym urządzeniu"
+            hint="DPAPI — każdy z dostępem do konta Windows może otworzyć sejf."
+          >
             <Switch
               on={remember && !!status.rememberAvailable}
               disabled={!status.rememberAvailable}
@@ -371,9 +396,18 @@ export function PasswordsPanel() {
               aria-label="Zapamiętaj"
             />
           </SettingsRow>
-          {error ? <p className="snote" style={{ color: 'var(--danger)' }}>{error}</p> : null}
+          {error ? (
+            <p className="snote" style={{ color: 'var(--danger)' }}>
+              {error}
+            </p>
+          ) : null}
           <div className="slist-row" style={{ justifyContent: 'flex-end' }}>
-            <button type="button" className="sbtn" disabled={busy || !master} onClick={() => void onUnlock()}>
+            <button
+              type="button"
+              className="sbtn"
+              disabled={busy || !master}
+              onClick={() => void onUnlock()}
+            >
               <Lock size={14} strokeWidth={1.75} /> Odblokuj
             </button>
           </div>
@@ -392,7 +426,10 @@ export function PasswordsPanel() {
             aria-label="Menedżer haseł"
           />
         </SettingsRow>
-        <SettingsRow label="Autouzupełnianie" hint="Tylko HTTPS, ścisły origin, bez cross-origin iframe.">
+        <SettingsRow
+          label="Autouzupełnianie"
+          hint="Tylko HTTPS, ścisły origin, bez cross-origin iframe."
+        >
           <Switch
             on={!!settings.passwordsAutofill}
             onChange={(v) => patchSettings({ passwordsAutofill: v })}
@@ -478,7 +515,13 @@ export function PasswordsPanel() {
                   className={`pw-item ${selected === e.id ? 'on' : ''}`}
                   onClick={() => setSelected(e.id)}
                 >
-                  <img src={faviconFor(e.origin)} alt="" width={16} height={16} onError={(ev) => faviconImgFallback(ev, e.origin)} />
+                  <img
+                    src={faviconFor(e.origin)}
+                    alt=""
+                    width={16}
+                    height={16}
+                    onError={(ev) => faviconImgFallback(ev, e.origin)}
+                  />
                   <span className="pw-item-text">
                     <strong>{hostOf(e.origin)}</strong>
                     <em>{e.username || '—'}</em>
@@ -499,7 +542,12 @@ export function PasswordsPanel() {
               <SettingsRow label="Hasło">
                 <div className="pw-inline">
                   <code>{showPw ? detail.password : '••••••••••••'}</code>
-                  <button type="button" className="sbtn ghost" onClick={() => setShowPw((v) => !v)} title="Pokaż">
+                  <button
+                    type="button"
+                    className="sbtn ghost"
+                    onClick={() => setShowPw((v) => !v)}
+                    title="Pokaż"
+                  >
                     {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                   <button
@@ -574,7 +622,11 @@ export function PasswordsPanel() {
                 onChange={(e) => setDraft((d) => ({ ...d, totpSecret: e.target.value }))}
               />
             </SettingsRow>
-            {error ? <p className="snote" style={{ color: 'var(--danger)' }}>{error}</p> : null}
+            {error ? (
+              <p className="snote" style={{ color: 'var(--danger)' }}>
+                {error}
+              </p>
+            ) : null}
             <div className="slist-row" style={{ justifyContent: 'flex-end' }}>
               <button type="button" className="sbtn" onClick={() => void saveDraft()}>
                 <Plus size={14} /> Dodaj
@@ -652,8 +704,22 @@ export function PasswordsPanel() {
                 Słabe hasła
               </div>
               {audit!.weak.slice(0, 12).map((e) => (
-                <button key={e.id} type="button" className="pw-item" onClick={() => { setPanel('list'); setSelected(e.id); }}>
-                  <img src={faviconFor(e.origin)} alt="" width={16} height={16} onError={(ev) => faviconImgFallback(ev, e.origin)} />
+                <button
+                  key={e.id}
+                  type="button"
+                  className="pw-item"
+                  onClick={() => {
+                    setPanel('list');
+                    setSelected(e.id);
+                  }}
+                >
+                  <img
+                    src={faviconFor(e.origin)}
+                    alt=""
+                    width={16}
+                    height={16}
+                    onError={(ev) => faviconImgFallback(ev, e.origin)}
+                  />
                   <span className="pw-item-text">
                     <strong>{hostOf(e.origin)}</strong>
                     <em>{e.username}</em>
@@ -673,7 +739,9 @@ export function PasswordsPanel() {
       {panel === 'import' && (
         <>
           <SettingsGroup title="Import CSV">
-            <p className="snote">Chrome / Edge / Firefox / Bitwarden — kolumny url, username, password.</p>
+            <p className="snote">
+              Chrome / Edge / Firefox / Bitwarden — kolumny url, username, password.
+            </p>
             <div className="slist-row">
               <label className="sbtn">
                 <Upload size={14} /> Wybierz plik
@@ -698,9 +766,18 @@ export function PasswordsPanel() {
                 onChange={(e) => setExportMaster(e.target.value)}
               />
             </SettingsRow>
-            {error ? <p className="snote" style={{ color: 'var(--danger)' }}>{error}</p> : null}
+            {error ? (
+              <p className="snote" style={{ color: 'var(--danger)' }}>
+                {error}
+              </p>
+            ) : null}
             <div className="slist-row" style={{ justifyContent: 'flex-end' }}>
-              <button type="button" className="sbtn" disabled={!exportMaster} onClick={() => void onExport()}>
+              <button
+                type="button"
+                className="sbtn"
+                disabled={!exportMaster}
+                onClick={() => void onExport()}
+              >
                 <Download size={14} /> Eksportuj
               </button>
             </div>

@@ -42,7 +42,14 @@ function weatherIcon(code: number) {
   return CloudSun;
 }
 
-type Place = { name: string; country: string; admin1: string; lat: number; lon: number; label: string };
+type Place = {
+  name: string;
+  country: string;
+  admin1: string;
+  lat: number;
+  lon: number;
+  label: string;
+};
 type WeatherData = Awaited<ReturnType<NonNullable<Window['shell']>['weatherFetch']>>;
 
 export const WEATHER_DEMO: WeatherData = {
@@ -218,7 +225,11 @@ export function WeatherWidget({
       <div className="hw-empty">
         <CloudSun size={22} strokeWidth={1.5} />
         <p>{err}</p>
-        <button type="button" className="hw-btn" onClick={() => void fetchWx({ location, lat: savedLat, lon: savedLon })}>
+        <button
+          type="button"
+          className="hw-btn"
+          onClick={() => void fetchWx({ location, lat: savedLat, lon: savedLon })}
+        >
           Ponów
         </button>
       </div>
@@ -283,7 +294,10 @@ export function WeatherWidget({
               {data.hourly.time.slice(0, 6).map((t, i) => (
                 <li key={t}>
                   <span>
-                    {new Date(t).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(t).toLocaleTimeString('pl-PL', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </span>
                   <strong>{Math.round(data.hourly!.temperature_2m?.[i] ?? 0)}°</strong>
                 </li>

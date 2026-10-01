@@ -84,13 +84,13 @@ function renderFolder(
 ): string {
   const parts: string[] = [];
   for (const f of folderChildren(folders, folderId)) {
-    parts.push(`<DT><H3>${esc(f.title)}</H3>\n<DL><p>\n${renderFolder(folders, bookmarks, f.id)}\n</DL><p>`);
+    parts.push(
+      `<DT><H3>${esc(f.title)}</H3>\n<DL><p>\n${renderFolder(folders, bookmarks, f.id)}\n</DL><p>`,
+    );
   }
   for (const b of bookmarksInFolder(bookmarks, folderId)) {
     const add = Math.floor(b.createdAt / 1000);
-    parts.push(
-      `<DT><A HREF="${esc(b.url)}" ADD_DATE="${add}">${esc(b.title || b.url)}</A>`,
-    );
+    parts.push(`<DT><A HREF="${esc(b.url)}" ADD_DATE="${add}">${esc(b.title || b.url)}</A>`);
   }
   return parts.join('\n');
 }

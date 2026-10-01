@@ -61,10 +61,7 @@ import {
   type CanvasMetrics,
   type GuideLine,
 } from './snapMath';
-import {
-  WidgetSettingsPopover,
-  type SettingsTarget,
-} from './WidgetSettingsPopover';
+import { WidgetSettingsPopover, type SettingsTarget } from './WidgetSettingsPopover';
 
 export const WIDGET_ICONS: Record<HomeWidgetType, LucideIcon> = {
   weather: CloudSun,
@@ -295,9 +292,7 @@ export function WidgetStrip({
       if (selectedKey.startsWith('chrome:')) {
         const id = selectedKey.slice(7) as HomeChromeId;
         setChrome(
-          chrome.map((c) =>
-            c.id === id ? { ...c, x: c.x + dx, y: Math.max(0, c.y + dy) } : c,
-          ),
+          chrome.map((c) => (c.id === id ? { ...c, x: c.x + dx, y: Math.max(0, c.y + dy) } : c)),
         );
       } else {
         onChange(
@@ -325,9 +320,7 @@ export function WidgetStrip({
   const patchWidgetSettings = useCallback(
     (id: string, next: Record<string, unknown>) => {
       onChange(
-        widgets.map((w) =>
-          w.id === id ? { ...w, settings: { ...w.settings, ...next } } : w,
-        ),
+        widgets.map((w) => (w.id === id ? { ...w, settings: { ...w.settings, ...next } } : w)),
       );
     },
     [onChange, widgets],
@@ -539,14 +532,19 @@ export function WidgetStrip({
   };
 
   const visibleChrome = chrome.filter((c) => {
-    if (c.id === 'clock') return settings.homeShowClock || settings.homeShowDate || settings.homeShowGreeting;
+    if (c.id === 'clock')
+      return settings.homeShowClock || settings.homeShowDate || settings.homeShowGreeting;
     if (c.id === 'shortcuts') return settings.homeShowApps;
     return true;
   });
 
   if (!visibleChrome.length && !widgets.length) return null;
 
-  const restingBox = (key: string, item: HomeChromeItem | HomeWidget, kind: 'chrome' | 'widget'): PlaceBox => {
+  const restingBox = (
+    key: string,
+    item: HomeChromeItem | HomeWidget,
+    kind: 'chrome' | 'widget',
+  ): PlaceBox => {
     const m = metrics ?? {
       width: rootRef.current?.offsetWidth || 1280,
       height: rootRef.current?.offsetHeight || 800,
@@ -637,7 +635,9 @@ export function WidgetStrip({
                 onOpenSettings={(el) => openSettings({ kind: 'chrome', id: c.id }, el)}
               >
                 {c.id === 'clock' && <ClockWidget reduced={reduced} />}
-                {c.id === 'search' && <SearchWidget onGo={onGo} reduced={reduced} inert={preview} />}
+                {c.id === 'search' && (
+                  <SearchWidget onGo={onGo} reduced={reduced} inert={preview} />
+                )}
                 {c.id === 'shortcuts' && <ShortcutsWidget onGo={onGo} />}
               </WidgetFrame>
             </div>

@@ -121,9 +121,7 @@ export function useMetrics(active: boolean, lowPower = false, mode: 'live' | 'di
 }
 
 export function useMetricsGuests(active: boolean, guests: MetricsGuest[]) {
-  const key = active
-    ? guests.map((g) => `${g.id}:${g.webContentsId ?? ''}`).join('|')
-    : '';
+  const key = active ? guests.map((g) => `${g.id}:${g.webContentsId ?? ''}`).join('|') : '';
 
   useEffect(() => {
     if (!active) return;

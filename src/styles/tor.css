@@ -154,7 +154,11 @@
   place-items: center;
   padding: 24px;
   background:
-    radial-gradient(ellipse 50% 40% at 50% 0%, color-mix(in srgb, #7c5cff 18%, transparent), transparent 70%),
+    radial-gradient(
+      ellipse 50% 40% at 50% 0%,
+      color-mix(in srgb, #7c5cff 18%, transparent),
+      transparent 70%
+    ),
     var(--bg);
   overflow: auto;
 }

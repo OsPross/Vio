@@ -53,7 +53,15 @@ function SideAppIcon({ app }: { app: SideApp }) {
   if (app.id === 'messenger') return <MessageCircle size={18} strokeWidth={1.75} />;
   if (app.id === 'gemini') return <Sparkles size={18} strokeWidth={1.75} />;
   if (src) {
-    return <img src={src} alt="" width={18} height={18} onError={(e) => faviconImgFallback(e, app.url)} />;
+    return (
+      <img
+        src={src}
+        alt=""
+        width={18}
+        height={18}
+        onError={(e) => faviconImgFallback(e, app.url)}
+      />
+    );
   }
   return <span className="side-rail-letter">{app.label.slice(0, 1)}</span>;
 }
@@ -120,9 +128,12 @@ export function AppSidebar({
   const motionOff =
     settings.perfReduceMotion ||
     !settings.uiMotion ||
-    (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    (typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-  const aiApp = sideApps.find((a) => a.id === 'gemini') ?? sideApps.find((a) => /gemini|chatgpt|ai/i.test(a.id + a.label));
+  const aiApp =
+    sideApps.find((a) => a.id === 'gemini') ??
+    sideApps.find((a) => /gemini|chatgpt|ai/i.test(a.id + a.label));
   const otherApps = sideApps.filter((a) => a.id !== aiApp?.id);
 
   useEffect(() => {
@@ -132,7 +143,9 @@ export function AppSidebar({
   }, [panelOpen, active]);
 
   return (
-    <div className={`side-shell ${panelOpen ? 'panel-open' : ''} ${settings.uiGlass ? 'glass' : ''}`}>
+    <div
+      className={`side-shell ${panelOpen ? 'panel-open' : ''} ${settings.uiGlass ? 'glass' : ''}`}
+    >
       <aside className="side-rail">
         <LayoutGroup id="side-rail">
           <div className="side-rail-group" role="group" aria-label="Nawigacja">
@@ -169,7 +182,9 @@ export function AppSidebar({
                     transition={{ type: 'spring', stiffness: 480, damping: 36 }}
                   />
                 )}
-                {panelOpen && active?.id === aiApp.id && motionOff && <span className="side-rail-indicator" />}
+                {panelOpen && active?.id === aiApp.id && motionOff && (
+                  <span className="side-rail-indicator" />
+                )}
                 <span className="side-rail-ico">
                   <SideAppIcon app={aiApp} />
                 </span>
@@ -269,7 +284,12 @@ export function AppSidebar({
                 >
                   <ExternalLink size={14} strokeWidth={1.75} />
                 </button>
-                <button type="button" className="icon-btn sm" title="Zamknij panel" onClick={closeSidePanel}>
+                <button
+                  type="button"
+                  className="icon-btn sm"
+                  title="Zamknij panel"
+                  onClick={closeSidePanel}
+                >
                   <X size={14} />
                 </button>
               </div>

@@ -81,9 +81,7 @@ export function applyOneShotLocalFlags(
 /**
  * Core settings field normalization (shared with store persist merge).
  */
-export function normalizeSettingsFields(
-  merged: Record<string, unknown>,
-): Record<string, unknown> {
+export function normalizeSettingsFields(merged: Record<string, unknown>): Record<string, unknown> {
   const s: Record<string, unknown> = { ...merged };
   if (!Array.isArray(s.homeTodos)) s.homeTodos = [];
   s.homeLayoutPreset = deriveHomeLayoutPreset(s);
@@ -98,11 +96,19 @@ export function normalizeSettingsFields(
   }
   if (typeof s.homeBgBlur !== 'number') s.homeBgBlur = 12;
   if (typeof s.homeBgDim !== 'number') s.homeBgDim = 35;
-  if (s.homeClockStyle !== 'thin' && s.homeClockStyle !== 'classic' && s.homeClockStyle !== 'mono') {
+  if (
+    s.homeClockStyle !== 'thin' &&
+    s.homeClockStyle !== 'classic' &&
+    s.homeClockStyle !== 'mono'
+  ) {
     s.homeClockStyle = 'thin';
   }
   if (typeof s.homeShowSeconds !== 'boolean') s.homeShowSeconds = false;
-  if (s.homeDensity !== 'compact' && s.homeDensity !== 'comfortable' && s.homeDensity !== 'spacious') {
+  if (
+    s.homeDensity !== 'compact' &&
+    s.homeDensity !== 'comfortable' &&
+    s.homeDensity !== 'spacious'
+  ) {
     s.homeDensity = 'comfortable';
   }
   if (s.bgStyle === 'custom' && !s.homeBgImage) s.bgStyle = 'soft';
@@ -124,5 +130,7 @@ export function normalizeSettingsFields(
 }
 
 export function mergeBangs(persisted: Bang[] | undefined, current: Bang[]): Bang[] {
-  return migrateBangsToDdg(persisted?.length ? persisted : current.length ? current : [...DEFAULT_BANGS]);
+  return migrateBangsToDdg(
+    persisted?.length ? persisted : current.length ? current : [...DEFAULT_BANGS],
+  );
 }

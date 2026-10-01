@@ -33,7 +33,11 @@ export function WidgetFrame({
   /* Regular widgets ALWAYS show full card + header (icon + name), even outside edit */
   if (!bare) {
     return (
-      <div className={['hw-frame', editMode ? 'is-edit' : '', className || ''].filter(Boolean).join(' ')}>
+      <div
+        className={['hw-frame', editMode ? 'is-edit' : '', className || '']
+          .filter(Boolean)
+          .join(' ')}
+      >
         <header className="hw-frame-head" style={showEditChrome ? { cursor: 'grab' } : undefined}>
           <Icon size={14} strokeWidth={1.75} className="hw-frame-ico" aria-hidden />
           <span className="hw-frame-title">{title}</span>
@@ -95,13 +99,7 @@ export function WidgetFrame({
   );
 }
 
-export function WidgetEmpty({
-  icon: Icon,
-  text,
-}: {
-  icon: LucideIcon;
-  text: string;
-}) {
+export function WidgetEmpty({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
   return (
     <div className="hw-empty">
       <Icon size={22} strokeWidth={1.5} aria-hidden />

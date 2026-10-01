@@ -2,7 +2,8 @@
 
 export type PrivacyPreset = 'standard' | 'strict' | 'custom';
 
-export type DohProvider = 'automatic' | 'quad9' | 'cloudflare' | 'mullvad' | 'nextdns' | 'custom' | 'off';
+export type DohProvider =
+  'automatic' | 'quad9' | 'cloudflare' | 'mullvad' | 'nextdns' | 'custom' | 'off';
 
 export type PrivacySettings = {
   privacyPreset: PrivacyPreset;

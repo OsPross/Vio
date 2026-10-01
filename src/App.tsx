@@ -148,7 +148,12 @@ function visitKey(url: string) {
   }
 }
 
-function recordVisitFromTab(tab: Tab, url: string, title: string, opts?: { typed?: boolean; soft?: boolean }) {
+function recordVisitFromTab(
+  tab: Tab,
+  url: string,
+  title: string,
+  opts?: { typed?: boolean; soft?: boolean },
+) {
   if (tab.mode === 'tor') return;
   const key = visitKey(url);
   if (!key) return;
@@ -320,7 +325,13 @@ function TabWebviewInner({
         // did-stop-loading / title event and re-rendered the whole chrome.
         if (Object.keys(patch).length) updateTab(tab.id, patch);
         if (active) onNavRef.current(el.canGoBack(), el.canGoForward(), url, title);
-        if (tab.mode !== 'tor' && title && title !== '…' && title !== 'Karta' && /^https?:/i.test(url)) {
+        if (
+          tab.mode !== 'tor' &&
+          title &&
+          title !== '…' &&
+          title !== 'Karta' &&
+          /^https?:/i.test(url)
+        ) {
           recordVisitFromTab(tab, url, title, { soft: true });
         }
       } catch {
@@ -369,7 +380,8 @@ function TabWebviewInner({
 
     const onStart = (e: unknown) => {
       const url = (e as { url?: string }).url;
-      if (url && active) onNavRef.current(el.canGoBack(), el.canGoForward(), url, el.getTitle() || '…');
+      if (url && active)
+        onNavRef.current(el.canGoBack(), el.canGoForward(), url, el.getTitle() || '…');
     };
 
     const applyStoredZoom = () => {
@@ -585,7 +597,9 @@ function TabWebviewInner({
             return;
           }
           const list = await window.shell?.passwordsFind?.(realUrl);
-          const accounts = Array.isArray(list) ? list.map((a) => ({ id: a.id, username: a.username })) : [];
+          const accounts = Array.isArray(list)
+            ? list.map((a) => ({ id: a.id, username: a.username }))
+            : [];
           try {
             el.send('djxxr-pw-cmd', { type: 'accounts', accounts });
           } catch {
@@ -813,7 +827,9 @@ export function App() {
         active.url !== 'about:about' &&
         active.url !== TOR_HOME_URL));
   const isTorHome =
-    !!active && activeIsTor && (active.url === TOR_HOME_URL || active.url === HOME_URL || active.url === 'about:blank');
+    !!active &&
+    activeIsTor &&
+    (active.url === TOR_HOME_URL || active.url === HOME_URL || active.url === 'about:blank');
   const [draft, setDraft] = useState(isHome || isTorHome ? '' : (active?.url ?? ''));
   /** Omnibox: user is editing — ignore navigations / tab URL sync for draft */
   const omniEditingRef = useRef(false);
@@ -832,7 +848,10 @@ export function App() {
     origin: string;
     permission: string;
   } | null>(null);
-  const [mediaFlags, setMediaFlags] = useState<{ mic: boolean; cam: boolean }>({ mic: false, cam: false });
+  const [mediaFlags, setMediaFlags] = useState<{ mic: boolean; cam: boolean }>({
+    mic: false,
+    cam: false,
+  });
   const [torInfo, setTorInfo] = useState<TorStatusInfo | null>(null);
   const [torBusy, setTorBusy] = useState(false);
   const [torError, setTorError] = useState<string | null>(null);
@@ -969,7 +988,8 @@ export function App() {
   useEffect(() => {
     applyThemeToDom(settings);
     const prefersReduce =
-      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     document.documentElement.dataset.reduceMotion =
       settings.perfReduceMotion || !settings.uiMotion || prefersReduce ? 'on' : 'off';
   }, [settings]);
@@ -981,7 +1001,8 @@ export function App() {
       backgroundThrottling: settings.perfBackgroundThrottling,
       cacheMb: settings.perfCacheMb,
       reduceRenderers: settings.perfMode === 'saver',
-      memoryCapMb: settings.perfMode === 'saver' ? 512 : settings.perfMode === 'performance' ? 1024 : 768,
+      memoryCapMb:
+        settings.perfMode === 'saver' ? 512 : settings.perfMode === 'performance' ? 1024 : 768,
     });
     void window.shell?.perfApplySession?.({
       cacheMb: settings.perfCacheMb,
@@ -1199,7 +1220,8 @@ export function App() {
           if (!cancelled) setMediaFlags({ mic: false, cam: false });
           return;
         }
-        const list = (await window.shell?.permissionsList?.()) as Record<string, Record<string, string>> | undefined;
+        const list = (await window.shell?.permissionsList?.()) as
+          Record<string, Record<string, string>> | undefined;
         const entry = list?.[origin] || {};
         if (!cancelled) {
           setMediaFlags({
@@ -1324,7 +1346,8 @@ export function App() {
 
   useEffect(() => {
     const off = window.shell?.onHttpsWarn?.((payload) => {
-      if (payload?.httpUrl) setHttpsWarn({ httpUrl: payload.httpUrl, httpsUrl: payload.httpsUrl || '' });
+      if (payload?.httpUrl)
+        setHttpsWarn({ httpUrl: payload.httpUrl, httpsUrl: payload.httpsUrl || '' });
     });
     return () => off?.();
   }, []);
@@ -1620,28 +1643,39 @@ export function App() {
     void window.shell?.setDevtoolsEnabled?.(Boolean(settings.allowInspect));
   }, [settings.allowInspect]);
 
-  const onNav = useCallback((canBack: boolean, canForward: boolean, url: string, _title?: string) => {
-    setNav((prev) =>
-      prev.back === canBack && prev.forward === canForward ? prev : { back: canBack, forward: canForward },
-    );
-    if (omniEditingRef.current && omniFocusedRef.current) return;
-    if (!url.startsWith('about:')) {
-      setDraft((d) => (d === url ? d : url));
-    }
-  }, []);
+  const onNav = useCallback(
+    (canBack: boolean, canForward: boolean, url: string, _title?: string) => {
+      setNav((prev) =>
+        prev.back === canBack && prev.forward === canForward
+          ? prev
+          : { back: canBack, forward: canForward },
+      );
+      if (omniEditingRef.current && omniFocusedRef.current) return;
+      if (!url.startsWith('about:')) {
+        setDraft((d) => (d === url ? d : url));
+      }
+    },
+    [],
+  );
 
   /** Deduped history nav — mouseup (primary) + app-command (fallback) share one gate */
   const browserNavAt = useRef(0);
   const doBrowserNav = useCallback((dir: 'back' | 'forward', source = 'unknown') => {
     const now = Date.now();
     if (now - browserNavAt.current < 180) {
-      if (typeof window !== 'undefined' && (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE) {
+      if (
+        typeof window !== 'undefined' &&
+        (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE
+      ) {
         console.log('[mouse-nav:ui] dedup-skip', { dir, source });
       }
       return;
     }
     browserNavAt.current = now;
-    if (typeof window !== 'undefined' && (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE) {
+    if (
+      typeof window !== 'undefined' &&
+      (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE
+    ) {
       console.log('[mouse-nav:ui] nav', { dir, source });
     }
     const st = useStore.getState();
@@ -2317,7 +2351,8 @@ export function App() {
 
   const go = (raw: string, opts?: { typed?: boolean; fromSuggest?: boolean }) => {
     const url = normalizeInput(raw, settings, bangs);
-    const isQuery = !!raw.trim() && !/^https?:/i.test(raw.trim()) && !raw.trim().startsWith('about:');
+    const isQuery =
+      !!raw.trim() && !/^https?:/i.test(raw.trim()) && !raw.trim().startsWith('about:');
     if (isTorTab(active)) {
       navigateActive(url);
       return;
@@ -2338,7 +2373,8 @@ export function App() {
   const motionOff =
     settings.perfReduceMotion ||
     !settings.uiMotion ||
-    (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    (typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   useEffect(() => {
     bindCommandHost({
@@ -2363,7 +2399,9 @@ export function App() {
         patchSettings({ showSidebar: !useStore.getState().settings.showSidebar }),
       openTaskMgr: () => setTaskMgrOpen(true),
       forgetSite: () => {
-        const url = useStore.getState().tabs.find((t) => t.id === useStore.getState().activeId)?.url;
+        const url = useStore
+          .getState()
+          .tabs.find((t) => t.id === useStore.getState().activeId)?.url;
         if (url) void window.shell?.privacyForgetSite?.(url);
       },
       clearData: () => {
@@ -2377,7 +2415,10 @@ export function App() {
   });
 
   const pageUrlForShare =
-    active && !active.url.startsWith('about:') && active.url !== HOME_URL && active.url !== TOR_HOME_URL
+    active &&
+    !active.url.startsWith('about:') &&
+    active.url !== HOME_URL &&
+    active.url !== TOR_HOME_URL
       ? active.url
       : '';
   const pageBookmarked =
@@ -2423,12 +2464,10 @@ export function App() {
           ? 'no-side'
           : '',
         settings.sidebarMode === 'auto' ? 'sidebar-auto' : '',
-        settings.sidebarMode === 'auto' &&
-        (sidebarAutoOpen || settings.sidePanelOpen)
+        settings.sidebarMode === 'auto' && (sidebarAutoOpen || settings.sidePanelOpen)
           ? 'sidebar-auto-open'
           : '',
-        (settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') &&
-        settings.sidePanelOpen
+        (settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') && settings.sidePanelOpen
           ? 'side-panel-open'
           : '',
         settings.uiGlass ? 'glass-on' : '',
@@ -2484,15 +2523,18 @@ export function App() {
           }}
           onContextMenu={(e) => {
             const t = e.target as HTMLElement;
-            if (t.closest('webview') || t.closest('input') || t.closest('textarea') || t.closest('a')) return;
+            if (
+              t.closest('webview') ||
+              t.closest('input') ||
+              t.closest('textarea') ||
+              t.closest('a')
+            )
+              return;
             e.preventDefault();
             setSidebarMenu({ x: e.clientX, y: e.clientY });
           }}
         >
-          <AppSidebar
-            onHome={() => navigateActive(HOME_URL)}
-            onOpenTab={(url) => newTab(url)}
-          />
+          <AppSidebar onHome={() => navigateActive(HOME_URL)} onOpenTab={(url) => newTab(url)} />
         </div>
       )}
 
@@ -2500,7 +2542,10 @@ export function App() {
         <div
           className="tabs"
           onDragOver={(e) => {
-            if (e.dataTransfer.types.includes('text/uri-list') || e.dataTransfer.types.includes('Files')) {
+            if (
+              e.dataTransfer.types.includes('text/uri-list') ||
+              e.dataTransfer.types.includes('Files')
+            ) {
               e.preventDefault();
               e.dataTransfer.dropEffect = 'link';
             }
@@ -2523,7 +2568,9 @@ export function App() {
             if (file) {
               const path = (file as File & { path?: string }).path;
               if (path) {
-                const fileUrl = path.startsWith('file:') ? path : `file:///${path.replace(/\\/g, '/').replace(/^\/+/, '')}`;
+                const fileUrl = path.startsWith('file:')
+                  ? path
+                  : `file:///${path.replace(/\\/g, '/').replace(/^\/+/, '')}`;
                 newTab(fileUrl);
               }
             }
@@ -2564,60 +2611,60 @@ export function App() {
                   }
                 >
                   <PerfGate id={`Tab:${t.id}`}>
-                  {t.id === activeId && !motionOff && (
-                    <motion.span
-                      className="tab-indicator"
-                      layoutId="tab-active-indicator"
-                      transition={{ type: 'spring', stiffness: 420, damping: 38 }}
-                    />
-                  )}
-                  {t.id === activeId && motionOff && <span className="tab-indicator" />}
-                  {t.mode === 'tor' ? (
-                    <span className="tab-onion" aria-hidden>
-                      ◉
-                    </span>
-                  ) : t.favicon ? (
-                    <img
-                      className="tab-fav"
-                      src={t.favicon}
-                      alt=""
-                      width={14}
-                      height={14}
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <Globe size={12} strokeWidth={1.8} />
-                  )}
-                  <span className="tab-title">
-                    {t.discarded && t.id !== activeId ? '○ ' : ''}
-                    {t.title || 'Karta'}
-                  </span>
-                  {!t.pinned && (hotTabs[t.id] || 0) >= 3 && !t.discarded && (
-                    <span className="tab-cpu-hint" title="Wysokie CPU — uśpij kartę">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateTab(t.id, { discarded: true });
+                    {t.id === activeId && !motionOff && (
+                      <motion.span
+                        className="tab-indicator"
+                        layoutId="tab-active-indicator"
+                        transition={{ type: 'spring', stiffness: 420, damping: 38 }}
+                      />
+                    )}
+                    {t.id === activeId && motionOff && <span className="tab-indicator" />}
+                    {t.mode === 'tor' ? (
+                      <span className="tab-onion" aria-hidden>
+                        ◉
+                      </span>
+                    ) : t.favicon ? (
+                      <img
+                        className="tab-fav"
+                        src={t.favicon}
+                        alt=""
+                        width={14}
+                        height={14}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
                         }}
-                      >
-                        <Moon size={11} strokeWidth={1.75} />
-                      </button>
+                      />
+                    ) : (
+                      <Globe size={12} strokeWidth={1.8} />
+                    )}
+                    <span className="tab-title">
+                      {t.discarded && t.id !== activeId ? '○ ' : ''}
+                      {t.title || 'Karta'}
                     </span>
-                  )}
-                  <span
-                    className="tab-x"
-                    role="button"
-                    tabIndex={-1}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(t.id);
-                    }}
-                  >
-                    <X size={12} />
-                  </span>
+                    {!t.pinned && (hotTabs[t.id] || 0) >= 3 && !t.discarded && (
+                      <span className="tab-cpu-hint" title="Wysokie CPU — uśpij kartę">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateTab(t.id, { discarded: true });
+                          }}
+                        >
+                          <Moon size={11} strokeWidth={1.75} />
+                        </button>
+                      </span>
+                    )}
+                    <span
+                      className="tab-x"
+                      role="button"
+                      tabIndex={-1}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(t.id);
+                      }}
+                    >
+                      <X size={12} />
+                    </span>
                   </PerfGate>
                 </motion.button>
               ))}
@@ -2655,7 +2702,12 @@ export function App() {
         <div className={`bar ${settings.uiGlass ? 'glass' : ''} ${activeIsTor ? 'tor-mode' : ''}`}>
           <div className="bar-nav">
             {!settings.showSidebar && (
-              <button type="button" className="icon-btn" onClick={toggleSidebar} title="Pokaż sidebar (Ctrl+B)">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={toggleSidebar}
+                title="Pokaż sidebar (Ctrl+B)"
+              >
                 <PanelLeft size={16} strokeWidth={1.75} />
               </button>
             )}
@@ -2831,7 +2883,11 @@ export function App() {
                   onClick={() => openBookmarkDialog()}
                   style={{ opacity: isBookmarkableUrl(active?.url) ? 1 : 0.35 }}
                 >
-                  <Star size={16} strokeWidth={1.75} fill={pageBookmarked ? 'currentColor' : 'none'} />
+                  <Star
+                    size={16}
+                    strokeWidth={1.75}
+                    fill={pageBookmarked ? 'currentColor' : 'none'}
+                  />
                 </button>
                 {bookmarkPop ? (
                   <BookmarkPopover
@@ -2858,7 +2914,9 @@ export function App() {
                 style={{ opacity: settings.passwordsEnabled && !activeIsTor ? 1 : 0.35 }}
               >
                 <KeyRound size={16} strokeWidth={1.75} />
-                {pwForPage > 0 && <span className="adblock-count">{pwForPage > 9 ? '9+' : pwForPage}</span>}
+                {pwForPage > 0 && (
+                  <span className="adblock-count">{pwForPage > 9 ? '9+' : pwForPage}</span>
+                )}
               </button>
               <button
                 type="button"
@@ -2881,7 +2939,9 @@ export function App() {
                 >
                   <Shield size={16} strokeWidth={1.75} />
                   {settings.adblockEnabled && blockedToday > 0 && (
-                    <span className="adblock-count">{blockedToday > 99 ? '99+' : blockedToday}</span>
+                    <span className="adblock-count">
+                      {blockedToday > 99 ? '99+' : blockedToday}
+                    </span>
                   )}
                 </button>
                 {!activeIsTor && (
@@ -2997,7 +3057,8 @@ export function App() {
                 newWindow: () => void window.shell?.newWindow?.(),
                 newPrivateWindow: () => void window.shell?.newWindow?.({ boot: 'private' }),
                 newTorWindow: () => void window.shell?.newWindow?.({ boot: 'tor' }),
-                sidebarMode: (settings.sidebarMode || (settings.showSidebar ? 'on' : 'off')) as SidebarMode,
+                sidebarMode: (settings.sidebarMode ||
+                  (settings.showSidebar ? 'on' : 'off')) as SidebarMode,
                 setSidebarMode: (mode) => patchSettings({ sidebarMode: mode }),
                 openPasswords: () => setSettingsTab('passwords'),
                 openHistory: () => {
@@ -3068,10 +3129,7 @@ export function App() {
           </div>
         </div>
 
-        <BookmarksBar
-          onOpen={openBookmarkUrl}
-          onEdit={(b) => openBookmarkDialog(b.url, b.title)}
-        />
+        <BookmarksBar onOpen={openBookmarkUrl} onEdit={(b) => openBookmarkDialog(b.url, b.title)} />
 
         {findOpen && (
           <FindBar
@@ -3155,7 +3213,10 @@ export function App() {
         <div
           className="stage"
           onDragOver={(e) => {
-            if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('text/uri-list')) {
+            if (
+              e.dataTransfer.types.includes('Files') ||
+              e.dataTransfer.types.includes('text/uri-list')
+            ) {
               e.preventDefault();
               e.dataTransfer.dropEffect = 'copy';
             }
@@ -3171,11 +3232,11 @@ export function App() {
             if (file) {
               const path = (file as File & { path?: string }).path;
               if (path) {
-                  const fileUrl = path.startsWith('file:')
-                    ? path
-                    : `file:///${path.replace(/\\/g, '/').replace(/^\/+/, '')}`;
-                  newTab(fileUrl);
-                }
+                const fileUrl = path.startsWith('file:')
+                  ? path
+                  : `file:///${path.replace(/\\/g, '/').replace(/^\/+/, '')}`;
+                newTab(fileUrl);
+              }
             }
           }}
         >
@@ -3448,7 +3509,9 @@ export function App() {
                   onClick={async () => {
                     try {
                       const t = await navigator.clipboard.readText();
-                      const el = document.getElementById('omnibox-input') as HTMLInputElement | null;
+                      const el = document.getElementById(
+                        'omnibox-input',
+                      ) as HTMLInputElement | null;
                       if (el) {
                         const start = el.selectionStart ?? el.value.length;
                         const end = el.selectionEnd ?? el.value.length;
@@ -3555,7 +3618,8 @@ export function App() {
                 <TriangleAlert size={28} strokeWidth={1.6} />
                 <h2>Połączenie nie jest bezpieczne</h2>
                 <p>
-                  Strona nie odpowiada przez HTTPS. W trybie ścisłym możesz wejść mimo to — ruch będzie nieszyfrowany.
+                  Strona nie odpowiada przez HTTPS. W trybie ścisłym możesz wejść mimo to — ruch
+                  będzie nieszyfrowany.
                 </p>
                 <code className="https-warn-url">{httpsWarn.httpUrl}</code>
                 <div className="https-warn-actions">
@@ -3585,7 +3649,12 @@ export function App() {
           {torError && (
             <div className="tor-error-banner" role="alert">
               <span>{torError}</span>
-              <button type="button" className="icon-btn sm" onClick={() => setTorError(null)} title="Zamknij">
+              <button
+                type="button"
+                className="icon-btn sm"
+                onClick={() => setTorError(null)}
+                title="Zamknij"
+              >
                 <X size={14} />
               </button>
             </div>
@@ -3723,27 +3792,27 @@ export function App() {
               onStartBrowse={(url) => navigateActive(url)}
             />
           )}
-              {isHome && active && !activeIsTor && !isHistoryPage && (
+          {isHome && active && !activeIsTor && !isHistoryPage && (
             <>
               <HomeSearch
-              onGo={(url, query) => {
-                if (windowMode === 'private') {
-                  useStore.getState().newPrivateTab(url);
-                  return;
-                }
-                if (windowMode === 'tor') {
-                  const part = useStore.getState().tabs.find((t) => t.mode === 'tor')?.partition;
-                  if (part) useStore.getState().newTorTab({ url, partition: part });
-                  return;
-                }
-                if (settings.openSearchInNewTab && query) {
-                  pushHistory(query);
-                  newTab(url);
-                  return;
-                }
-                navigateActive(url, query);
-              }}
-            />
+                onGo={(url, query) => {
+                  if (windowMode === 'private') {
+                    useStore.getState().newPrivateTab(url);
+                    return;
+                  }
+                  if (windowMode === 'tor') {
+                    const part = useStore.getState().tabs.find((t) => t.mode === 'tor')?.partition;
+                    if (part) useStore.getState().newTorTab({ url, partition: part });
+                    return;
+                  }
+                  if (settings.openSearchInNewTab && query) {
+                    pushHistory(query);
+                    newTab(url);
+                    return;
+                  }
+                  navigateActive(url, query);
+                }}
+              />
             </>
           )}
           {active?.loadError &&

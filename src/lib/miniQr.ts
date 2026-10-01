@@ -69,7 +69,7 @@ export function buildQrSvg(text: string, size = 180): string {
     for (let yWalk = 0; yWalk < n; yWalk++) {
       for (let dx = 0; dx < 2; dx++) {
         const xx = x - dx;
-        const yy = (Math.floor((n - 1 - x) / 2) % 2 === 0 ? n - 1 - yWalk : yWalk);
+        const yy = Math.floor((n - 1 - x) / 2) % 2 === 0 ? n - 1 - yWalk : yWalk;
         if (xx < 0 || yy < 0 || xx >= n || yy >= n) continue;
         if (grid[yy][xx]) continue;
         // reserved finders already filled

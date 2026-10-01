@@ -64,7 +64,11 @@ export function shouldShowOmniboxGhost(opts: GhostShowOpts): boolean {
 export function ghostNavigateUrl(typed: string, fill: string): string {
   const suffix = matchOmniboxGhost(typed, fill);
   const host = normalizeGhostFill(fill);
-  const completed = suffix ? typed + suffix : host.toLowerCase() === typed.toLowerCase() ? host : typed;
+  const completed = suffix
+    ? typed + suffix
+    : host.toLowerCase() === typed.toLowerCase()
+      ? host
+      : typed;
   if (/^https?:\/\//i.test(completed)) return completed;
   return `https://${completed}`;
 }

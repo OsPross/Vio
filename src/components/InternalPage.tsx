@@ -9,7 +9,14 @@ type Props = {
   maxWidth?: number;
 };
 
-export function InternalPage({ title, subtitle, toolbar, children, className, maxWidth = 960 }: Props) {
+export function InternalPage({
+  title,
+  subtitle,
+  toolbar,
+  children,
+  className,
+  maxWidth = 960,
+}: Props) {
   const style = { '--internal-page-max': `${maxWidth}px` } as CSSProperties;
 
   return (

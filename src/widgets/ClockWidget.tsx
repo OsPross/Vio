@@ -72,12 +72,12 @@ export function ClockWidget({ size = 'L', reduced }: { size?: 'S' | 'M' | 'L'; r
   });
 
   return (
-    <div
-      className={`hw-clock hw-size-${size} hw-clock-style-${settings.homeClockStyle || 'thin'}`}
-    >
+    <div className={`hw-clock hw-size-${size} hw-clock-style-${settings.homeClockStyle || 'thin'}`}>
       {(settings.homeShowClock || settings.homeShowDate) && (
         <div className="home-time">
-          {settings.homeShowClock && <ClockDigits value={timeStr} animate={!reduced && !showSeconds} />}
+          {settings.homeShowClock && (
+            <ClockDigits value={timeStr} animate={!reduced && !showSeconds} />
+          )}
           {settings.homeShowDate && <span className="home-date">{dateStr}</span>}
         </div>
       )}

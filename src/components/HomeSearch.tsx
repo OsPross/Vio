@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { LayoutGrid, Plus } from 'lucide-react';
-import {
-  migrateHomeWidgets,
-  normalizeHomeWidgets,
-  useStore,
-  type HomeWidget,
-} from '../store';
+import { migrateHomeWidgets, normalizeHomeWidgets, useStore, type HomeWidget } from '../store';
 import { homeBgCssUrl } from '../lib/homeBg';
 import { WidgetStrip } from '../widgets/WidgetStrip';
 import { AddWidgetGallery } from '../widgets/AddWidgetGallery';
@@ -22,7 +17,8 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
   const reduced =
     settings.perfReduceMotion ||
     !settings.uiMotion ||
-    (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    (typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   const drift = settings.bgStyle === 'soft' && !reduced && !settings.perfLowPowerClock;
 

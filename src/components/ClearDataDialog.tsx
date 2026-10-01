@@ -54,11 +54,7 @@ export function ClearDataDialog({
   };
 
   return (
-    <div
-      className="clear-data-backdrop"
-      role="presentation"
-      onMouseDown={() => !busy && onClose()}
-    >
+    <div className="clear-data-backdrop" role="presentation" onMouseDown={() => !busy && onClose()}>
       <div
         className="clear-data-dialog"
         role="dialog"
@@ -78,10 +74,20 @@ export function ClearDataDialog({
           />
         </label>
         <div className="clear-data-actions">
-          <button type="button" className="history-sbtn secondary" disabled={busy} onClick={onClose}>
+          <button
+            type="button"
+            className="history-sbtn secondary"
+            disabled={busy}
+            onClick={onClose}
+          >
             Anuluj
           </button>
-          <button type="button" className="history-sbtn danger-text" disabled={busy} onClick={() => void runClear()}>
+          <button
+            type="button"
+            className="history-sbtn danger-text"
+            disabled={busy}
+            onClick={() => void runClear()}
+          >
             Wyczyść
           </button>
         </div>

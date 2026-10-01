@@ -63,19 +63,28 @@ export function ExtensionsPage() {
       <header className="internal-page-head">
         <div className="internal-page-head-text">
           <h1>
-            <Puzzle size={22} strokeWidth={1.75} style={{ verticalAlign: '-4px', marginRight: 8 }} />
+            <Puzzle
+              size={22}
+              strokeWidth={1.75}
+              style={{ verticalAlign: '-4px', marginRight: 8 }}
+            />
             Rozszerzenia
           </h1>
           <p className="internal-page-subtitle">
-            <code>session.loadExtension</code> (MV3 gdzie Electron pozwala). Tor — nigdy. Prywatne — tylko
-            gdy włączysz per rozszerzenie.
+            <code>session.loadExtension</code> (MV3 gdzie Electron pozwala). Tor — nigdy. Prywatne —
+            tylko gdy włączysz per rozszerzenie.
           </p>
         </div>
         <div className="internal-page-toolbar extensions-actions">
           <button type="button" className="sbtn" onClick={() => void reload()} title="Odśwież">
             <RefreshCw size={14} />
           </button>
-          <button type="button" className="sbtn primary" disabled={busy} onClick={() => void installFolder()}>
+          <button
+            type="button"
+            className="sbtn primary"
+            disabled={busy}
+            onClick={() => void installFolder()}
+          >
             <FolderOpen size={14} />
             Folder / ZIP / CRX…
           </button>
@@ -95,7 +104,12 @@ export function ExtensionsPage() {
           }}
           disabled={busy}
         />
-        <button type="button" className="sbtn" disabled={busy || !storeInput.trim()} onClick={() => void installStore()}>
+        <button
+          type="button"
+          className="sbtn"
+          disabled={busy || !storeInput.trim()}
+          onClick={() => void installStore()}
+        >
           Zainstaluj
         </button>
       </div>
@@ -107,8 +121,9 @@ export function ExtensionsPage() {
           <div className="extensions-empty">
             <p>Brak zainstalowanych rozszerzeń.</p>
             <p className="muted">
-              Wskaż rozpakowany katalog, plik .zip/.crx albo wklej link Chrome Web Store. Pełne popupy
-              chrome.action wymagają biblioteki electron-chrome-extensions (na razie niepodłączonej).
+              Wskaż rozpakowany katalog, plik .zip/.crx albo wklej link Chrome Web Store. Pełne
+              popupy chrome.action wymagają biblioteki electron-chrome-extensions (na razie
+              niepodłączonej).
             </p>
           </div>
         ) : (
@@ -141,7 +156,9 @@ export function ExtensionsPage() {
                     type="checkbox"
                     checked={ext.enabled}
                     onChange={(e) => {
-                      void window.shell?.extensionsSetEnabled?.(ext.id, e.target.checked).then(() => reload());
+                      void window.shell
+                        ?.extensionsSetEnabled?.(ext.id, e.target.checked)
+                        .then(() => reload());
                     }}
                   />
                   Włączone
@@ -151,17 +168,24 @@ export function ExtensionsPage() {
                     type="checkbox"
                     checked={ext.allowPrivate}
                     onChange={(e) => {
-                      void window.shell?.extensionsSetPrivate?.(ext.id, e.target.checked).then(() => reload());
+                      void window.shell
+                        ?.extensionsSetPrivate?.(ext.id, e.target.checked)
+                        .then(() => reload());
                     }}
                   />
                   W prywatnym
                 </label>
-                <label className="extensions-toggle" title="Ikona na pasku (bez pełnego chrome.action)">
+                <label
+                  className="extensions-toggle"
+                  title="Ikona na pasku (bez pełnego chrome.action)"
+                >
                   <input
                     type="checkbox"
                     checked={!!ext.pinned}
                     onChange={(e) => {
-                      void window.shell?.extensionsSetPinned?.(ext.id, e.target.checked).then(() => reload());
+                      void window.shell
+                        ?.extensionsSetPinned?.(ext.id, e.target.checked)
+                        .then(() => reload());
                     }}
                   />
                   <Pin size={12} />
@@ -186,8 +210,10 @@ export function ExtensionsPage() {
 
       <footer className="extensions-foot muted">
         <p>
-          Trade-off: natywne <code>loadExtension</code> nie emuluje <code>chrome.tabs</code> / action popup.
-          <code> electron-chrome-extensions</code> dodałaby te API kosztem utrzymania — celowo odłożone.
+          Trade-off: natywne <code>loadExtension</code> nie emuluje <code>chrome.tabs</code> /
+          action popup.
+          <code> electron-chrome-extensions</code> dodałaby te API kosztem utrzymania — celowo
+          odłożone.
         </p>
       </footer>
     </div>

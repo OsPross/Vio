@@ -266,7 +266,9 @@ export function SearchWidget({
     const t = q.trim().toLowerCase();
     if (!t) {
       if (!settings.suggestHistory) return [];
-      return queryHistory.slice(0, 5).map((h) => ({ kind: 'history' as const, title: h.q, subtitle: 'Historia' }));
+      return queryHistory
+        .slice(0, 5)
+        .map((h) => ({ kind: 'history' as const, title: h.q, subtitle: 'Historia' }));
     }
     if (t.startsWith('!')) {
       if (!settings.suggestBangs) return [];
@@ -318,7 +320,8 @@ export function SearchWidget({
 
   const showSuggest = !inPreview && focused && suggestions.length > 0;
   const engineName = engineLabel(settings.searchEngine);
-  const placeholder = settings.homePlaceholder?.trim() || `Szukaj w ${engineName} albo wklej adres…`;
+  const placeholder =
+    settings.homePlaceholder?.trim() || `Szukaj w ${engineName} albo wklej adres…`;
 
   const run = (title?: string, fill?: string) => {
     if (fill) {
@@ -347,7 +350,11 @@ export function SearchWidget({
           setQ(s.fill);
           return;
         }
-        run(s?.kind === 'search' || s?.kind === 'history' || s?.kind === 'remote' ? s.title : undefined);
+        run(
+          s?.kind === 'search' || s?.kind === 'history' || s?.kind === 'remote'
+            ? s.title
+            : undefined,
+        );
       }}
     >
       <div className="home-search-inner" ref={innerRef}>

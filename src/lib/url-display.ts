@@ -264,11 +264,7 @@ export function formatUrlForDisplay(url: string, opts?: { maxLen?: number }): Di
     let path = parsed.pathname + parsed.hash;
     if (path === '/') path = '';
 
-    const showQuery =
-      !path &&
-      parsed.search &&
-      parsed.search.length > 1 &&
-      !detectSearch(parsed);
+    const showQuery = !path && parsed.search && parsed.search.length > 1 && !detectSearch(parsed);
 
     if (showQuery) {
       path = parsed.search;
@@ -304,12 +300,25 @@ export function formatUrlPlain(url: string, opts?: { maxLen?: number }): string 
 }
 
 /** Omnibox / suggest: shorten URL subtitles while keeping human labels. */
-export function formatSuggestSubtitle(subtitle: string | undefined, itemUrl?: string): string | undefined {
+export function formatSuggestSubtitle(
+  subtitle: string | undefined,
+  itemUrl?: string,
+): string | undefined {
   if (!subtitle) return undefined;
-  const fixed = new Set(['Zapytanie', 'Przełącz na kartę', 'Skrót', 'Sugestia', 'Dopełnienie · Tab']);
+  const fixed = new Set([
+    'Zapytanie',
+    'Przełącz na kartę',
+    'Skrót',
+    'Sugestia',
+    'Dopełnienie · Tab',
+  ]);
   if (fixed.has(subtitle)) return subtitle;
   const candidate = itemUrl || subtitle;
-  if (/^https?:\/\//i.test(candidate) || /^about:/i.test(candidate) || candidate.startsWith('file:')) {
+  if (
+    /^https?:\/\//i.test(candidate) ||
+    /^about:/i.test(candidate) ||
+    candidate.startsWith('file:')
+  ) {
     return formatUrlPlain(candidate);
   }
   return subtitle;

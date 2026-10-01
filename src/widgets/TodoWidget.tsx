@@ -59,7 +59,8 @@ export function TodoWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?:
                 className={`hw-todo-check ${t.done ? 'on' : ''}`}
                 disabled={preview}
                 onClick={() =>
-                  !preview && setTodos(todos.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))
+                  !preview &&
+                  setTodos(todos.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))
                 }
                 aria-label={t.done ? 'Odznacz' : 'Zaznacz'}
               />

@@ -9,8 +9,9 @@ export function buildSessionSnapshot(
   navByTabId: Record<string, Tab['navHistory']>,
 ) {
   const normal = tabs.filter((t) => !isTorTab(t));
-  const active =
-    normal.some((t) => t.id === activeId) ? activeId : normal.find((t) => t.pinned)?.id || normal[0]?.id || null;
+  const active = normal.some((t) => t.id === activeId)
+    ? activeId
+    : normal.find((t) => t.pinned)?.id || normal[0]?.id || null;
 
   return {
     activeId: active,

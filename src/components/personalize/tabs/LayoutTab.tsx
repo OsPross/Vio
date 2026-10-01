@@ -18,9 +18,8 @@ const RADIUS = [
 ] as const;
 
 function nearestRadius(n: number) {
-  return RADIUS.reduce((best, r) =>
-    Math.abs(r.value - n) < Math.abs(best.value - n) ? r : best,
-  ).value;
+  return RADIUS.reduce((best, r) => (Math.abs(r.value - n) < Math.abs(best.value - n) ? r : best))
+    .value;
 }
 
 export function LayoutTab() {
