@@ -578,13 +578,9 @@ app.whenReady().then(async () => {
   await perf.applySessionPerf(ses, { cacheMb: boot.cacheMb });
   spellcheck.applyToSession(ses, { tor: false });
 
-  try {
-    if (typeof ses.registerPreloadScript === 'function') {
-      ses.registerPreloadScript({ type: 'frame', filePath: wvPreloadPath });
-    }
-  } catch (err) {
-    console.warn('[security] webview preload:', err);
-  }
+  // Guest preload is set ONLY via will-attach-webview (security.attachWebviewGuard).
+  // Session-wide frame preloads were removed — they re-ran the guest script in the
+  // main frame AND every iframe (double contextBridge + unwanted iframe injection).
 
   passwords.init({
     onLock: () => {

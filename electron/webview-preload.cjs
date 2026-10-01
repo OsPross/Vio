@@ -2,34 +2,34 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Proof / diagnostics: one execution per document in the webview main frame.
+// will-attach-webview sets preload only on the guest main world — iframes must not load this file.
+const __djxxrPreloadRunId = `wv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 try {
-  if (!globalThis.__djxxrPwBridge) {
-    globalThis.__djxxrPwBridge = true;
-    contextBridge.exposeInMainWorld('__djxxrPw', {
-      post: (type, payload) => {
-        if (typeof type !== 'string') return;
-        ipcRenderer.sendToHost('djxxr-pw', { type, payload: payload || {} });
-      },
-      onCommand: (cb) => {
-        if (typeof cb !== 'function') return () => {};
-        const handler = (_e, msg) => {
-          try {
-            cb(msg);
-          } catch {
-            /* */
-          }
-        };
-        ipcRenderer.on('djxxr-pw-cmd', handler);
-        return () => ipcRenderer.removeListener('djxxr-pw-cmd', handler);
-      },
-    });
-  }
-} catch (err) {
-  // Already exposed (preload registered twice) — ignore
-  if (!/already|existing property/i.test(String(err && err.message))) {
-    console.warn('[webview-preload] bridge', err);
-  }
+  const frame = typeof window !== 'undefined' && window === window.top ? 'main' : 'subframe';
+  console.debug('[webview-preload] run', { id: __djxxrPreloadRunId, frame });
+} catch {
+  console.debug('[webview-preload] run', { id: __djxxrPreloadRunId });
 }
+
+contextBridge.exposeInMainWorld('__djxxrPw', {
+  post: (type, payload) => {
+    if (typeof type !== 'string') return;
+    ipcRenderer.sendToHost('djxxr-pw', { type, payload: payload || {} });
+  },
+  onCommand: (cb) => {
+    if (typeof cb !== 'function') return () => {};
+    const handler = (_e, msg) => {
+      try {
+        cb(msg);
+      } catch {
+        /* */
+      }
+    };
+    ipcRenderer.on('djxxr-pw-cmd', handler);
+    return () => ipcRenderer.removeListener('djxxr-pw-cmd', handler);
+  },
+});
 
 /** Video presence / playback → chrome PiP button */
 function reportMedia() {
