@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'motion/react';
 import {
   ArrowLeft,
@@ -23,28 +23,19 @@ import {
   X,
 } from 'lucide-react';
 import { HomeSearch } from './components/HomeSearch';
-import { DownloadsButton, DownloadsPage } from './components/DownloadsUI';
-import { CommandPalette } from './components/CommandPalette';
-import { HistoryPage } from './components/HistoryPage';
-import { ClearDataDialog } from './components/ClearDataDialog';
-import { BookmarksPage } from './components/BookmarksPage';
-import { ExtensionsPage } from './components/ExtensionsPage';
+import { DownloadsButton } from './components/DownloadsUI';
 import { BookmarksBar } from './components/BookmarksBar';
 import { BookmarkPopover } from './components/BookmarkPopover';
 import { AppMenu, type SidebarMode } from './components/AppMenu';
-import { AboutDialog, QrShareDialog } from './components/AppDialogs';
 import { FindBar } from './components/FindBar';
 import { ErrorPage } from './components/ErrorPage';
 import { PerfGate } from './components/PerfGate';
 import { hostFromPageUrl, zoomFactorForHost } from './lib/pageHost';
 import { setWindowBoot, getWindowPartition } from './lib/windowBoot';
 import { bindCommandHost } from './lib/commands';
-import { AboutPage } from './components/AboutPage';
 import { OmniboxSuggest } from './components/OmniboxSuggest';
-import { SettingsPage } from './components/SettingsPage';
-import { AppSidebar } from './components/AppSidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { MetricsDot, TaskManagerOverlay } from './components/metrics/ResourcesPanel';
+import { MetricsDot } from './components/metrics/ResourcesPanel';
 import { useMetrics, useMetricsGuests } from './lib/useMetrics';
 import type { MetricsGuest } from './lib/metricsTypes';
 import {
@@ -66,10 +57,9 @@ import {
   type ThemeId,
 } from './store';
 import { buildSessionSnapshot } from './lib/sessionSnapshot';
-import { TorLanding, type TorStatusInfo } from './components/TorLanding';
-import { ShieldPanel } from './components/ShieldPanel';
 import { Switch } from './components/ui/Switch';
 import { formatUrlPlain } from './lib/url-display';
+import type { TorStatusInfo } from './components/TorLanding';
 import {
   chromeShortcutAllowedInEditable,
   isEditableDomTarget,
@@ -79,7 +69,6 @@ import {
   type ShortcutHandlerKey,
   type ShortcutInput,
 } from './lib/shortcutsRegistry';
-
 import { TabWebview, markTypedUrl, recordVisitFromTab, type WebviewEl, type SaveOffer } from './features/tabs';
 import {
   draftForUrl,
@@ -88,6 +77,57 @@ import {
   titleForInternalUrl,
 } from './lib/tabNavigate';
 
+/** Heavy routes / dialogs — not needed for first paint */
+const SettingsPage = lazy(() =>
+  import('./components/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+);
+const AboutPage = lazy(() =>
+  import('./components/AboutPage').then((m) => ({ default: m.AboutPage })),
+);
+const HistoryPage = lazy(() =>
+  import('./components/HistoryPage').then((m) => ({ default: m.HistoryPage })),
+);
+const BookmarksPage = lazy(() =>
+  import('./components/BookmarksPage').then((m) => ({ default: m.BookmarksPage })),
+);
+const ExtensionsPage = lazy(() =>
+  import('./components/ExtensionsPage').then((m) => ({ default: m.ExtensionsPage })),
+);
+const DownloadsPage = lazy(() =>
+  import('./components/DownloadsUI').then((m) => ({ default: m.DownloadsPage })),
+);
+const CommandPalette = lazy(() =>
+  import('./components/CommandPalette').then((m) => ({ default: m.CommandPalette })),
+);
+const ClearDataDialog = lazy(() =>
+  import('./components/ClearDataDialog').then((m) => ({ default: m.ClearDataDialog })),
+);
+const AboutDialog = lazy(() =>
+  import('./components/AppDialogs').then((m) => ({ default: m.AboutDialog })),
+);
+const QrShareDialog = lazy(() =>
+  import('./components/AppDialogs').then((m) => ({ default: m.QrShareDialog })),
+);
+const TaskManagerOverlay = lazy(() =>
+  import('./components/metrics/ResourcesPanel').then((m) => ({ default: m.TaskManagerOverlay })),
+);
+const AppSidebar = lazy(() =>
+  import('./components/AppSidebar').then((m) => ({ default: m.AppSidebar })),
+);
+const ShieldPanel = lazy(() =>
+  import('./components/ShieldPanel').then((m) => ({ default: m.ShieldPanel })),
+);
+const TorLanding = lazy(() =>
+  import('./components/TorLanding').then((m) => ({ default: m.TorLanding })),
+);
+
+function LazyFallback({ label }: { label?: string }) {
+  return (
+    <div className="lazy-route-fallback" role="status" aria-live="polite">
+      {label || 'Ładowanie…'}
+    </div>
+  );
+}
 
 export function App() {
   const tabs = useStore((s) => s.tabs);
@@ -1723,23 +1763,27 @@ export function App() {
   const shell = (node: React.ReactNode) => (
     <MotionConfig reducedMotion={motionOff ? 'always' : 'never'}>
       {node}
-      <TaskManagerOverlay open={taskMgrOpen} onClose={() => setTaskMgrOpen(false)} />
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        onNavigate={(url, opts) => {
-          if (opts?.newTab) newTab(normalizeInput(url, settings, bangs));
-          else go(url);
-        }}
-        onSwitchTab={(id) => {
-          setActive(id);
-          setView('browser');
-        }}
-        onRunBang={(fill) => {
-          setDraft(fill);
-          document.getElementById('omnibox-input')?.focus();
-        }}
-      />
+      <Suspense fallback={null}>
+        <TaskManagerOverlay open={taskMgrOpen} onClose={() => setTaskMgrOpen(false)} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          onNavigate={(url, opts) => {
+            if (opts?.newTab) newTab(normalizeInput(url, settings, bangs));
+            else go(url);
+          }}
+          onSwitchTab={(id) => {
+            setActive(id);
+            setView('browser');
+          }}
+          onRunBang={(fill) => {
+            setDraft(fill);
+            document.getElementById('omnibox-input')?.focus();
+          }}
+        />
+      </Suspense>
     </MotionConfig>
   );
 
@@ -1748,7 +1792,9 @@ export function App() {
       <div className={`app settings-mode ${settings.uiGlass ? 'glass-on' : ''}`}>
         <div className="drag-strip absolute-drag" />
         <ErrorBoundary name="settings">
-          <SettingsPage />
+          <Suspense fallback={<LazyFallback label="Ustawienia…" />}>
+            <SettingsPage />
+          </Suspense>
         </ErrorBoundary>
       </div>,
     );
@@ -1833,7 +1879,9 @@ export function App() {
           }}
         >
           <ErrorBoundary name="sidebar">
-            <AppSidebar onHome={() => navigateActive(HOME_URL)} onOpenTab={(url) => newTab(url)} />
+            <Suspense fallback={null}>
+              <AppSidebar onHome={() => navigateActive(HOME_URL)} onOpenTab={(url) => newTab(url)} />
+            </Suspense>
           </ErrorBoundary>
         </div>
       )}
@@ -2244,27 +2292,56 @@ export function App() {
                   )}
                 </button>
                 {!activeIsTor && (
-                  <ShieldPanel
-                    open={shieldOpen}
-                    onClose={() => setShieldOpen(false)}
-                    pageUrl={active?.url || ''}
-                    blockedToday={blockedToday}
-                    protectionOn={
-                      !!active?.url &&
-                      !settings.privacySiteExceptions.some((ex) => {
+                  <Suspense fallback={null}>
+                    <ShieldPanel
+                      open={shieldOpen}
+                      onClose={() => setShieldOpen(false)}
+                      pageUrl={active?.url || ''}
+                      blockedToday={blockedToday}
+                      protectionOn={
+                        !!active?.url &&
+                        !settings.privacySiteExceptions.some((ex) => {
+                          try {
+                            const h = new URL(active.url).hostname;
+                            return h === ex || h.endsWith(`.${ex}`);
+                          } catch {
+                            return false;
+                          }
+                        })
+                      }
+                      onToggleProtection={(on) => {
                         try {
-                          const h = new URL(active.url).hostname;
-                          return h === ex || h.endsWith(`.${ex}`);
+                          const h = new URL(active?.url || '').hostname.replace(/^www\./, '');
+                          const base = h.split('.').slice(-2).join('.');
+                          if (!on) {
+                            patchSettings({
+                              privacySiteExceptions: [
+                                ...new Set([...(settings.privacySiteExceptions || []), base || h]),
+                              ],
+                            });
+                            void window.shell?.privacyExceptionAdd?.(base || h);
+                            const el = currentView();
+                            try {
+                              el?.reloadIgnoringCache?.();
+                            } catch {
+                              el?.reload?.();
+                            }
+                          } else {
+                            patchSettings({
+                              privacySiteExceptions: (settings.privacySiteExceptions || []).filter(
+                                (x) => x !== base && x !== h,
+                              ),
+                            });
+                            void window.shell?.privacyExceptionRemove?.(base || h);
+                          }
                         } catch {
-                          return false;
+                          /* */
                         }
-                      })
-                    }
-                    onToggleProtection={(on) => {
-                      try {
-                        const h = new URL(active?.url || '').hostname.replace(/^www\./, '');
-                        const base = h.split('.').slice(-2).join('.');
-                        if (!on) {
+                      }}
+                      onDisableOnThisPage={() => {
+                        try {
+                          const h = new URL(active?.url || '').hostname.replace(/^www\./, '');
+                          const base = h.split('.').slice(-2).join('.');
                           patchSettings({
                             privacySiteExceptions: [
                               ...new Set([...(settings.privacySiteExceptions || []), base || h]),
@@ -2277,43 +2354,16 @@ export function App() {
                           } catch {
                             el?.reload?.();
                           }
-                        } else {
-                          patchSettings({
-                            privacySiteExceptions: (settings.privacySiteExceptions || []).filter(
-                              (x) => x !== base && x !== h,
-                            ),
-                          });
-                          void window.shell?.privacyExceptionRemove?.(base || h);
-                        }
-                      } catch {
-                        /* */
-                      }
-                    }}
-                    onDisableOnThisPage={() => {
-                      try {
-                        const h = new URL(active?.url || '').hostname.replace(/^www\./, '');
-                        const base = h.split('.').slice(-2).join('.');
-                        patchSettings({
-                          privacySiteExceptions: [
-                            ...new Set([...(settings.privacySiteExceptions || []), base || h]),
-                          ],
-                        });
-                        void window.shell?.privacyExceptionAdd?.(base || h);
-                        const el = currentView();
-                        try {
-                          el?.reloadIgnoringCache?.();
                         } catch {
-                          el?.reload?.();
+                          /* */
                         }
-                      } catch {
-                        /* */
-                      }
-                    }}
-                    onForget={() => {
-                      void window.shell?.privacyForgetSite?.(active?.url || '');
-                      setShieldOpen(false);
-                    }}
-                  />
+                      }}
+                      onForget={() => {
+                        void window.shell?.privacyForgetSite?.(active?.url || '');
+                        setShieldOpen(false);
+                      }}
+                    />
+                  </Suspense>
                 )}
               </div>
             </div>
@@ -2495,19 +2545,27 @@ export function App() {
           </div>
         )}
         {qrOpen && pageUrlForShare && (
-          <QrShareDialog url={pageUrlForShare} onClose={() => setQrOpen(false)} />
+          <Suspense fallback={null}>
+            <QrShareDialog url={pageUrlForShare} onClose={() => setQrOpen(false)} />
+          </Suspense>
         )}
         {clearDataOpen && (
-          <ClearDataDialog
-            open={clearDataOpen}
-            onClose={() => setClearDataOpen(false)}
-            onConfirm={async (range) => {
-              await window.shell?.historyClear?.({ range });
-              setClearDataOpen(false);
-            }}
-          />
+          <Suspense fallback={null}>
+            <ClearDataDialog
+              open={clearDataOpen}
+              onClose={() => setClearDataOpen(false)}
+              onConfirm={async (range) => {
+                await window.shell?.historyClear?.({ range });
+                setClearDataOpen(false);
+              }}
+            />
+          </Suspense>
         )}
-        {aboutInfo && <AboutDialog info={aboutInfo} onClose={() => setAboutInfo(null)} />}
+        {aboutInfo && (
+          <Suspense fallback={null}>
+            <AboutDialog info={aboutInfo} onClose={() => setAboutInfo(null)} />
+          </Suspense>
+        )}
 
         <div
           className="stage"
@@ -3061,51 +3119,63 @@ export function App() {
           )}
           {isHistoryPage && active && (
             <ErrorBoundary name="about:history">
-              <HistoryPage
-                onOpen={(url) => {
-                  navigateActive(url);
-                }}
-                onOpenNewTab={(url) => newTab(url)}
-              />
+              <Suspense fallback={<LazyFallback />}>
+                <HistoryPage
+                  onOpen={(url) => {
+                    navigateActive(url);
+                  }}
+                  onOpenNewTab={(url) => newTab(url)}
+                />
+              </Suspense>
             </ErrorBoundary>
           )}
           {isDownloadsPage && active && (
             <ErrorBoundary name="about:downloads">
-              <DownloadsPage />
+              <Suspense fallback={<LazyFallback />}>
+                <DownloadsPage />
+              </Suspense>
             </ErrorBoundary>
           )}
           {isBookmarksPage && active && (
             <ErrorBoundary name="about:bookmarks">
-              <BookmarksPage
-                onOpen={openBookmarkUrl}
-                onEditBookmark={(b) => openBookmarkDialog(b.url, b.title)}
-              />
+              <Suspense fallback={<LazyFallback />}>
+                <BookmarksPage
+                  onOpen={openBookmarkUrl}
+                  onEditBookmark={(b) => openBookmarkDialog(b.url, b.title)}
+                />
+              </Suspense>
             </ErrorBoundary>
           )}
           {isExtensionsPage && active && (
             <ErrorBoundary name="about:extensions">
-              <ExtensionsPage />
+              <Suspense fallback={<LazyFallback />}>
+                <ExtensionsPage />
+              </Suspense>
             </ErrorBoundary>
           )}
           {isAboutPage && (
             <ErrorBoundary name="about:about">
-              <AboutPage />
+              <Suspense fallback={<LazyFallback />}>
+                <AboutPage />
+              </Suspense>
             </ErrorBoundary>
           )}
           {isTorHome && active && (
-            <TorLanding
-              info={torInfo}
-              busy={torBusy}
-              error={torError}
-              progress={torProgress}
-              showDisclaimer={!settings.torSeenDisclaimer}
-              onDismissDisclaimer={() => patchSettings({ torSeenDisclaimer: true })}
-              onRefresh={() => {
-                void window.shell?.torRefresh?.().then((st) => setTorInfo(st || null));
-              }}
-              onNewIdentity={() => void requestNewIdentity()}
-              onStartBrowse={(url) => navigateActive(url)}
-            />
+            <Suspense fallback={<LazyFallback />}>
+              <TorLanding
+                info={torInfo}
+                busy={torBusy}
+                error={torError}
+                progress={torProgress}
+                showDisclaimer={!settings.torSeenDisclaimer}
+                onDismissDisclaimer={() => patchSettings({ torSeenDisclaimer: true })}
+                onRefresh={() => {
+                  void window.shell?.torRefresh?.().then((st) => setTorInfo(st || null));
+                }}
+                onNewIdentity={() => void requestNewIdentity()}
+                onStartBrowse={(url) => navigateActive(url)}
+              />
+            </Suspense>
           )}
           {isHome && active && !activeIsTor && !isHistoryPage && (
             <>

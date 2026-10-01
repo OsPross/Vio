@@ -289,6 +289,14 @@ button {
   height: 100%;
 }
 
+.lazy-route-fallback {
+  display: grid;
+  place-items: center;
+  min-height: 40vh;
+  color: var(--muted, #888);
+  font: 500 14px/1.4 var(--font-ui, system-ui, sans-serif);
+}
+
 .side-shell {
   display: flex;
   flex-direction: row;
