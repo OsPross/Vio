@@ -472,6 +472,73 @@ declare global {
         url?: string;
       }>;
       homeBgClear: () => Promise<{ ok: boolean }>;
+      notesList: (opts?: { q?: string }) => Promise<{
+        ok: boolean;
+        notes?: {
+          id: string;
+          title: string;
+          body: string;
+          createdAt: number;
+          updatedAt: number;
+        }[];
+        error?: string;
+      }>;
+      notesGet: (id: string) => Promise<{
+        ok: boolean;
+        note?: {
+          id: string;
+          title: string;
+          body: string;
+          createdAt: number;
+          updatedAt: number;
+        };
+        error?: string;
+      }>;
+      notesCreate: (opts?: { body?: string; title?: string }) => Promise<{
+        ok: boolean;
+        note?: {
+          id: string;
+          title: string;
+          body: string;
+          createdAt: number;
+          updatedAt: number;
+        };
+        error?: string;
+      }>;
+      notesUpdate: (
+        id: string,
+        patch?: { body?: string; title?: string },
+      ) => Promise<{
+        ok: boolean;
+        note?: {
+          id: string;
+          title: string;
+          body: string;
+          createdAt: number;
+          updatedAt: number;
+        };
+        error?: string;
+      }>;
+      notesDelete: (id: string) => Promise<{ ok: boolean; error?: string }>;
+      notesMigrateLegacy: (text: string) => Promise<{
+        ok: boolean;
+        migrated?: boolean;
+        note?: {
+          id: string;
+          title: string;
+          body: string;
+          createdAt: number;
+          updatedAt: number;
+        };
+        notes?: {
+          id: string;
+          title: string;
+          body: string;
+          createdAt: number;
+          updatedAt: number;
+        }[];
+        error?: string;
+      }>;
       onHttpsWarn: (cb: (payload: { httpUrl: string; httpsUrl?: string; errorCode?: number }) => void) => () => void;
       pictureInPicture: (
         webContentsId: number,
