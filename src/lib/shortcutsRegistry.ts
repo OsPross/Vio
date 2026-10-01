@@ -399,7 +399,7 @@ export const CHROME_SHORTCUTS: ChromeShortcutDef[] = [
     handlerKey: 'taskManager',
     accelerator: 'Shift+Esc',
     description: 'Menedżer zadań',
-    guest: false,
+    guest: true,
     match: (i) => i.shift && !isMod(i) && !i.alt && i.key === 'Escape',
   },
   {
@@ -451,6 +451,64 @@ export function matchChromeShortcut(input: ShortcutInput): ShortcutHandlerKey | 
 export function isGuestChromeShortcut(input: ShortcutInput): boolean {
   for (const def of CHROME_SHORTCUTS) {
     if (def.guest && def.match(input)) return true;
+  }
+  return false;
+}
+
+/**
+ * Chrome chrome shortcuts that MUST fire even when focus is in an input /
+ * textarea / contenteditable (omnibox, YouTube search, Google Docs, Discord…).
+ * Everything else is left to the field (Backspace, Ctrl+A/C/V/X/Z, arrows…).
+ */
+const ALLOWED_IN_EDITABLE = new Set<ShortcutHandlerKey>([
+  'newTab',
+  'newWindow',
+  'newPrivateWindow',
+  'newTorWindow',
+  'closeTab',
+  'reopenClosedTab',
+  'nextTab',
+  'prevTab',
+  'activateTab1',
+  'activateTab2',
+  'activateTab3',
+  'activateTab4',
+  'activateTab5',
+  'activateTab6',
+  'activateTab7',
+  'activateTab8',
+  'activateTab9',
+  'focusOmnibox',
+  'reload',
+  'hardReload',
+  'findInPage',
+  'print',
+  'zoomIn',
+  'zoomOut',
+  'zoomReset',
+  'toggleFullscreen',
+  'devtools',
+  'back',
+  'forward',
+  'taskManager',
+  'commandPalette',
+]);
+
+export function chromeShortcutAllowedInEditable(handler: ShortcutHandlerKey | null | undefined): boolean {
+  return !!handler && ALLOWED_IN_EDITABLE.has(handler);
+}
+
+/** INPUT / TEXTAREA / SELECT / contenteditable (incl. nested, like Google Docs). */
+export function isEditableDomTarget(el: EventTarget | null | undefined): boolean {
+  if (!el || !(el instanceof Element)) return false;
+  try {
+    const tag = el.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    const html = el as HTMLElement;
+    if (html.isContentEditable) return true;
+    if (el.closest?.('[contenteditable="true"], [contenteditable=""]')) return true;
+  } catch {
+    /* */
   }
   return false;
 }

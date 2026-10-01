@@ -70,6 +70,8 @@ import { Switch } from './components/ui/Switch';
 import { letterFavicon } from './lib/favicon';
 import { formatUrlPlain } from './lib/url-display';
 import {
+  chromeShortcutAllowedInEditable,
+  isEditableDomTarget,
   matchChromeShortcut,
   shortcutInputFromKeyboardEvent,
   shortcutInputFromPayload,
@@ -1588,9 +1590,7 @@ export function App() {
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Backspace' || e.altKey || e.ctrlKey || e.metaKey) return;
-      const t = e.target as HTMLElement | null;
-      const tag = t?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t?.isContentEditable) return;
+      if (isEditableDomTarget(e.target)) return;
       e.preventDefault();
     };
     window.addEventListener('mouseup', onUp, true);
@@ -2084,32 +2084,11 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement | null;
-      const tag = t?.tagName;
-      const typing =
-        tag === 'INPUT' ||
-        tag === 'TEXTAREA' ||
-        tag === 'SELECT' ||
-        Boolean(t?.isContentEditable);
-      if (typing) {
-        // Text editing keys + IME: never steal. Allow a few Chrome-like chrome shortcuts.
+      if (isEditableDomTarget(e.target)) {
+        // Chrome: browser chrome shortcuts still fire in fields; editing keys stay with the field.
         const input = shortcutInputFromKeyboardEvent(e);
         const handler = matchChromeShortcut(input);
-        const allowInField =
-          handler === 'focusOmnibox' ||
-          handler === 'newTab' ||
-          handler === 'newWindow' ||
-          handler === 'newPrivateWindow' ||
-          handler === 'closeTab' ||
-          handler === 'reopenClosedTab' ||
-          handler === 'nextTab' ||
-          handler === 'prevTab' ||
-          handler === 'reload' ||
-          handler === 'hardReload' ||
-          handler === 'commandPalette' ||
-          (handler && handler.startsWith('activateTab'));
-        // Escape is handled inside OmniboxSuggest (stopPropagation)
-        if (!allowInField) return;
+        if (!chromeShortcutAllowedInEditable(handler)) return;
         if (handleChromeShortcut(input)) e.preventDefault();
         return;
       }

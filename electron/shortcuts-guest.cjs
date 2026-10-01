@@ -52,6 +52,7 @@ const GUEST_MATCHERS = [
   (i) => ctrlOnly(i) && (i.key === '+' || i.key === '='),
   (i) => ctrlOnly(i) && i.key === '-',
   (i) => ctrlOnly(i) && i.key === '0',
+  (i) => i.shift && !isMod(i) && !i.alt && i.key === 'Escape',
 ];
 
 function normalizeInput(input) {
