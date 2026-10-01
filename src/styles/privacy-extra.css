@@ -82,6 +82,13 @@
   gap: 6px;
   margin-bottom: 10px;
 }
+.shield-disable-site {
+  width: 100%;
+  margin-bottom: 8px;
+}
+.shield-panel .sbtn {
+  font-size: 12.5px;
+}
 
 .shield-blocked-label {
   display: block;

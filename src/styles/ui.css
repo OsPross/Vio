@@ -451,3 +451,79 @@
   height: 28px;
   font-size: 12.5px;
 }
+
+/* Global ghost/primary buttons — used outside .settings-page (shield, downloads, about, task mgr) */
+.sbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+.sbtn:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+.sbtn:focus-visible {
+  outline: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+.sbtn.primary {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--fg);
+}
+.sbtn.primary:hover {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.sbtn.ghost {
+  border: 0;
+  background: transparent;
+  color: var(--fg-2);
+  padding: 0 8px;
+  height: 30px;
+}
+.sbtn.ghost:hover {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  color: var(--fg);
+}
+.sbtn.text {
+  border: 0;
+  background: transparent;
+  color: var(--fg-2);
+  padding: 0 4px;
+  height: auto;
+}
+.sbtn.text:hover {
+  color: var(--fg);
+  background: transparent;
+}
+.sbtn.danger-text {
+  border: 0;
+  background: transparent;
+  color: var(--danger, #e55);
+  padding: 0 8px;
+  height: 30px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.sbtn.danger-text:hover {
+  opacity: 0.85;
+  background: color-mix(in srgb, var(--danger, #e55) 10%, transparent);
+}
+.sbtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
