@@ -1321,6 +1321,64 @@ export function applyThemeToDom(settings: Settings) {
 
 const first = uid();
 
+const PERSIST_KEY = 'moja-przegladarka-v8';
+
+type PersistSnapshot = {
+  state: Partial<State>;
+  version?: number;
+};
+
+/** Avoid white screen when localStorage JSON is corrupt — backup + reset. */
+const safePersistStorage = {
+  getItem: (name: string): PersistSnapshot | null => {
+    let raw: string | null = null;
+    try {
+      raw = localStorage.getItem(name);
+    } catch {
+      return null;
+    }
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as PersistSnapshot;
+    } catch (err) {
+      try {
+        localStorage.setItem(`${name}.corrupt-${Date.now()}`, raw);
+        localStorage.removeItem(name);
+      } catch {
+        /* */
+      }
+      console.warn(
+        '[persist] uszkodzony localStorage — przywrócono domyślne ustawienia (kopia .corrupt-*)',
+        err,
+      );
+      try {
+        window.dispatchEvent(
+          new CustomEvent('djxxr-persist-reset', {
+            detail: { reason: 'corrupt-json', key: name },
+          }),
+        );
+      } catch {
+        /* */
+      }
+      return null;
+    }
+  },
+  setItem: (name: string, value: PersistSnapshot) => {
+    try {
+      localStorage.setItem(name, JSON.stringify(value));
+    } catch (err) {
+      console.warn('[persist] setItem failed', err);
+    }
+  },
+  removeItem: (name: string) => {
+    try {
+      localStorage.removeItem(name);
+    } catch {
+      /* */
+    }
+  },
+};
+
 export const useStore = create<State>()(
   persist(
     (set, get) => ({
@@ -1882,7 +1940,8 @@ export const useStore = create<State>()(
         }),
     }),
     {
-      name: 'moja-przegladarka-v8',
+      name: PERSIST_KEY,
+      storage: safePersistStorage,
       partialize: (s) => ({
         settings: s.settings,
         bangs: s.bangs,
