@@ -680,16 +680,24 @@
   font-weight: 500;
 }
 
-/* Clock style */
+/* Clock style — 2 cols so tiles + selection ring fit the controls pane */
 .pz-cstyle-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  /* room for the 2px selection ring so it is not clipped by the scroll pane */
+  padding: 2px;
+  overflow: visible;
 }
 .pz-cstyle-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
   padding: 0;
   border: 0;
   background: transparent;
@@ -697,9 +705,12 @@
   font: inherit;
   color: var(--fg-3);
   text-align: left;
+  box-sizing: border-box;
 }
 .pz-cstyle-face {
   height: 72px;
+  width: 100%;
+  max-width: 100%;
   border-radius: 10px;
   border: 1.5px solid color-mix(in srgb, var(--line) 80%, transparent);
   display: block;
@@ -707,6 +718,7 @@
   background: var(--bg);
   color: var(--fg);
   position: relative;
+  box-sizing: border-box;
 }
 .pz-cstyle-fit {
   width: 100%;
