@@ -1,15 +1,40 @@
 node_modules/
 dist/
 release/
+out/
 tmp-verify/
 .DS_Store
 *.log
+npm-debug.log*
+yarn-error.log*
 .env
 .env.*
+!.env.example
 userData/
+**/userData/
 **/Partitions/
 .vscode/
 *.tsbuildinfo
 tsconfig.tsbuildinfo
 Thumbs.db
 desktop.ini
+
+# Local Electron / browser profile dumps
+**/Cookies
+**/Login Data
+**/History
+**/Web Data
+**/*.heapsnapshot
+
+# Keys & secrets (never commit)
+*.pem
+*.p12
+*.pfx
+*.key
+!electron/tor-keys/*.asc
+id_rsa*
+credentials.json
+**/passwords-store*
+**/vault*
+dev-app-update.yml
+!dev-app-update.yml.example
