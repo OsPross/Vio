@@ -1,7 +1,5 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { MotionConfig } from 'motion/react';
-import { X } from 'lucide-react';
-import { BookmarksBar } from './components/BookmarksBar';
 import { hostFromPageUrl, zoomFactorForHost } from './lib/pageHost';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import {
@@ -21,20 +19,15 @@ import {
 import type { TorStatusInfo } from './components/TorLanding';
 import { isEditableDomTarget } from './lib/shortcutsRegistry';
 import {
-  TabStrip,
   TabContent,
   markTypedUrl,
   recordVisitFromTab,
   type WebviewEl,
   type SaveOffer,
 } from './features/tabs';
-import { BrowserChrome } from './features/omnibox';
+import { AppChrome } from './features/shell';
 import {
-  ChromeOverlays,
-  CrashRestoreOffer,
-  HttpsWarnOverlay,
   ShellOverlays,
-  StageOverlays,
   type AboutInfo,
 } from './features/dialogs';
 import {
@@ -52,9 +45,6 @@ import { useTabLifecycle, useTabMediaFlags } from './hooks/useTabLifecycle';
 /** Heavy routes / dialogs — not needed for first paint */
 const SettingsPage = lazy(() =>
   import('./components/SettingsPage').then((m) => ({ default: m.SettingsPage })),
-);
-const AppSidebar = lazy(() =>
-  import('./components/AppSidebar').then((m) => ({ default: m.AppSidebar })),
 );
 
 function LazyFallback({ label }: { label?: string }) {
@@ -80,10 +70,7 @@ export function App() {
   const pinTab = useStore((s) => s.pinTab);
   const reopenClosedTab = useStore((s) => s.reopenClosedTab);
   const duplicateTab = useStore((s) => s.duplicateTab);
-  const restoreSessionTabs = useStore((s) => s.restoreSessionTabs);
-  const setSessionReady = useStore((s) => s.setSessionReady);
   const setView = useStore((s) => s.setView);
-  const setSettingsTab = useStore((s) => s.setSettingsTab);
   const patchSettings = useStore((s) => s.patchSettings);
   const shortcuts = useStore((s) => s.shortcuts);
   const pushHistory = useStore((s) => s.pushHistory);
@@ -151,7 +138,6 @@ export function App() {
   const [zoomFlash, setZoomFlash] = useState<number | null>(null);
   const [bookmarkPop, setBookmarkPop] = useState<{ url: string; title: string } | null>(null);
   const bookmarkStarRef = useRef<HTMLButtonElement>(null);
-  const bookmarks = useStore((s) => s.bookmarks);
   const [htmlFullscreen, setHtmlFullscreen] = useState(false);
   const [fsToast, setFsToast] = useState(false);
   const [certRemember, setCertRemember] = useState(false);
@@ -826,16 +812,6 @@ export function App() {
     setTaskMgrOpen,
   });
 
-  const pageUrlForShare =
-    active &&
-    !active.url.startsWith('about:') &&
-    active.url !== HOME_URL &&
-    active.url !== TOR_HOME_URL
-      ? active.url
-      : '';
-  const pageBookmarked =
-    !!active?.url && isBookmarkableUrl(active.url) && bookmarks.some((b) => b.url === active.url);
-
   const shell = (node: React.ReactNode) => (
     <MotionConfig reducedMotion={motionOff ? 'always' : 'never'}>
       {node}
@@ -864,346 +840,131 @@ export function App() {
   }
 
   return shell(
-    <div
-      className={[
-        'app',
-        settings.sidebarMode === 'off' || settings.sidebarMode === 'auto' || !settings.showSidebar
-          ? 'no-side'
-          : '',
-        settings.sidebarMode === 'auto' ? 'sidebar-auto' : '',
-        settings.sidebarMode === 'auto' && (sidebarAutoOpen || settings.sidePanelOpen)
-          ? 'sidebar-auto-open'
-          : '',
-        (settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') && settings.sidePanelOpen
-          ? 'side-panel-open'
-          : '',
-        settings.uiGlass ? 'glass-on' : '',
-        settings.uiMotion ? 'motion-on' : '',
-        `theme-${settings.theme}`,
-        `bg-${settings.bgStyle}`,
-        htmlFullscreen ? 'html-fullscreen' : '',
-        windowMode === 'private' ? 'window-private' : '',
-        windowMode === 'tor' ? 'window-tor' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      style={
-        {
-          ['--rail-w' as string]: '56px',
-          ['--panel-w' as string]:
-            (settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') &&
-            settings.sidePanelOpen
-              ? `${settings.sidePanelWidth}px`
-              : '0px',
-          ['--side-total' as string]:
-            settings.sidebarMode === 'on'
-              ? settings.sidePanelOpen
-                ? `${56 + settings.sidePanelWidth}px`
-                : '56px'
-              : '0px',
-        } as React.CSSProperties
-      }
+    <AppChrome
+      htmlFullscreen={htmlFullscreen}
+      windowMode={windowMode}
+      sidebarAutoOpen={sidebarAutoOpen}
+      setSidebarAutoOpen={setSidebarAutoOpen}
+      sidebarAutoTimer={sidebarAutoTimer}
+      sidebarMenu={sidebarMenu}
+      setSidebarMenu={setSidebarMenu}
+      navigateActive={navigateActive}
+      openBookmarkUrl={openBookmarkUrl}
+      openBookmarkDialog={openBookmarkDialog}
+      hotTabs={hotTabs}
+      torBusy={torBusy}
+      openTorTab={openTorTab}
+      tabMenu={tabMenu}
+      newTabMenu={newTabMenu}
+      setTabMenu={setTabMenu}
+      setNewTabMenu={setNewTabMenu}
+      draft={draft}
+      setDraft={setDraft}
+      omniEditingRef={omniEditingRef}
+      omniFocusedRef={omniFocusedRef}
+      omniMenu={omniMenu}
+      setOmniMenu={setOmniMenu}
+      nav={nav}
+      go={go}
+      currentView={currentView}
+      toggleSidebar={toggleSidebar}
+      active={active}
+      activeIsTor={activeIsTor}
+      isHome={isHome}
+      isTorHome={isTorHome}
+      isInternalAbout={isInternalAbout}
+      isHistoryPage={isHistoryPage}
+      guestWc={guestWc}
+      zoomFlash={zoomFlash}
+      zoomPercent={zoomPercent}
+      popupBlocked={popupBlocked}
+      setPopupBlocked={setPopupBlocked}
+      pageHasVideo={pageHasVideo}
+      togglePictureInPicture={togglePictureInPicture}
+      mediaFlags={mediaFlags}
+      bookmarkPop={bookmarkPop}
+      setBookmarkPop={setBookmarkPop}
+      bookmarkStarRef={bookmarkStarRef}
+      pwForPage={pwForPage}
+      shieldOpen={shieldOpen}
+      setShieldOpen={setShieldOpen}
+      blockedToday={blockedToday}
+      torInfo={torInfo}
+      requestNewIdentity={requestNewIdentity}
+      bumpZoom={bumpZoom}
+      applyZoom={applyZoom}
+      printActivePage={printActivePage}
+      saveActivePdf={saveActivePdf}
+      setTaskMgrOpen={setTaskMgrOpen}
+      setClearDataOpen={setClearDataOpen}
+      setQrOpen={setQrOpen}
+      setFindOpen={setFindOpen}
+      findOpen={findOpen}
+      findQuery={findQuery}
+      findActive={findActive}
+      findTotal={findTotal}
+      setFindQuery={setFindQuery}
+      runFind={runFind}
+      closeFind={closeFind}
+      fsToast={fsToast}
+      certWarn={certWarn}
+      setCertWarn={setCertWarn}
+      certRemember={certRemember}
+      setCertRemember={setCertRemember}
+      qrOpen={qrOpen}
+      clearDataOpen={clearDataOpen}
+      aboutInfo={aboutInfo}
+      setAboutInfo={setAboutInfo}
+      crashOffer={crashOffer}
+      setCrashOffer={setCrashOffer}
+      torProgress={torProgress}
+      torError={torError}
+      setTorError={setTorError}
+      permAsk={permAsk}
+      setPermAsk={setPermAsk}
+      permRemember={permRemember}
+      setPermRemember={setPermRemember}
+      saveOffer={saveOffer}
+      setSaveOffer={setSaveOffer}
+      setPwForPage={setPwForPage}
+      httpsWarn={httpsWarn}
+      setHttpsWarn={setHttpsWarn}
     >
-      {settings.sidebarMode === 'auto' && (
-        <div
-          className="sidebar-edge-hit"
-          onMouseEnter={() => {
-            setSidebarAutoOpen(true);
-            if (sidebarAutoTimer.current) window.clearTimeout(sidebarAutoTimer.current);
-          }}
-        />
-      )}
-      {(settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') && (
-        <div
-          className="sidebar-ctx-host"
-          onMouseEnter={() => {
-            if (settings.sidebarMode !== 'auto') return;
-            setSidebarAutoOpen(true);
-            if (sidebarAutoTimer.current) window.clearTimeout(sidebarAutoTimer.current);
-          }}
-          onMouseLeave={() => {
-            if (settings.sidebarMode !== 'auto') return;
-            // Keep overlay while a side app panel is open
-            if (settings.sidePanelOpen) return;
-            if (sidebarAutoTimer.current) window.clearTimeout(sidebarAutoTimer.current);
-            sidebarAutoTimer.current = window.setTimeout(() => setSidebarAutoOpen(false), 300);
-          }}
-          onContextMenu={(e) => {
-            const t = e.target as HTMLElement;
-            if (
-              t.closest('webview') ||
-              t.closest('input') ||
-              t.closest('textarea') ||
-              t.closest('a')
-            )
-              return;
-            e.preventDefault();
-            setSidebarMenu({ x: e.clientX, y: e.clientY });
-          }}
-        >
-          <ErrorBoundary name="sidebar">
-            <Suspense fallback={null}>
-              <AppSidebar onHome={() => navigateActive(HOME_URL)} onOpenTab={(url) => newTab(url)} />
-            </Suspense>
-          </ErrorBoundary>
-        </div>
-      )}
-
-      <div className="main">
-        <TabStrip
-          hotTabs={hotTabs}
-          torBusy={torBusy}
-          openTorTab={openTorTab}
-          tabMenu={tabMenu}
-          newTabMenu={newTabMenu}
-          setTabMenu={setTabMenu}
-          setNewTabMenu={setNewTabMenu}
-        />
-
-        <BrowserChrome
-          draft={draft}
-          setDraft={setDraft}
-          omniEditingRef={omniEditingRef}
-          omniFocusedRef={omniFocusedRef}
-          omniMenu={omniMenu}
-          setOmniMenu={setOmniMenu}
-          nav={nav}
-          go={go}
-          navigateActive={navigateActive}
-          currentView={currentView}
-          toggleSidebar={toggleSidebar}
-          active={active}
-          activeIsTor={activeIsTor}
-          isHome={isHome}
-          isTorHome={isTorHome}
-          isInternalAbout={isInternalAbout}
-          isHistoryPage={isHistoryPage}
-          windowMode={windowMode}
-          guestWc={guestWc}
-          zoomFlash={zoomFlash}
-          zoomPercent={zoomPercent}
-          popupBlocked={popupBlocked}
-          setPopupBlocked={setPopupBlocked}
-          pageHasVideo={pageHasVideo}
-          togglePictureInPicture={togglePictureInPicture}
-          mediaFlags={mediaFlags}
-          pageBookmarked={pageBookmarked}
-          openBookmarkDialog={openBookmarkDialog}
-          bookmarkPop={bookmarkPop}
-          setBookmarkPop={setBookmarkPop}
-          bookmarkStarRef={bookmarkStarRef}
-          pwForPage={pwForPage}
-          shieldOpen={shieldOpen}
-          setShieldOpen={setShieldOpen}
-          blockedToday={blockedToday}
-          torInfo={torInfo}
-          requestNewIdentity={requestNewIdentity}
-          bumpZoom={bumpZoom}
-          applyZoom={applyZoom}
-          printActivePage={printActivePage}
-          saveActivePdf={saveActivePdf}
-          pageUrlForShare={pageUrlForShare}
-          setTaskMgrOpen={setTaskMgrOpen}
-          setClearDataOpen={setClearDataOpen}
-          setQrOpen={setQrOpen}
-          setFindOpen={setFindOpen}
-        />
-
-        <BookmarksBar onOpen={openBookmarkUrl} onEdit={(b) => openBookmarkDialog(b.url, b.title)} />
-
-        <ChromeOverlays
-          findOpen={findOpen}
-          findQuery={findQuery}
-          findActive={findActive}
-          findTotal={findTotal}
-          setFindQuery={setFindQuery}
-          runFind={runFind}
-          closeFind={closeFind}
-          fsToast={fsToast}
-          htmlFullscreen={htmlFullscreen}
-          certWarn={certWarn}
-          setCertWarn={setCertWarn}
-          certRemember={certRemember}
-          setCertRemember={setCertRemember}
-          qrOpen={qrOpen}
-          setQrOpen={setQrOpen}
-          pageUrlForShare={pageUrlForShare}
-          clearDataOpen={clearDataOpen}
-          setClearDataOpen={setClearDataOpen}
-          aboutInfo={aboutInfo}
-          setAboutInfo={setAboutInfo}
-        />
-
-        <div
-          className="stage"
-          onDragOver={(e) => {
-            if (
-              e.dataTransfer.types.includes('Files') ||
-              e.dataTransfer.types.includes('text/uri-list')
-            ) {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = 'copy';
-            }
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            const uri = e.dataTransfer.getData('text/uri-list').split('\n')[0]?.trim();
-            if (uri && /^https?:/i.test(uri)) {
-              newTab(uri);
-              return;
-            }
-            const file = e.dataTransfer.files?.[0];
-            if (file) {
-              const path = (file as File & { path?: string }).path;
-              if (path) {
-                const fileUrl = path.startsWith('file:')
-                  ? path
-                  : `file:///${path.replace(/\\/g, '/').replace(/^\/+/, '')}`;
-                newTab(fileUrl);
-              }
-            }
-          }}
-        >
-          {(windowMode === 'private' || windowMode === 'tor') && (
-            <div className={`window-mode-banner ${windowMode}`} role="status">
-              {windowMode === 'private'
-                ? 'Okno prywatne — historia i sesja kart nie są zapisywane. Pobrane pliki zostają na dysku, ale nie w liście.'
-                : 'Okno Tor — ruch przez sieć Tor. Sesja tego okna jest izolowana (logika demona Tor bez zmian).'}
-            </div>
-          )}
-          <CrashRestoreOffer
-            crashOffer={crashOffer}
-            setCrashOffer={setCrashOffer}
-            restoreSessionTabs={restoreSessionTabs}
-            setSessionReady={setSessionReady}
-          />
-          {sidebarMenu && (
-            <div
-              className="tab-ctx-backdrop"
-              onMouseDown={() => setSidebarMenu(null)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setSidebarMenu(null);
-              }}
-            >
-              <div
-                className="tab-ctx-menu"
-                style={{ left: sidebarMenu.x, top: sidebarMenu.y }}
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    newTab();
-                    setSidebarMenu(null);
-                  }}
-                >
-                  Nowa karta
-                  <kbd>Ctrl+T</kbd>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigateActive(HOME_URL);
-                    setSidebarMenu(null);
-                  }}
-                >
-                  Strona startowa
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSettingsTab('general');
-                    setSidebarMenu(null);
-                  }}
-                >
-                  Ustawienia
-                </button>
-                <hr />
-                <button
-                  type="button"
-                  onClick={() => {
-                    patchSettings({ showSidebar: false });
-                    setSidebarMenu(null);
-                  }}
-                >
-                  Ukryj pasek boczny
-                  <kbd>Ctrl+B</kbd>
-                </button>
-              </div>
-            </div>
-          )}
-          <HttpsWarnOverlay
-            httpsWarn={httpsWarn}
-            setHttpsWarn={setHttpsWarn}
-            navigateActive={navigateActive}
-          />
-          {torProgress && torBusy && (
-            <div className="tor-progress-banner" role="status">
-              {torProgress}
-            </div>
-          )}
-          {torError && (
-            <div className="tor-error-banner" role="alert">
-              <span>{torError}</span>
-              <button
-                type="button"
-                className="icon-btn sm"
-                onClick={() => setTorError(null)}
-                title="Zamknij"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-          <StageOverlays
-            permAsk={permAsk}
-            setPermAsk={setPermAsk}
-            permRemember={permRemember}
-            setPermRemember={setPermRemember}
-            saveOffer={saveOffer}
-            setSaveOffer={setSaveOffer}
-            passwordsOfferSave={settings.passwordsOfferSave}
-            activeIsTor={activeIsTor}
-            setPwForPage={setPwForPage}
-          />
-          <TabContent
-            active={active}
-            activeId={activeId}
-            tabs={tabs}
-            activeIsTor={activeIsTor}
-            isHistoryPage={isHistoryPage}
-            isDownloadsPage={isDownloadsPage}
-            isBookmarksPage={isBookmarksPage}
-            isExtensionsPage={isExtensionsPage}
-            isAboutPage={isAboutPage}
-            isInternalAbout={isInternalAbout}
-            isHome={isHome}
-            isTorHome={isTorHome}
-            windowMode={windowMode}
-            torInfo={torInfo}
-            setTorInfo={setTorInfo}
-            torBusy={torBusy}
-            torError={torError}
-            torProgress={torProgress}
-            requestNewIdentity={requestNewIdentity}
-            navigateActive={navigateActive}
-            openBookmarkUrl={openBookmarkUrl}
-            openBookmarkDialog={openBookmarkDialog}
-            currentView={currentView}
-            bumpZoom={bumpZoom}
-            doBrowserNav={doBrowserNav}
-            onNav={onNav}
-            setSaveOffer={setSaveOffer}
-            onGuestMeta={onGuestMeta}
-            tabMediaRef={tabMediaRef}
-            setPageHasVideo={setPageHasVideo}
-            setFindActive={setFindActive}
-            setFindTotal={setFindTotal}
-            setHtmlFullscreen={setHtmlFullscreen}
-          />
-        </div>
-      </div>
-    </div>,
+      <TabContent
+        active={active}
+        activeId={activeId}
+        tabs={tabs}
+        activeIsTor={activeIsTor}
+        isHistoryPage={isHistoryPage}
+        isDownloadsPage={isDownloadsPage}
+        isBookmarksPage={isBookmarksPage}
+        isExtensionsPage={isExtensionsPage}
+        isAboutPage={isAboutPage}
+        isInternalAbout={isInternalAbout}
+        isHome={isHome}
+        isTorHome={isTorHome}
+        windowMode={windowMode}
+        torInfo={torInfo}
+        setTorInfo={setTorInfo}
+        torBusy={torBusy}
+        torError={torError}
+        torProgress={torProgress}
+        requestNewIdentity={requestNewIdentity}
+        navigateActive={navigateActive}
+        openBookmarkUrl={openBookmarkUrl}
+        openBookmarkDialog={openBookmarkDialog}
+        currentView={currentView}
+        bumpZoom={bumpZoom}
+        doBrowserNav={doBrowserNav}
+        onNav={onNav}
+        setSaveOffer={setSaveOffer}
+        onGuestMeta={onGuestMeta}
+        tabMediaRef={tabMediaRef}
+        setPageHasVideo={setPageHasVideo}
+        setFindActive={setFindActive}
+        setFindTotal={setFindTotal}
+        setHtmlFullscreen={setHtmlFullscreen}
+      />
+    </AppChrome>,
   );
 }
