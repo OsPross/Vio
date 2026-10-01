@@ -1,4 +1,4 @@
-/* Shared UI primitives ‚Äî tokens only */
+/* Shared UI primitives ó tokens only */
 
 .ui-input {
   height: 34px;
@@ -67,7 +67,7 @@
   outline-offset: 1px;
 }
 
-/* Chrome UI ‚Äî no accidental text selection; inputs/notes keep selection */
+/* Chrome UI ó no accidental text selection; inputs/notes keep selection */
 .pz-sheet,
 .pz-sheet-tabs,
 .pz-layout-card,
@@ -93,7 +93,7 @@
 .hw-input,
 .home-search input,
 [contenteditable='true'],
-.hw-notes textarea {
+.hw-notes-body {
   user-select: text;
   -webkit-user-select: text;
 }
@@ -388,7 +388,7 @@
   padding: 4px 14px;
 }
 
-/* Dark checkboxes ó no native white flush */
+/* Dark checkboxes ù no native white flush */
 .ui-check,
 .history-check input[type='checkbox'],
 .bm-check input[type='checkbox'],
