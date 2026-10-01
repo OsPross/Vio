@@ -14,9 +14,15 @@ Dlatego po „you” w polu było „youtube.com”, a dalsze pisanie/Backspace 
 - Ghost: overlay `.omnibox-ghost` (ten sam font/padding, `scrollLeft`, kolor `--text-tertiary` / `--fg-3`) tylko gdy kursor na końcu, brak zaznaczenia, brak IME/paste-dismiss, prefiks hosta.
 - Tab / → = przyjmij ghost; Enter z ghostem = `https://…`; Shift+Enter / Ctrl+Backspace = szukaj wpisanego; Esc chowa ghost.
 - Logika w `src/lib/omniboxGhost.ts` + test `test/omnibox-ghost.test.mjs`.
+- Fallback topsites w UI (jak w `history.cjs`), zanim wróci IPC.
+
+## Commity
+- `0e1cfbf` — ghost text (value tylko typed)
+- `b4ddc0c` — topsite fallback przed IPC
 
 ## Testy
 - `npm run typecheck` OK  
 - `npm run test` OK (w tym omnibox-ghost)  
 - `npm run build` OK  
-- Ręcznie w `electron:dev`: you→ghost tube.com; your→znik; Backspace; Enter; Tab+/feed; Shift+Enter; kursor w środku; Midnight/Paper.
+- Live probe: `value` zostaje `"you"` (nie wstawia `youtube.com` do pola). Ghost wymaga suggest/topsite — pełna app z `main.cjs`.  
+- Ręcznie: you→ghost tube.com; your→znik; Backspace; Enter; Tab+/feed; Shift+Enter; kursor w środku; Midnight/Paper.
