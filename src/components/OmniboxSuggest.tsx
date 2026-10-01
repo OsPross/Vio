@@ -97,6 +97,8 @@ export function OmniboxSuggest({
     return pageUrl;
   }, [pageUrl]);
 
+  const bookmarks = useStore((s) => s.bookmarks);
+
   const openTabsPayload = useMemo(
     () =>
       tabs
@@ -105,7 +107,12 @@ export function OmniboxSuggest({
     [tabs],
   );
 
-  // History / tabs / bangs / shortcuts via main (debounce ~50ms)
+  const bookmarksPayload = useMemo(
+    () => bookmarks.slice(0, 200).map((b) => ({ title: b.title, url: b.url })),
+    [bookmarks],
+  );
+
+  // History / tabs / bangs / shortcuts / bookmarks via main (debounce ~50ms)
   useEffect(() => {
     if (tor) {
       setCompletion(null);
@@ -119,6 +126,7 @@ export function OmniboxSuggest({
           openTabs: openTabsPayload,
           shortcuts: shortcuts.map((s) => ({ id: s.id, label: s.label, url: s.url })),
           bangs: bangs.map((b) => ({ key: b.key, label: b.label })),
+          bookmarks: bookmarksPayload,
           suggestHistory: settings.suggestHistory,
           suggestBangs: settings.suggestBangs,
           limit: 8,
@@ -140,6 +148,7 @@ export function OmniboxSuggest({
     value,
     tor,
     openTabsPayload,
+    bookmarksPayload,
     shortcuts,
     bangs,
     settings.suggestHistory,
@@ -197,11 +206,10 @@ export function OmniboxSuggest({
   const acceptCompletion = useCallback(() => {
     if (!completion) return false;
     const cur = value;
-    const lower = cur.toLowerCase();
     const host = completion.fill;
-    if (!host.toLowerCase().startsWith(lower) || host.length <= cur.length) return false;
+    if (!host.toLowerCase().startsWith(cur.toLowerCase()) || host.length <= cur.length) return false;
+    markDirty();
     onChange(host);
-    // select the completed suffix
     requestAnimationFrame(() => {
       const el = inputRef.current;
       if (!el) return;
@@ -209,7 +217,27 @@ export function OmniboxSuggest({
       el.setSelectionRange(cur.length, host.length);
     });
     return true;
-  }, [completion, value, onChange]);
+  }, [completion, value, onChange, markDirty]);
+
+  // Chrome-style: expand value to completion and select the suffix while typing
+  const inlineApplied = useRef('');
+  useEffect(() => {
+    if (!focused || tor || !completion?.fill) return;
+    const host = completion.fill;
+    const cur = value;
+    if (!cur || host.length <= cur.length) return;
+    if (!host.toLowerCase().startsWith(cur.toLowerCase())) return;
+    if (inlineApplied.current === `${cur}|${host}`) return;
+    const el = inputRef.current;
+    if (!el) return;
+    if (el.selectionStart !== el.selectionEnd) return;
+    if (el.selectionStart !== cur.length) return;
+    inlineApplied.current = `${cur}|${host}`;
+    onChange(host);
+    requestAnimationFrame(() => {
+      el.setSelectionRange(cur.length, host.length);
+    });
+  }, [completion, value, focused, tor, onChange]);
 
   const runItem = (item: SuggestItem) => {
     setOpen(false);
@@ -263,9 +291,50 @@ export function OmniboxSuggest({
       e.key === 'ArrowLeft' ||
       e.key === 'ArrowRight' ||
       ((e.ctrlKey || e.metaKey) &&
-        ['a', 'A', 'z', 'Z', 'x', 'X', 'c', 'C', 'v', 'V', 'Backspace'].includes(e.key))
+        ['a', 'A', 'z', 'Z', 'x', 'X', 'c', 'C', 'v', 'V', 'Backspace', 'Enter'].includes(e.key))
     ) {
       e.stopPropagation();
+    }
+
+    // Backspace with completion selected → remove completion only
+    if (e.key === 'Backspace' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const el = inputRef.current;
+      if (el && completion && el.selectionStart !== el.selectionEnd) {
+        const start = el.selectionStart ?? 0;
+        const end = el.selectionEnd ?? 0;
+        const fill = completion.fill;
+        if (
+          end === value.length &&
+          start < end &&
+          value.toLowerCase() === fill.toLowerCase()
+        ) {
+          e.preventDefault();
+          const keep = value.slice(0, start);
+          inlineApplied.current = '';
+          markDirty();
+          onChange(keep);
+          requestAnimationFrame(() => {
+            inputRef.current?.setSelectionRange(keep.length, keep.length);
+          });
+          return;
+        }
+      }
+    }
+
+    // Ctrl+Enter → www. + .com
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      let raw = value.trim();
+      if (!raw) return;
+      if (!/^https?:\/\//i.test(raw) && !raw.includes(' ') && !raw.startsWith('!')) {
+        raw = raw.replace(/^(www\.)?/i, '');
+        if (!/\.[a-z]{2,}$/i.test(raw)) raw = `${raw}.com`;
+        raw = `https://www.${raw.replace(/^www\./i, '')}`;
+      }
+      clearDirty();
+      onSubmit(raw, { typed: true });
+      return;
     }
 
     if (e.key === 'Escape') {
@@ -329,6 +398,13 @@ export function OmniboxSuggest({
         }
       }
     }
+    if (e.key === 'Enter' && active < 0 && completion?.fill && value.toLowerCase() === completion.fill.toLowerCase()) {
+      e.preventDefault();
+      e.stopPropagation();
+      clearDirty();
+      onSubmit(`https://${completion.fill}`, { typed: true, fromSuggest: true });
+      return;
+    }
     if (e.key === 'Enter' && active >= 0 && selectable[active]?.item) {
       e.preventDefault();
       e.stopPropagation();
@@ -336,10 +412,10 @@ export function OmniboxSuggest({
       clearDirty();
       return;
     }
-    if (e.key === 'Delete' && e.shiftKey && active >= 0) {
+    if (e.key === 'Delete' && e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
-      const item = selectable[active]?.item;
+      const item = active >= 0 ? selectable[active]?.item : null;
       if (item) void removeItem(item);
     }
   };

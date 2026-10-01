@@ -404,27 +404,68 @@ function suggest(q, opts = {}) {
 
   let completion = null;
   if (t && !t.includes(' ') && !t.startsWith('!') && !/^https?:/i.test(t) && opts.suggestHistory !== false) {
-    // Prefer typed domains / high frecency hosts starting with query
-    let best = null;
-    let bestScore = -1;
+    // Inline autocomplete: ONLY host/URL prefix (never mid-string). Frecency + bookmarks + shortcuts.
+    /** @type {{ fill: string, score: number }[]} */
+    const candidates = [];
+    const considerHost = (hostRaw, scoreBase) => {
+      const host = String(hostRaw || '')
+        .replace(/^www\./i, '')
+        .toLowerCase();
+      if (!host || host.length <= t.length) return;
+      if (!host.startsWith(t.toLowerCase())) return;
+      candidates.push({ fill: host, score: scoreBase });
+    };
     for (const v of visits.values()) {
       let host = '';
       try {
-        host = new URL(v.url).hostname.replace(/^www\./, '');
+        host = new URL(v.url).hostname;
       } catch {
         continue;
       }
-      if (!host.startsWith(t) && !host.includes(`.${t}`)) continue;
-      // Prefer exact prefix of registrable-ish host
-      const prefixBonus = host.startsWith(t) ? 50 : 10;
-      const score = frecencyScore(v.visitCount, v.typedCount, v.lastVisit, now) + prefixBonus + v.typedCount * 20;
-      if (score > bestScore) {
-        bestScore = score;
-        best = host;
+      const score =
+        frecencyScore(v.visitCount, v.typedCount, v.lastVisit, now) + 50 + v.typedCount * 20;
+      considerHost(host, score);
+    }
+    if (Array.isArray(opts.bookmarks)) {
+      for (const b of opts.bookmarks) {
+        if (!b?.url) continue;
+        try {
+          considerHost(new URL(b.url).hostname, 600);
+        } catch {
+          /* */
+        }
       }
     }
-    if (best && best.length > t.length) {
-      completion = { host: best, fill: best };
+    if (Array.isArray(opts.shortcuts)) {
+      for (const s of opts.shortcuts) {
+        if (!s?.url) continue;
+        try {
+          considerHost(new URL(s.url).hostname, 550);
+        } catch {
+          /* */
+        }
+      }
+    }
+    // Popular topsites boost for common prefixes
+    for (const top of [
+      'youtube.com',
+      'google.com',
+      'github.com',
+      'wikipedia.org',
+      'reddit.com',
+      'facebook.com',
+      'twitter.com',
+      'x.com',
+      'amazon.com',
+      'netflix.com',
+      'discord.com',
+      'stackoverflow.com',
+    ]) {
+      considerHost(top, 200);
+    }
+    candidates.sort((a, b) => b.score - a.score || a.fill.length - b.fill.length);
+    if (candidates[0]) {
+      completion = { host: candidates[0].fill, fill: candidates[0].fill };
     }
   }
 
@@ -499,6 +540,20 @@ function suggest(q, opts = {}) {
     }
   }
 
+  if (t && Array.isArray(opts.bookmarks)) {
+    for (const b of opts.bookmarks) {
+      if (!b?.url) continue;
+      if (!matchText(b.title, t) && !matchText(b.url, t)) continue;
+      items.push({
+        kind: 'bookmark',
+        title: b.title || b.url,
+        subtitle: b.url,
+        url: b.url,
+        score: 750,
+      });
+    }
+  }
+
   if (t && Array.isArray(opts.openTabs)) {
     for (const tab of opts.openTabs) {
       if (!tab?.url || isExcludedUrl(tab.url)) continue;
@@ -531,9 +586,10 @@ function suggest(q, opts = {}) {
   // Sort within kinds later; first global by score then take diversity
   items.sort((a, b) => (b.score || 0) - (a.score || 0));
 
-  const kindOrder = ['history', 'query', 'tab', 'shortcut', 'bang'];
+  const kindOrder = ['history', 'bookmark', 'query', 'tab', 'shortcut', 'bang'];
   const kindLabel = {
     history: 'Historia',
+    bookmark: 'Zakładki',
     query: 'Zapytania',
     tab: 'Karty',
     shortcut: 'Skróty',
