@@ -21,6 +21,11 @@ type Props = {
   onSubmit: (raw: string, opts?: { typed?: boolean; fromSuggest?: boolean }) => void;
   onSwitchTab?: (tabId: string) => void;
   onContextMenu?: (e: React.MouseEvent<HTMLInputElement>) => void;
+  /** Current page URL (full) — used for Esc restore and focus select-all */
+  pageUrl?: string;
+  /** Notify parent that user is editing (block external draft overwrites) */
+  onEditingChange?: (editing: boolean) => void;
+  onFocusChange?: (focused: boolean) => void;
   disabledSuggest?: boolean;
   placeholder?: string;
   torMode?: boolean;
@@ -29,7 +34,7 @@ type Props = {
   shortcuts: Shortcut[];
   tabs: Tab[];
   className?: string;
-  children?: React.ReactNode; // leading icon slot rendered by parent form
+  children?: React.ReactNode;
 };
 
 function flattenGroups(groups: { label: string; items: SuggestItem[] }[]) {
@@ -48,6 +53,9 @@ export function OmniboxSuggest({
   onSubmit,
   onSwitchTab,
   onContextMenu,
+  pageUrl = '',
+  onEditingChange,
+  onFocusChange,
   disabledSuggest,
   placeholder,
   torMode,
@@ -66,8 +74,28 @@ export function OmniboxSuggest({
   const [groups, setGroups] = useState<{ label: string; items: SuggestItem[] }[]>([]);
   const [remote, setRemote] = useState<SuggestItem[]>([]);
   const reqId = useRef(0);
+  /** User changed text since last focus/sync — parent must not overwrite */
+  const dirtyRef = useRef(false);
+  const escArmedRef = useRef(false);
 
   const tor = !!torMode || !!disabledSuggest;
+
+  const markDirty = useCallback(() => {
+    if (!dirtyRef.current) {
+      dirtyRef.current = true;
+      onEditingChange?.(true);
+    }
+  }, [onEditingChange]);
+
+  const clearDirty = useCallback(() => {
+    dirtyRef.current = false;
+    onEditingChange?.(false);
+  }, [onEditingChange]);
+
+  const pageCanonical = useMemo(() => {
+    if (!pageUrl || pageUrl.startsWith('about:')) return '';
+    return pageUrl;
+  }, [pageUrl]);
 
   const openTabsPayload = useMemo(
     () =>
@@ -226,14 +254,66 @@ export function OmniboxSuggest({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Never let these bubble to app shortcut handler while editing
+    if (
+      e.key === 'Backspace' ||
+      e.key === 'Delete' ||
+      e.key === 'Home' ||
+      e.key === 'End' ||
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight' ||
+      ((e.ctrlKey || e.metaKey) &&
+        ['a', 'A', 'z', 'Z', 'x', 'X', 'c', 'C', 'v', 'V', 'Backspace'].includes(e.key))
+    ) {
+      e.stopPropagation();
+    }
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (open) {
+        setOpen(false);
+        setActive(-1);
+        escArmedRef.current = true;
+        return;
+      }
+      if (dirtyRef.current || (pageCanonical && value !== pageCanonical)) {
+        onChange(pageCanonical);
+        clearDirty();
+        escArmedRef.current = true;
+        requestAnimationFrame(() => {
+          const el = inputRef.current;
+          if (!el) return;
+          el.focus();
+          el.select();
+        });
+        return;
+      }
+      // Second Esc (or Esc when already synced): blur → page
+      setOpen(false);
+      setActive(-1);
+      clearDirty();
+      inputRef.current?.blur();
+      try {
+        const wv = document.querySelector('webview:not(.hidden)') as HTMLElement | null;
+        wv?.focus?.();
+      } catch {
+        /* */
+      }
+      return;
+    }
+
     if (tor) return;
+
     if (e.key === 'ArrowDown' && show) {
       e.preventDefault();
+      e.stopPropagation();
       setActive((i) => Math.min(selectable.length - 1, i + 1));
       return;
     }
     if (e.key === 'ArrowUp' && show) {
       e.preventDefault();
+      e.stopPropagation();
       setActive((i) => Math.max(-1, i - 1));
       return;
     }
@@ -243,28 +323,28 @@ export function OmniboxSuggest({
       if (e.key === 'Tab' || atEnd) {
         if (acceptCompletion()) {
           e.preventDefault();
+          e.stopPropagation();
+          markDirty();
           return;
         }
       }
     }
     if (e.key === 'Enter' && active >= 0 && selectable[active]?.item) {
       e.preventDefault();
+      e.stopPropagation();
       runItem(selectable[active].item!);
-      return;
-    }
-    if (e.key === 'Escape') {
-      setOpen(false);
-      setActive(-1);
+      clearDirty();
       return;
     }
     if (e.key === 'Delete' && e.shiftKey && active >= 0) {
       e.preventDefault();
+      e.stopPropagation();
       const item = selectable[active]?.item;
       if (item) void removeItem(item);
     }
   };
 
-  // Inline ghost: show completion suffix visually via CSS overlay when selection empty
+  // Ghost completion suffix (visual only). Controlled value is ALWAYS full `value` while focused.
   const ghost =
     !tor &&
     focused &&
@@ -275,6 +355,7 @@ export function OmniboxSuggest({
       ? completion.fill.slice(value.length)
       : '';
 
+  // Shortened display ONLY when blurred — never feed shortened text back into draft
   const inputDisplayValue =
     !focused && isHttpNavigableUrl(value) ? formatUrlPlain(value) : value;
 
@@ -286,19 +367,31 @@ export function OmniboxSuggest({
           id={inputId}
           value={inputDisplayValue}
           onChange={(e) => {
+            markDirty();
+            escArmedRef.current = false;
             onChange(e.target.value);
             setOpen(true);
             setActive(-1);
           }}
           onFocus={(e) => {
             setFocused(true);
-            e.target.select();
+            onFocusChange?.(true);
+            escArmedRef.current = false;
+            // Ensure full URL is shown (not search-label shortening)
+            if (pageCanonical && !dirtyRef.current && value !== pageCanonical) {
+              onChange(pageCanonical);
+            }
+            // Select all after React commits full URL
+            requestAnimationFrame(() => {
+              e.target.select();
+            });
             setOpen(true);
           }}
           onBlur={() => {
             setFocused(false);
-            // delay so click on row registers
+            onFocusChange?.(false);
             setTimeout(() => setOpen(false), 160);
+            if (!dirtyRef.current) onEditingChange?.(false);
           }}
           onKeyDown={onKeyDown}
           onContextMenu={onContextMenu}
@@ -306,6 +399,7 @@ export function OmniboxSuggest({
           spellCheck={false}
           autoComplete="off"
           autoCorrect="off"
+          autoCapitalize="off"
         />
         {ghost ? (
           <span className="omnibox-ghost" aria-hidden>

@@ -676,6 +676,9 @@ export function App() {
   const isTorHome =
     !!active && activeIsTor && (active.url === TOR_HOME_URL || active.url === HOME_URL || active.url === 'about:blank');
   const [draft, setDraft] = useState(isHome || isTorHome ? '' : (active?.url ?? ''));
+  /** Omnibox: user is editing — ignore navigations / tab URL sync for draft */
+  const omniEditingRef = useRef(false);
+  const omniFocusedRef = useRef(false);
   const [nav, setNav] = useState({ back: false, forward: false });
   const [blockedToday, setBlockedToday] = useState(0);
   const [saveOffer, setSaveOffer] = useState<SaveOffer | null>(null);
@@ -1303,6 +1306,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (omniEditingRef.current && omniFocusedRef.current) return;
     if (isHome || isTorHome || isInternalAbout) setDraft('');
     else setDraft(active?.url ?? '');
   }, [active?.id, active?.url, isHome, isTorHome, isInternalAbout]);
@@ -1367,6 +1371,7 @@ export function App() {
 
   const onNav = useCallback((canBack: boolean, canForward: boolean, url: string, _title?: string) => {
     setNav({ back: canBack, forward: canForward });
+    if (omniEditingRef.current && omniFocusedRef.current) return;
     if (!url.startsWith('about:')) setDraft(url);
   }, []);
 
@@ -1840,12 +1845,41 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName;
+      const typing =
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        Boolean(t?.isContentEditable);
+      if (typing) {
+        // Text editing keys + IME: never steal. Allow a few Chrome-like chrome shortcuts.
+        const input = shortcutInputFromKeyboardEvent(e);
+        const handler = matchChromeShortcut(input);
+        const allowInField =
+          handler === 'focusOmnibox' ||
+          handler === 'newTab' ||
+          handler === 'newWindow' ||
+          handler === 'newPrivateWindow' ||
+          handler === 'closeTab' ||
+          handler === 'reopenClosedTab' ||
+          handler === 'nextTab' ||
+          handler === 'prevTab' ||
+          handler === 'reload' ||
+          handler === 'hardReload' ||
+          handler === 'commandPalette' ||
+          (handler && handler.startsWith('activateTab'));
+        // Escape is handled inside OmniboxSuggest (stopPropagation)
+        if (!allowInField) return;
+        if (handleChromeShortcut(input)) e.preventDefault();
+        return;
+      }
       if (handleChromeShortcut(shortcutInputFromKeyboardEvent(e))) {
         e.preventDefault();
       }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [handleChromeShortcut]);
 
   useEffect(() => {
@@ -2316,8 +2350,28 @@ export function App() {
             <OmniboxSuggest
               value={draft}
               onChange={setDraft}
-              onSubmit={(raw, opts) => go(raw, opts)}
+              pageUrl={
+                isHome || isTorHome || isInternalAbout
+                  ? ''
+                  : active?.url && !active.url.startsWith('about:')
+                    ? active.url
+                    : ''
+              }
+              onEditingChange={(editing) => {
+                omniEditingRef.current = editing;
+              }}
+              onFocusChange={(focused) => {
+                omniFocusedRef.current = focused;
+                if (!focused && !omniEditingRef.current) {
+                  /* synced */
+                }
+              }}
+              onSubmit={(raw, opts) => {
+                omniEditingRef.current = false;
+                go(raw, opts);
+              }}
               onSwitchTab={(tabId) => {
+                omniEditingRef.current = false;
                 setActive(tabId);
                 setView('browser');
               }}
