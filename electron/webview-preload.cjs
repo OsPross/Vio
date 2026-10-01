@@ -12,7 +12,7 @@ try {
   console.debug('[webview-preload] run', { id: __djxxrPreloadRunId });
 }
 
-// Legacy-engine cosmetic CSS as early as possible (Ghostery getCosmeticCss returns '' — session preload handles that engine).
+// Fallback cosmetic CSS when Ghostery is down (getCosmeticCss returns '' while Ghostery session preload handles cosmetics).
 function injectLegacyCosmeticCss() {
   void ipcRenderer
     .invoke('shell:adblock-cosmetic')

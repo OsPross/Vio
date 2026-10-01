@@ -1,14 +1,16 @@
 'use strict';
 
 /**
- * Ghostery-backed adblocker + legacy YouTube/cosmetic helpers.
+ * Ghostery (@ghostery/adblocker-electron) adblock engine.
  * Filter lists cached under userData/adblock-lists (daily refresh).
+ * Fallback: cosmetic CSS + YouTube page script only when Ghostery init fails (no legacy network hooks).
  */
 
 const fs = require('node:fs');
 const path = require('node:path');
 const { app, net } = require('electron');
-const legacy = require('./adblock.cjs');
+
+/** @typedef {{ enabled: boolean, network: boolean, cosmetic: boolean, trackers: boolean, customRules: string[] }} AdblockConfig */
 
 const LIST_URLS = [
   'https://easylist.to/easylist/easylist.txt',
@@ -16,6 +18,21 @@ const LIST_URLS = [
   'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt',
   'https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext',
 ];
+
+/** @type {AdblockConfig} */
+let config = {
+  enabled: true,
+  network: true,
+  cosmetic: true,
+  trackers: true,
+  customRules: [],
+};
+
+let blockedCount = 0;
+let blockedToday = 0;
+let dayKey = new Date().toISOString().slice(0, 10);
+/** @type {((n: number) => void) | null} */
+let onBlocked = null;
 
 /** @type {import('@ghostery/adblocker-electron').ElectronBlocker | null} */
 let blocker = null;
@@ -27,6 +44,190 @@ const ghosteryOn = new WeakSet();
 const recentBlocked = new Map();
 let updateLists = true;
 let lastInitError = null;
+
+/** @type {import('@ghostery/adblocker').NetworkFilter[]} */
+let appliedCustomNetwork = [];
+/** @type {import('@ghostery/adblocker').CosmeticFilter[]} */
+let appliedCustomCosmetic = [];
+
+/** @type {Set<string>} */
+let customHosts = new Set();
+
+const COSMETIC_CSS = `
+/* Blokada — warstwa kosmetyczna */
+iframe[id*="google_ads" i],
+iframe[id*="ad_" i],
+iframe[src*="doubleclick" i],
+iframe[src*="googlesyndication" i],
+iframe[src*="adnxs" i],
+iframe[src*="taboola" i],
+iframe[src*="outbrain" i],
+ins.adsbygoogle,
+div[id^="div-gpt-ad"],
+div[id*="google_ads" i],
+div[class*="ad-container" i],
+div[class*="ad-wrapper" i],
+div[class*="ad-slot" i],
+div[class*="adsbox" i],
+div[data-ad],
+div[data-ad-slot],
+div[data-google-query-id],
+aside[class*="advert" i],
+section[class*="advert" i],
+[aria-label="Ads" i],
+[aria-label="Advertisement" i],
+[id*="taboola" i],
+[class*="taboola" i],
+[id*="outbrain" i],
+[class*="outbrain" i],
+[class*="sponsored-content" i],
+[class*="rc-cta" i],
+.adsbygoogle,
+#ad,
+#ads,
+.ad-banner,
+.ad-unit,
+.advertisement,
+.sponsored,
+[data-testid="ad"],
+/* YouTube */
+ytd-ad-slot-renderer,
+ytd-promoted-sparkles-web-renderer,
+ytd-promoted-sparkles-text-search-renderer,
+ytd-in-feed-ad-layout-renderer,
+ytd-banner-promo-renderer,
+ytd-statement-banner-renderer,
+ytd-player-legacy-desktop-watch-ads-renderer,
+ytd-action-companion-ad-renderer,
+ytd-display-ad-renderer,
+ytd-promoted-video-renderer,
+ytd-ad-slot-renderer,
+#masthead-ad,
+#player-ads,
+#offer-module,
+.ytp-ad-module,
+.ytp-ad-overlay-container,
+.ytp-ad-progress-list,
+.ytp-ad-message-container,
+.video-ads,
+.ytp-ad-player-overlay,
+.ytp-ad-player-overlay-layout,
+tp-yt-paper-dialog.ytd-popup-container,
+ytd-mealbar-promo-renderer,
+ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-ads"],
+ytm-promoted-sparkles-text-search-renderer,
+ytm-companion-ad-renderer {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+}
+`.trim();
+
+const YOUTUBE_PAGE_SCRIPT = `
+(function () {
+  if (window.__mojaYtBlock) return;
+  window.__mojaYtBlock = true;
+  var wasAd = false;
+
+  function killNodes(sel) {
+    document.querySelectorAll(sel).forEach(function (el) {
+      try { el.remove(); } catch (e) {}
+    });
+  }
+
+  function tick() {
+    killNodes([
+      'ytd-ad-slot-renderer',
+      'ytd-promoted-sparkles-web-renderer',
+      'ytd-promoted-sparkles-text-search-renderer',
+      'ytd-in-feed-ad-layout-renderer',
+      'ytd-banner-promo-renderer',
+      'ytd-statement-banner-renderer',
+      'ytd-action-companion-ad-renderer',
+      'ytd-display-ad-renderer',
+      'ytd-promoted-video-renderer',
+      'ytd-mealbar-promo-renderer',
+      '#masthead-ad',
+      '#player-ads'
+    ].join(','));
+
+    var skip = document.querySelector(
+      '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, .ytp-ad-skip-button-container button'
+    );
+    if (skip) {
+      try { skip.click(); } catch (e) {}
+    }
+    var closeOv = document.querySelector('.ytp-ad-overlay-close-button');
+    if (closeOv) {
+      try { closeOv.click(); } catch (e) {}
+    }
+
+    var player = document.querySelector('.html5-video-player');
+    var video = document.querySelector('video.html5-main-video, video');
+    var showing = player && player.classList.contains('ad-showing');
+
+    if (showing && video) {
+      wasAd = true;
+      try {
+        video.muted = true;
+        video.playbackRate = 16;
+        if (video.duration && isFinite(video.duration) && video.duration > 0) {
+          video.currentTime = Math.max(0, video.duration - 0.15);
+        }
+      } catch (e) {}
+    } else if (wasAd && video) {
+      wasAd = false;
+      try {
+        video.playbackRate = 1;
+      } catch (e) {}
+    }
+  }
+
+  setInterval(tick, 400);
+  try {
+    new MutationObserver(tick).observe(document.documentElement, { childList: true, subtree: true });
+  } catch (e) {}
+  tick();
+})();
+`.trim();
+
+function refreshCustom() {
+  customHosts = new Set();
+  for (const raw of config.customRules) {
+    const line = String(raw || '')
+      .trim()
+      .toLowerCase();
+    if (!line || line.startsWith('!') || line.startsWith('#')) continue;
+    if (line.startsWith('||')) {
+      const host = line
+        .slice(2)
+        .replace(/\^.*$/, '')
+        .replace(/\/.*$/, '')
+        .replace(/^\*\./, '');
+      if (host) customHosts.add(host);
+      continue;
+    }
+    customHosts.add(line.replace(/^\*\./, ''));
+  }
+}
+
+function rollDay() {
+  const k = new Date().toISOString().slice(0, 10);
+  if (k !== dayKey) {
+    dayKey = k;
+    blockedToday = 0;
+  }
+}
+
+function bump() {
+  rollDay();
+  blockedCount += 1;
+  blockedToday += 1;
+  if (onBlocked) onBlocked(blockedToday);
+}
 
 function cacheDir() {
   return path.join(app.getPath('userData'), 'adblock-lists');
@@ -58,7 +259,7 @@ function pushBlocked(tabKey, url) {
   const list = recentBlocked.get(tabKey) || [];
   list.unshift({ url, host, at: Date.now() });
   recentBlocked.set(tabKey, list.slice(0, 80));
-  legacy.bump?.();
+  bump();
 }
 
 function getRecentBlocked(tabKey) {
@@ -70,42 +271,78 @@ function clearRecentBlocked(tabKey) {
   else recentBlocked.clear();
 }
 
-async function loadOrFetchLists() {
-  fs.mkdirSync(cacheDir(), { recursive: true });
-  let meta = { at: 0 };
+function cryptoHash(s) {
+  return require('node:crypto').createHash('sha1').update(String(s)).digest('hex').slice(0, 16);
+}
+
+function ghosteryBlockingWanted() {
+  return Boolean(blocker && config.enabled && config.network);
+}
+
+function applyCustomRulesToBlocker() {
+  if (!blocker) return;
   try {
-    meta = JSON.parse(fs.readFileSync(cacheMetaPath(), 'utf8'));
-  } catch {
-    /* */
+    const { parseFilters } = require('@ghostery/adblocker');
+    const text = config.customRules.map((r) => String(r || '').trim()).filter(Boolean).join('\n');
+    const { networkFilters, cosmeticFilters } = parseFilters(text);
+    blocker.update({
+      newNetworkFilters: networkFilters,
+      newCosmeticFilters: cosmeticFilters,
+      removedNetworkFilters: appliedCustomNetwork,
+      removedCosmeticFilters: appliedCustomCosmetic,
+    });
+    appliedCustomNetwork = networkFilters;
+    appliedCustomCosmetic = cosmeticFilters;
+  } catch (err) {
+    console.warn('[adblock+] custom rules update', err.message || err);
   }
-  const fresh = Date.now() - (meta.at || 0) < 24 * 60 * 60 * 1000;
-  const bodies = [];
-  for (let i = 0; i < LIST_URLS.length; i++) {
-    const file = path.join(cacheDir(), `list-${i}.txt`);
-    if (fresh && fs.existsSync(file)) {
-      bodies.push(fs.readFileSync(file, 'utf8'));
-      continue;
+}
+
+function disableGhostery(ses) {
+  if (!blocker || !ses) return;
+  if (!ghosteryOn.has(ses)) return;
+  try {
+    if (typeof blocker.disableBlockingInSession === 'function') {
+      blocker.disableBlockingInSession(ses);
     }
-    if (!updateLists && fs.existsSync(file)) {
-      bodies.push(fs.readFileSync(file, 'utf8'));
-      continue;
-    }
-    if (!updateLists && !fs.existsSync(file)) {
-      continue;
-    }
-    try {
-      const text = await fetchText(LIST_URLS[i]);
-      fs.writeFileSync(file, text, 'utf8');
-      bodies.push(text);
-    } catch (err) {
-      console.warn('[adblock+] fetch list', LIST_URLS[i], err.message || err);
-      if (fs.existsSync(file)) bodies.push(fs.readFileSync(file, 'utf8'));
-    }
+  } catch (e) {
+    console.warn('[adblock+] disableBlockingInSession', e);
   }
-  if (bodies.length) {
-    fs.writeFileSync(cacheMetaPath(), JSON.stringify({ at: Date.now(), n: bodies.length }), 'utf8');
+  ghosteryOn.delete(ses);
+}
+
+function enableGhostery(ses) {
+  if (!blocker || !ses) return;
+  if (!ghosteryBlockingWanted()) {
+    disableGhostery(ses);
+    return;
   }
-  return bodies;
+  if (ghosteryOn.has(ses)) return;
+  try {
+    if (typeof blocker.disableBlockingInSession === 'function') {
+      try {
+        blocker.disableBlockingInSession(ses);
+      } catch {
+        /* not previously enabled */
+      }
+    }
+    blocker.enableBlockingInSession(ses);
+    ghosteryOn.add(ses);
+  } catch (e) {
+    const msg = String(e.message || e);
+    if (msg.includes('second handler')) {
+      ghosteryOn.add(ses);
+      return;
+    }
+    console.warn('[adblock+] enableBlockingInSession', e);
+  }
+}
+
+function syncBlockingOnSessions() {
+  for (const ses of attached) {
+    if (ghosteryBlockingWanted()) enableGhostery(ses);
+    else disableGhostery(ses);
+  }
 }
 
 async function init(opts = {}) {
@@ -142,96 +379,147 @@ async function init(opts = {}) {
     });
     fs.writeFileSync(cacheMetaPath(), JSON.stringify({ at: Date.now() }), 'utf8');
 
+    appliedCustomNetwork = [];
+    appliedCustomCosmetic = [];
+    refreshCustom();
+    applyCustomRulesToBlocker();
+
     blocker.on('request-blocked', (request) => {
       try {
         pushBlocked(String(request.tabId ?? 'global'), request.url);
-        if (typeof legacy.bump === 'function') legacy.bump();
       } catch {
         /* */
       }
     });
     lastInitError = null;
-    for (const ses of attached) {
-      enableGhostery(ses);
-    }
+    syncBlockingOnSessions();
     return { ok: true, engine: 'ghostery', lists: LIST_URLS.length };
   } catch (err) {
     lastInitError = String(err.message || err);
-    console.warn('[adblock+] ghostery init failed, legacy only', lastInitError);
+    console.warn('[adblock+] ghostery init failed (cosmetic fallback only)', lastInitError);
     blocker = null;
-    return { ok: false, error: lastInitError, engine: 'legacy' };
-  }
-}
-
-function cryptoHash(s) {
-  return require('node:crypto').createHash('sha1').update(String(s)).digest('hex').slice(0, 16);
-}
-
-function enableGhostery(ses) {
-  if (!blocker || !ses) return;
-  if (ghosteryOn.has(ses)) return;
-  try {
-    if (typeof blocker.disableBlockingInSession === 'function') {
-      try {
-        blocker.disableBlockingInSession(ses);
-      } catch {
-        /* not previously enabled */
-      }
-    }
-    blocker.enableBlockingInSession(ses);
-    ghosteryOn.add(ses);
-  } catch (e) {
-    const msg = String(e.message || e);
-    if (msg.includes('second handler')) {
-      ghosteryOn.add(ses);
-      return;
-    }
-    console.warn('[adblock+] enableBlockingInSession', e);
+    appliedCustomNetwork = [];
+    appliedCustomCosmetic = [];
+    return { ok: false, error: lastInitError, engine: 'fallback-cosmetic' };
   }
 }
 
 /**
- * Prefer Ghostery when ready. Legacy attach only as fallback — no double onBeforeRequest.
- * Cosmetics (one path): Ghostery → adblocker-electron-preload on the session; legacy →
- * webview-preload style inject via getCosmeticCss. Renderer must not insertCSS cosmetic rules.
- * getPageScript stays legacy-only (YouTube helpers).
+ * Ghostery session blocking when ready. Single engine — no parallel network hook.
+ * Cosmetics: Ghostery session preload when active; else webview-preload via getCosmeticCss.
  */
 function attachToSession(ses) {
   attached.add(ses);
-  if (blocker) {
-    enableGhostery(ses);
-    return;
-  }
-  legacy.attachToSession(ses);
+  if (blocker) enableGhostery(ses);
 }
 
+/**
+ * @param {Partial<AdblockConfig> & { updateLists?: boolean }} next
+ */
 function setConfig(next) {
   if (next && typeof next.updateLists === 'boolean') updateLists = next.updateLists;
-  return legacy.setConfig(next);
+  if (next && typeof next === 'object') {
+    config = { ...config, ...next };
+    if (Array.isArray(next.customRules)) refreshCustom();
+  }
+  if (blocker) {
+    if (Array.isArray(next?.customRules)) applyCustomRulesToBlocker();
+    syncBlockingOnSessions();
+  }
+  return getStatus();
+}
+
+function getCosmeticCss() {
+  if (blocker) return '';
+  if (!config.enabled || !config.cosmetic) return '';
+  return COSMETIC_CSS;
+}
+
+/**
+ * @param {string} [pageUrl]
+ */
+function getPageScript(pageUrl) {
+  if (!config.enabled || !config.cosmetic) return '';
+  if (!pageUrl) return '';
+  try {
+    const h = new URL(pageUrl).hostname.toLowerCase();
+    if (
+      h === 'youtube.com' ||
+      h.endsWith('.youtube.com') ||
+      h === 'youtu.be' ||
+      h.endsWith('.youtu.be') ||
+      h === 'youtube-nocookie.com' ||
+      h.endsWith('.youtube-nocookie.com') ||
+      h === 'm.youtube.com'
+    ) {
+      return YOUTUBE_PAGE_SCRIPT;
+    }
+  } catch {
+    /* */
+  }
+  return '';
+}
+
+/**
+ * @param {string} url
+ */
+function shouldBlock(url) {
+  if (!config.enabled || !config.network) return false;
+  if (!blocker) return false;
+  try {
+    const { Request } = require('@ghostery/adblocker');
+    let hostname = '';
+    try {
+      hostname = new URL(url).hostname;
+    } catch {
+      return false;
+    }
+    const { match } = blocker.match(
+      Request.fromRawDetails({
+        url,
+        type: 'other',
+        sourceUrl: url,
+        sourceHostname: hostname,
+      }),
+    );
+    return Boolean(match);
+  } catch {
+    return false;
+  }
 }
 
 function getStatus() {
+  rollDay();
   return {
-    ...legacy.getStatus(),
-    engine: blocker ? 'ghostery' : 'legacy',
+    ...config,
+    blockedCount,
+    blockedToday,
+    ruleHosts: customHosts.size + (blocker ? LIST_URLS.length : 0),
+    engine: blocker ? 'ghostery' : 'fallback-cosmetic',
     updateLists,
     lastInitError,
   };
 }
+
+function setBlockedListener(fn) {
+  onBlocked = typeof fn === 'function' ? fn : null;
+}
+
+refreshCustom();
 
 module.exports = {
   init,
   attachToSession,
   setConfig,
   getStatus,
-  getCosmeticCss(...a) {
-    if (blocker) return '';
-    return legacy.getCosmeticCss(...a);
-  },
-  getPageScript: (...a) => legacy.getPageScript(...a),
-  shouldBlock: (...a) => legacy.shouldBlock(...a),
-  setBlockedListener: (...a) => legacy.setBlockedListener(...a),
+  getCosmeticCss,
+  getPageScript,
+  shouldBlock,
+  setBlockedListener,
+  bump,
   getRecentBlocked,
   clearRecentBlocked,
   LIST_URLS,
+  COSMETIC_CSS,
 };
+

@@ -177,7 +177,10 @@ check('before-quit calls tor.stop', main.includes('void tor.stop()') || main.inc
 check('AvoidDiskWrites 1 in torrc', daemon.includes("'AvoidDiskWrites 1'") || daemon.includes('AvoidDiskWrites 1'));
 
 console.log('\n=== 11. Adblock double-bind ===');
-check('Ghostery attach returns before legacy', /if \(blocker\) \{\s*enableGhostery\(ses\);\s*return;/.test(adblockPlus));
+check('adblock-plus does not require legacy adblock.cjs', !adblockPlus.includes("require('./adblock.cjs')"));
+check('Ghostery enableBlockingInSession wired', adblockPlus.includes('enableBlockingInSession'));
+check('no onBeforeRequest in adblock-plus', !adblockPlus.includes('onBeforeRequest'));
+check('legacy adblock.cjs removed', !fs.existsSync(path.join(root, 'electron', 'adblock.cjs')));
 
 async function openpgpCases() {
   console.log('\n=== 4b. OpenPGP runtime ===');
