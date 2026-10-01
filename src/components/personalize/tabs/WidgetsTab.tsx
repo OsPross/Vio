@@ -36,10 +36,12 @@ function SortableWidgetRow({
   widget,
   onSize,
   onToggle,
+  onPatchSettings,
 }: {
   widget: HomeWidget;
   onSize: (size: HomeWidgetSize) => void;
   onToggle: (on: boolean) => void;
+  onPatchSettings: (settings: Record<string, unknown>) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: widget.id,
@@ -51,35 +53,51 @@ function SortableWidgetRow({
     transition,
     opacity: isDragging ? 0.85 : 1,
   };
+  const city = String(widget.settings.location || '');
 
   return (
-    <div ref={setNodeRef} className="pz-widget-row" style={style}>
-      <button
-        type="button"
-        className="pz-widget-grip"
-        {...attributes}
-        {...listeners}
-        title="Przeciągnij"
-      >
-        <GripVertical size={14} />
-      </button>
-      <Icon size={15} strokeWidth={1.75} className="pz-widget-ico" />
-      <span className="pz-widget-name">{meta.label}</span>
-      <Segmented
-        size="sm"
-        value={widget.size}
-        options={[
-          { id: 'S', label: 'S' },
-          { id: 'M', label: 'M' },
-          { id: 'L', label: 'L' },
-        ]}
-        onChange={(id) => onSize(id as HomeWidgetSize)}
-        aria-label={`Rozmiar ${meta.label}`}
-      />
-      <Switch on={true} onChange={onToggle} aria-label={`Widoczność ${meta.label}`} />
-      <span className="pz-widget-more" aria-hidden>
-        <MoreHorizontal size={14} />
-      </span>
+    <div ref={setNodeRef} className="pz-widget-row-wrap" style={style}>
+      <div className="pz-widget-row">
+        <button
+          type="button"
+          className="pz-widget-grip"
+          {...attributes}
+          {...listeners}
+          title="Przeciągnij"
+        >
+          <GripVertical size={14} />
+        </button>
+        <Icon size={15} strokeWidth={1.75} className="pz-widget-ico" />
+        <span className="pz-widget-name">{meta.label}</span>
+        <Segmented
+          size="sm"
+          value={widget.size}
+          options={[
+            { id: 'S', label: 'S' },
+            { id: 'M', label: 'M' },
+            { id: 'L', label: 'L' },
+          ]}
+          onChange={(id) => onSize(id as HomeWidgetSize)}
+          aria-label={`Rozmiar ${meta.label}`}
+        />
+        <Switch on={true} onChange={onToggle} aria-label={`Widoczność ${meta.label}`} />
+        <span className="pz-widget-more" aria-hidden>
+          <MoreHorizontal size={14} />
+        </span>
+      </div>
+      {widget.type === 'weather' && (
+        <label className="pz-widget-city">
+          <span>Miasto</span>
+          <input
+            className="ui-input"
+            value={city}
+            placeholder="Np. Kraków"
+            spellCheck={false}
+            onChange={(e) => onPatchSettings({ location: e.target.value })}
+            onBlur={(e) => onPatchSettings({ location: e.target.value.trim() })}
+          />
+        </label>
+      )}
     </div>
   );
 }
@@ -176,6 +194,13 @@ export function WidgetsTab({
                     onToggle={(on) => {
                       if (!on) setWidgets(widgets.filter((x) => x.id !== w.id));
                     }}
+                    onPatchSettings={(next) =>
+                      setWidgets(
+                        widgets.map((x) =>
+                          x.id === w.id ? { ...x, settings: { ...x.settings, ...next } } : x,
+                        ),
+                      )
+                    }
                   />
                 ))}
               </div>

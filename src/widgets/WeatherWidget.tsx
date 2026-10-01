@@ -81,7 +81,6 @@ export function WeatherWidget({
   preview?: boolean;
 }) {
   const allowNet = useStore((s) => s.settings.privacyAllowAppNetwork);
-  const setSettingsTab = useStore((s) => s.setSettingsTab);
   const location = String(widget.settings.location || '');
   const savedLat = typeof widget.settings.lat === 'number' ? widget.settings.lat : undefined;
   const savedLon = typeof widget.settings.lon === 'number' ? widget.settings.lon : undefined;
@@ -146,56 +145,16 @@ export function WeatherWidget({
   }, [draft, location, allowNet, preview]);
 
   if (!location && !preview) {
+    return null;
+  }
+
+  if (!location && preview) {
     return (
       <div className={`hw-weather hw-weather-setup hw-size-${size}`}>
         <div className="hw-weather-setup-inner">
           <MapPin size={28} strokeWidth={1.5} className="hw-weather-pin" />
           <p className="hw-weather-setup-title">Ustaw miasto</p>
-          {!allowNet ? (
-            <p className="hw-muted">
-              Zapytania aplikacji są wyłączone.{' '}
-              <button type="button" className="hw-link" onClick={() => setSettingsTab('privacy')}>
-                Otwórz prywatność
-              </button>
-            </p>
-          ) : (
-            <>
-              <input
-                className="hw-input"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Np. Kraków, Gdańsk…"
-                spellCheck={false}
-                autoFocus
-              />
-              {suggests.length > 0 && (
-                <ul className="hw-suggest-list">
-                  {suggests.map((p) => (
-                    <li key={`${p.lat}-${p.lon}`}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDraft(p.name);
-                          setSuggests([]);
-                          void fetchWx({ location: p.name, lat: p.lat, lon: p.lon });
-                        }}
-                      >
-                        {p.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <button
-                type="button"
-                className="hw-btn"
-                disabled={loading || draft.trim().length < 2}
-                onClick={() => void fetchWx({ location: draft.trim() })}
-              >
-                {loading ? 'Szukam…' : 'Zapisz'}
-              </button>
-            </>
-          )}
+          <p className="hw-muted">Ustaw miasto w Personalizacja → Widżety.</p>
         </div>
       </div>
     );

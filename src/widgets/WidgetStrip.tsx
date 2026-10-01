@@ -650,6 +650,14 @@ export function WidgetStrip({
           const px = sizePx(w.size);
           const h = widgetSizeCells(w.size).h * HOME_GRID_PX;
           const resolvedStyle = (w.style || widgetStyle) as HomeWidgetStyle;
+          // Hide weather on home until a city is set (configure in Personalize → Widgets)
+          if (
+            !preview &&
+            w.type === 'weather' &&
+            !String(w.settings?.location || '').trim()
+          ) {
+            return null;
+          }
           let style: CSSProperties = { width: px, maxWidth: '100%' };
           let box: PlaceBox = { left: 0, top: 0, width: px, height: h };
           if (!flexFallback) {

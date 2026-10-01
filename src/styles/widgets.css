@@ -728,6 +728,22 @@
 }
 
 /* —— Weather —— */
+.hw-card.hw-type-weather .hw-frame {
+  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: var(--hw-radius, 14px);
+  padding: 10px 12px 12px;
+  box-sizing: border-box;
+  height: 100%;
+}
+.hw-card.hw-type-weather.hw-style-glass .hw-frame {
+  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 48%, transparent);
+  backdrop-filter: blur(var(--glass-blur, 16px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
+}
+.hw-card.hw-type-weather.hw-style-solid .hw-frame {
+  background: var(--bg-elev, var(--elev));
+}
 .hw-weather {
   position: relative;
   flex: 1;
@@ -735,6 +751,30 @@
   flex-direction: column;
   gap: 10px;
   min-height: 0;
+  padding: 2px 0 0;
+}
+.pz-widget-row-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+}
+.pz-widget-row-wrap:last-child {
+  border-bottom: 0;
+}
+.pz-widget-city {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 6px 36px;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.pz-widget-city .ui-input {
+  flex: 1;
+  height: 30px;
+  font-size: 12.5px;
 }
 .hw-weather-setup {
   justify-content: center;
