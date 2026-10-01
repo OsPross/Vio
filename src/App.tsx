@@ -43,6 +43,7 @@ import { AboutPage } from './components/AboutPage';
 import { OmniboxSuggest } from './components/OmniboxSuggest';
 import { SettingsPage } from './components/SettingsPage';
 import { AppSidebar } from './components/AppSidebar';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { MetricsDot, TaskManagerOverlay } from './components/metrics/ResourcesPanel';
 import { useMetrics, useMetricsGuests } from './lib/useMetrics';
 import type { MetricsGuest } from './lib/metricsTypes';
@@ -80,6 +81,12 @@ import {
 } from './lib/shortcutsRegistry';
 
 import { TabWebview, markTypedUrl, recordVisitFromTab, type WebviewEl, type SaveOffer } from './features/tabs';
+import {
+  draftForUrl,
+  isInternalPageUrl,
+  resolveTorHomeUrl,
+  titleForInternalUrl,
+} from './lib/tabNavigate';
 
 
 export function App() {
@@ -1590,23 +1597,8 @@ export function App() {
       }
       if (opts?.typed && /^https?:/i.test(url)) markTypedUrl(url);
     }
-    const nextUrl = tor && (url === HOME_URL || url === 'about:home') ? TOR_HOME_URL : url;
-    const title =
-      nextUrl === HISTORY_URL
-        ? 'Historia'
-        : nextUrl === DOWNLOADS_URL
-          ? 'Pobrania'
-          : nextUrl === BOOKMARKS_URL
-            ? 'Zakładki'
-            : nextUrl === EXTENSIONS_URL
-              ? 'Rozszerzenia'
-              : nextUrl === ABOUT_URL || nextUrl === 'about:about'
-                ? 'O djxxr'
-                : nextUrl === HOME_URL || nextUrl === TOR_HOME_URL
-                  ? tor
-                    ? 'Tor'
-                    : 'Nowa karta'
-                  : '…';
+    const nextUrl = resolveTorHomeUrl(url, tor);
+    const title = titleForInternalUrl(nextUrl, tor);
     if (!tor && /^https?:/i.test(nextUrl)) {
       recordVisitFromTab(active, nextUrl, '', { typed: !!opts?.typed });
     }
@@ -1615,34 +1607,13 @@ export function App() {
       title,
       ...(tor ? { mode: 'tor' as const } : {}),
     });
-    const isInternal =
-      nextUrl === HOME_URL ||
-      nextUrl === TOR_HOME_URL ||
-      nextUrl === HISTORY_URL ||
-      nextUrl === DOWNLOADS_URL ||
-      nextUrl === BOOKMARKS_URL ||
-      nextUrl === EXTENSIONS_URL ||
-      nextUrl === ABOUT_URL ||
-      nextUrl === 'about:about' ||
-      nextUrl.startsWith('about:');
-    if (!tor && !isInternal) {
+    if (!tor && !isInternalPageUrl(nextUrl)) {
       requestAnimationFrame(() => {
         const el = currentView();
         if (el && el.src !== nextUrl) el.src = nextUrl;
       });
     }
-    setDraft(
-      nextUrl === HOME_URL ||
-        nextUrl === TOR_HOME_URL ||
-        nextUrl === HISTORY_URL ||
-        nextUrl === DOWNLOADS_URL ||
-        nextUrl === BOOKMARKS_URL ||
-        nextUrl === EXTENSIONS_URL ||
-        nextUrl === ABOUT_URL ||
-        nextUrl === 'about:about'
-        ? ''
-        : nextUrl,
-    );
+    setDraft(draftForUrl(nextUrl));
     setView('browser');
   };
 
@@ -1761,7 +1732,9 @@ export function App() {
     return shell(
       <div className={`app settings-mode ${settings.uiGlass ? 'glass-on' : ''}`}>
         <div className="drag-strip absolute-drag" />
-        <SettingsPage />
+        <ErrorBoundary name="settings">
+          <SettingsPage />
+        </ErrorBoundary>
       </div>,
     );
   }
@@ -1844,7 +1817,9 @@ export function App() {
             setSidebarMenu({ x: e.clientX, y: e.clientY });
           }}
         >
-          <AppSidebar onHome={() => navigateActive(HOME_URL)} onOpenTab={(url) => newTab(url)} />
+          <ErrorBoundary name="sidebar">
+            <AppSidebar onHome={() => navigateActive(HOME_URL)} onOpenTab={(url) => newTab(url)} />
+          </ErrorBoundary>
         </div>
       )}
 
@@ -3070,22 +3045,38 @@ export function App() {
             </div>
           )}
           {isHistoryPage && active && (
-            <HistoryPage
-              onOpen={(url) => {
-                navigateActive(url);
-              }}
-              onOpenNewTab={(url) => newTab(url)}
-            />
+            <ErrorBoundary name="about:history">
+              <HistoryPage
+                onOpen={(url) => {
+                  navigateActive(url);
+                }}
+                onOpenNewTab={(url) => newTab(url)}
+              />
+            </ErrorBoundary>
           )}
-          {isDownloadsPage && active && <DownloadsPage />}
+          {isDownloadsPage && active && (
+            <ErrorBoundary name="about:downloads">
+              <DownloadsPage />
+            </ErrorBoundary>
+          )}
           {isBookmarksPage && active && (
-            <BookmarksPage
-              onOpen={openBookmarkUrl}
-              onEditBookmark={(b) => openBookmarkDialog(b.url, b.title)}
-            />
+            <ErrorBoundary name="about:bookmarks">
+              <BookmarksPage
+                onOpen={openBookmarkUrl}
+                onEditBookmark={(b) => openBookmarkDialog(b.url, b.title)}
+              />
+            </ErrorBoundary>
           )}
-          {isExtensionsPage && active && <ExtensionsPage />}
-          {isAboutPage && <AboutPage />}
+          {isExtensionsPage && active && (
+            <ErrorBoundary name="about:extensions">
+              <ExtensionsPage />
+            </ErrorBoundary>
+          )}
+          {isAboutPage && (
+            <ErrorBoundary name="about:about">
+              <AboutPage />
+            </ErrorBoundary>
+          )}
           {isTorHome && active && (
             <TorLanding
               info={torInfo}
