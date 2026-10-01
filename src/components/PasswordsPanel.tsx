@@ -85,6 +85,7 @@ export function PasswordsPanel() {
 
   const [status, setStatus] = useState<Status | null>(null);
   const [shellMissing, setShellMissing] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [error, setError] = useState('');
   const [master, setMaster] = useState('');
   const [master2, setMaster2] = useState('');
@@ -121,12 +122,35 @@ export function PasswordsPanel() {
   const [busy, setBusy] = useState(false);
 
   const refreshStatus = useCallback(async () => {
+    setLoadError('');
     if (!window.shell?.passwordsStatus) {
       setShellMissing(true);
       return;
     }
-    const st = await window.shell.passwordsStatus();
-    if (st && !('error' in st && st.ok === false)) setStatus(st as Status);
+    try {
+      const st = await Promise.race([
+        window.shell.passwordsStatus(),
+        new Promise<never>((_, rej) =>
+          setTimeout(() => rej(new Error('Timeout: shell:passwords-status')), 10_000),
+        ),
+      ]);
+      if (st && typeof st === 'object' && 'ok' in st && (st as { ok?: boolean }).ok === false) {
+        setStatus(null);
+        setLoadError(
+          String((st as { error?: string }).error || 'Nie udało się odczytać statusu sejfu'),
+        );
+        return;
+      }
+      if (st && typeof st === 'object' && 'setup' in st) {
+        setStatus(st as Status);
+        return;
+      }
+      setStatus(null);
+      setLoadError('Brak odpowiedzi statusu sejfu');
+    } catch (err) {
+      setStatus(null);
+      setLoadError(String((err as Error)?.message || err || 'Błąd IPC sejfu'));
+    }
   }, []);
 
   const refreshList = useCallback(async () => {
@@ -309,6 +333,17 @@ export function PasswordsPanel() {
         Menedżer haseł działa tylko w oknie Electron (IPC). Otwórz aplikację przez{' '}
         <code>npm run electron:dev</code>, nie sam Vite w przeglądarce.
       </p>
+    );
+  }
+
+  if (loadError && !status) {
+    return (
+      <div className="snote" style={{ display: 'grid', gap: 10, maxWidth: 420 }}>
+        <span>{loadError}</span>
+        <button type="button" className="sbtn" onClick={() => void refreshStatus()}>
+          Spróbuj ponownie
+        </button>
+      </div>
     );
   }
 

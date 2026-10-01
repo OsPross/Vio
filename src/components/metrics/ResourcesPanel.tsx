@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Moon, X } from 'lucide-react';
-import { useMetrics } from '../../lib/useMetrics';
+import { metricsRetry, useMetrics } from '../../lib/useMetrics';
 import type { MetricsRow } from '../../lib/metricsTypes';
 import { resolveFavicon, faviconImgFallback } from '../../lib/favicon';
 import { AnimatedNumber, Sparkline } from './Sparkline';
@@ -28,6 +28,36 @@ export function ResourcesPanel({ active }: { active: boolean }) {
   const updateTab = useStore((s) => s.updateTab);
   const tabs = useStore((s) => s.tabs);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'cpu', dir: -1 });
+  const [loadError, setLoadError] = useState('');
+  const [retrying, setRetrying] = useState(false);
+
+  useEffect(() => {
+    if (!active) {
+      setLoadError('');
+      return;
+    }
+    if (data) {
+      setLoadError('');
+      return;
+    }
+    const t = window.setTimeout(() => {
+      setLoadError('Brak metryk z procesu głównego (shell:metrics).');
+    }, 6000);
+    return () => window.clearTimeout(t);
+  }, [active, data]);
+
+  const onRetry = async () => {
+    setRetrying(true);
+    setLoadError('');
+    try {
+      const snap = await metricsRetry();
+      if (!snap) setLoadError('Nie udało się pobrać metryk. Spróbuj ponownie.');
+    } catch (err) {
+      setLoadError(String((err as Error)?.message || err || 'Błąd IPC metryk'));
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const rows = useMemo(() => {
     const list = data?.rows ? [...data.rows] : [];
@@ -161,7 +191,16 @@ export function ResourcesPanel({ active }: { active: boolean }) {
       <section className="sg">
         <span className="sg-label">Menedżer zadań</span>
         <div className="sg-block mx-table-wrap">
-          {!data && <p className="snote">Ładowanie metryk…</p>}
+          {loadError && !data ? (
+            <div className="snote" style={{ display: 'grid', gap: 10 }}>
+              <span>{loadError}</span>
+              <button type="button" className="sbtn" disabled={retrying} onClick={() => void onRetry()}>
+                Spróbuj ponownie
+              </button>
+            </div>
+          ) : (
+            !data && <p className="snote">Ładowanie metryk…</p>
+          )}
           {data && (
             <table className="mx-table">
               <thead>

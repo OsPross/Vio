@@ -132,8 +132,8 @@ function wrapApp(fn) {
 
 function wrapPw(fn) {
   return async (event, ...args) => {
-    assertFromApp(event);
     try {
+      assertFromApp(event);
       passwords.touchActivity();
       return await fn(...args);
     } catch (err) {
