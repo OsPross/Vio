@@ -9,6 +9,29 @@ import {
 } from '../lib/omniboxGhost';
 import { useStore, type Bang, type Shortcut, type Tab } from '../store';
 
+/** Same topsites as history.cjs — snappy ghost before IPC returns */
+const TOP_SITE_HOSTS = [
+  'youtube.com',
+  'google.com',
+  'github.com',
+  'wikipedia.org',
+  'reddit.com',
+  'facebook.com',
+  'twitter.com',
+  'x.com',
+  'amazon.com',
+  'netflix.com',
+  'discord.com',
+  'stackoverflow.com',
+];
+
+function localTopFill(typed: string): string | null {
+  const t = typed.trim().toLowerCase();
+  if (t.length < 1 || /\s/.test(t) || t.startsWith('!') || /^https?:/i.test(t)) return null;
+  const hit = TOP_SITE_HOSTS.find((h) => h.startsWith(t) && h.length > t.length);
+  return hit || null;
+}
+
 export type SuggestItem = {
   kind: string;
   title: string;
@@ -218,14 +241,16 @@ export function OmniboxSuggest({
 
   const flat = useMemo(() => flattenGroups(allGroups), [allGroups]);
 
+  const effectiveFill = completion?.fill || localTopFill(value) || null;
+
   const ghostSuffix = useMemo(() => {
     if (tor || composing || ghostDismissed) return '';
-    return matchOmniboxGhost(value, completion?.fill);
-  }, [tor, composing, ghostDismissed, value, completion?.fill]);
+    return matchOmniboxGhost(value, effectiveFill);
+  }, [tor, composing, ghostDismissed, value, effectiveFill]);
 
   const ghostVisible = shouldShowOmniboxGhost({
     typed: value,
-    fill: completion?.fill,
+    fill: effectiveFill,
     focused,
     composing,
     dismissed: ghostDismissed,
@@ -235,13 +260,13 @@ export function OmniboxSuggest({
   });
 
   const completionItem: SuggestItem | null =
-    ghostSuffix && completion?.fill
+    ghostSuffix && effectiveFill
       ? {
           kind: 'completion',
           title: value + ghostSuffix,
           subtitle: 'Enter',
-          fill: normalizeGhostFill(completion.fill),
-          url: `https://${normalizeGhostFill(completion.fill)}`,
+          fill: normalizeGhostFill(effectiveFill),
+          url: `https://${normalizeGhostFill(effectiveFill)}`,
         }
       : null;
 
@@ -267,7 +292,7 @@ export function OmniboxSuggest({
 
   /** Accept ghost into the field (Tab / →) — value becomes completed host */
   const acceptGhost = useCallback(() => {
-    if (!completion?.fill || !ghostSuffix) return false;
+    if (!effectiveFill || !ghostSuffix) return false;
     const next = value + ghostSuffix;
     markDirty();
     setGhostDismissed(true);
@@ -281,7 +306,7 @@ export function OmniboxSuggest({
       syncCaret();
     });
     return true;
-  }, [completion?.fill, ghostSuffix, value, onChange, markDirty, syncCaret]);
+  }, [effectiveFill, ghostSuffix, value, onChange, markDirty, syncCaret]);
 
   const runItem = (item: SuggestItem) => {
     setOpen(false);
@@ -467,8 +492,8 @@ export function OmniboxSuggest({
       e.preventDefault();
       e.stopPropagation();
       clearDirty();
-      if (ghostVisible && completion?.fill) {
-        onSubmit(ghostNavigateUrl(value, completion.fill), { typed: true, fromSuggest: true });
+      if (ghostVisible && effectiveFill) {
+        onSubmit(ghostNavigateUrl(value, effectiveFill), { typed: true, fromSuggest: true });
       } else {
         onSubmit(value, { typed: true });
       }
