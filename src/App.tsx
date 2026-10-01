@@ -64,12 +64,10 @@ import {
   type Tab,
   type ThemeId,
 } from './store';
-import { pageScrollbarCss } from './lib/page-scrollbars';
 import { buildSessionSnapshot } from './lib/sessionSnapshot';
 import { TorLanding, type TorStatusInfo } from './components/TorLanding';
 import { ShieldPanel } from './components/ShieldPanel';
 import { Switch } from './components/ui/Switch';
-import { letterFavicon } from './lib/favicon';
 import { formatUrlPlain } from './lib/url-display';
 import {
   chromeShortcutAllowedInEditable,
