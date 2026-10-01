@@ -115,6 +115,11 @@ function createCreateWindow(deps) {
     }
     bw.on('closed', () => {
       appWindows.delete(bw);
+      try {
+        pushMetricsVisibility();
+      } catch {
+        /* */
+      }
       if (privatePartition) {
         void windowMode.wipePrivatePartition(privatePartition);
       }
@@ -154,9 +159,17 @@ function createCreateWindow(deps) {
     mouseNav.attachAppCommandFallback(bw);
     mouseNav.attachSideButtons(bw.webContents, { host: bw, label: `host:${bw.id}` });
 
+    // OR across all app windows — a hidden secondary must not pause metrics for the main UI.
+    // Do not probe before first show: create uses show:false and would stick windowVisible=false.
     const pushMetricsVisibility = () => {
       try {
-        const visible = !bw.isDestroyed() && bw.isVisible() && !bw.isMinimized();
+        let visible = false;
+        for (const w of appWindows) {
+          if (!w.isDestroyed() && w.isVisible() && !w.isMinimized()) {
+            visible = true;
+            break;
+          }
+        }
         metrics.setWindowVisible(visible);
       } catch {
         /* */
@@ -166,7 +179,6 @@ function createCreateWindow(deps) {
     bw.on('hide', pushMetricsVisibility);
     bw.on('minimize', pushMetricsVisibility);
     bw.on('restore', pushMetricsVisibility);
-    pushMetricsVisibility();
 
     if (!secondary && win.isMaximized) {
       try {

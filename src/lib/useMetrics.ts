@@ -35,44 +35,70 @@ async function ensurePushChannel() {
     }) ?? null;
 }
 
-async function acquireLive() {
-  liveRefCount += 1;
+/** Serialize IPC so StrictMode unsub/sub cannot desync main watchers. */
+let ipcGate: Promise<void> = Promise.resolve();
+let liveSubscribed = false;
+let discardSubscribed = false;
+
+function enqueueIpc(fn: () => Promise<void>) {
+  ipcGate = ipcGate.then(fn, fn);
+  return ipcGate;
+}
+
+async function syncLiveSub() {
   await ensurePushChannel();
-  if (liveRefCount === 1) {
+  if (liveRefCount > 0 && !liveSubscribed) {
     if (window.shell?.metricsSubscribeLive) await window.shell.metricsSubscribeLive();
     else await window.shell?.metricsSubscribe?.();
+    liveSubscribed = true;
+    await metricsOnce();
+  } else if (liveRefCount === 0 && liveSubscribed) {
+    if (window.shell?.metricsUnsubscribeLive) await window.shell.metricsUnsubscribeLive();
+    else await window.shell?.metricsUnsubscribe?.();
+    liveSubscribed = false;
+    if (!discardSubscribed) {
+      unsubPush?.();
+      unsubPush = null;
+    }
+  } else if (liveRefCount > 0 && !latest) {
+    await metricsOnce();
   }
+}
+
+async function syncDiscardSub() {
+  await ensurePushChannel();
+  if (discardRefCount > 0 && !discardSubscribed) {
+    await window.shell?.metricsSubscribeDiscard?.();
+    discardSubscribed = true;
+    await metricsOnce();
+  } else if (discardRefCount === 0 && discardSubscribed) {
+    await window.shell?.metricsUnsubscribeDiscard?.();
+    discardSubscribed = false;
+    if (!liveSubscribed) {
+      unsubPush?.();
+      unsubPush = null;
+    }
+  }
+}
+
+async function acquireLive() {
+  liveRefCount += 1;
+  await enqueueIpc(syncLiveSub);
 }
 
 async function releaseLive() {
   liveRefCount = Math.max(0, liveRefCount - 1);
-  if (liveRefCount === 0) {
-    if (window.shell?.metricsUnsubscribeLive) await window.shell.metricsUnsubscribeLive();
-    else await window.shell?.metricsUnsubscribe?.();
-    if (discardRefCount === 0) {
-      unsubPush?.();
-      unsubPush = null;
-    }
-  }
+  await enqueueIpc(syncLiveSub);
 }
 
 async function acquireDiscard() {
   discardRefCount += 1;
-  await ensurePushChannel();
-  if (discardRefCount === 1) {
-    await window.shell?.metricsSubscribeDiscard?.();
-  }
+  await enqueueIpc(syncDiscardSub);
 }
 
 async function releaseDiscard() {
   discardRefCount = Math.max(0, discardRefCount - 1);
-  if (discardRefCount === 0) {
-    await window.shell?.metricsUnsubscribeDiscard?.();
-    if (liveRefCount === 0) {
-      unsubPush?.();
-      unsubPush = null;
-    }
-  }
+  await enqueueIpc(syncDiscardSub);
 }
 
 /**
@@ -130,14 +156,41 @@ export function useMetricsGuests(active: boolean, guests: MetricsGuest[]) {
 }
 
 export async function metricsOnce(): Promise<MetricsPayload | null> {
-  const snap = await window.shell?.metricsSnapshot?.();
-  if (snap && 'system' in snap) {
-    emit(snap as MetricsPayload);
-    return snap as MetricsPayload;
+  try {
+    const snap = await window.shell?.metricsSnapshot?.();
+    if (snap && 'system' in snap) {
+      emit(snap as MetricsPayload);
+      return snap as MetricsPayload;
+    }
+  } catch {
+    /* */
   }
   return null;
 }
 
 export function getLatestMetrics() {
+  return latest;
+}
+
+/** Force re-subscribe + snapshot (task manager retry). */
+export async function metricsRetry(): Promise<MetricsPayload | null> {
+  await enqueueIpc(async () => {
+    if (liveRefCount > 0) {
+      if (liveSubscribed) {
+        if (window.shell?.metricsUnsubscribeLive) await window.shell.metricsUnsubscribeLive();
+        else await window.shell?.metricsUnsubscribe?.();
+        liveSubscribed = false;
+      }
+      await syncLiveSub();
+    } else if (discardRefCount > 0) {
+      if (discardSubscribed) {
+        await window.shell?.metricsUnsubscribeDiscard?.();
+        discardSubscribed = false;
+      }
+      await syncDiscardSub();
+    } else {
+      await metricsOnce();
+    }
+  });
   return latest;
 }

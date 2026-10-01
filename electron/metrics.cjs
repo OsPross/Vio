@@ -100,10 +100,21 @@ function setLowPower(on) {
   return intervalMs;
 }
 
+/** Debounce stop so StrictMode mount→unmount→mount does not leave liveWatchers at 0. */
+let stopTimer = null;
+
 function recomputeSampling() {
   if (liveWatchers + discardWatchers <= 0 || !windowVisible) {
-    stop();
+    if (stopTimer) return;
+    stopTimer = setTimeout(() => {
+      stopTimer = null;
+      if (liveWatchers + discardWatchers <= 0 || !windowVisible) stop();
+    }, 80);
     return;
+  }
+  if (stopTimer) {
+    clearTimeout(stopTimer);
+    stopTimer = null;
   }
   const want = liveWatchers > 0 ? (intervalMs === LOW_POWER_INTERVAL_MS ? LOW_POWER_INTERVAL_MS : DEFAULT_INTERVAL_MS) : DISCARD_INTERVAL_MS;
   if (!timer) {
@@ -117,12 +128,14 @@ function recomputeSampling() {
 function setWindowVisible(visible) {
   windowVisible = Boolean(visible);
   recomputeSampling();
-  return { ok: true, windowVisible, subscribers };
+  return { ok: true, windowVisible, subscribers: liveWatchers + discardWatchers };
 }
 
 function subscribeLive() {
   liveWatchers += 1;
+  lastPushKey = '';
   recomputeSampling();
+  void tick();
   return { ok: true, subscribers: liveWatchers + discardWatchers, intervalMs, mode: 'live' };
 }
 
@@ -134,7 +147,9 @@ function unsubscribeLive() {
 
 function subscribeDiscard() {
   discardWatchers += 1;
+  lastPushKey = '';
   recomputeSampling();
+  void tick();
   return { ok: true, subscribers: liveWatchers + discardWatchers, intervalMs, mode: 'discard' };
 }
 
