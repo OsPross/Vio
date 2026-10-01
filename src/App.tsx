@@ -30,6 +30,7 @@ import { useSessionPersist } from './hooks/useSessionPersist';
 import { useTabLifecycle, useTabMediaFlags } from './hooks/useTabLifecycle';
 import { useTorSession } from './hooks/useTorSession';
 import { useBrowserNav } from './hooks/useBrowserNav';
+import { useOmniboxDraft } from './features/omnibox';
 
 /** Heavy routes / dialogs — not needed for first paint */
 const SettingsPage = lazy(() =>
@@ -81,10 +82,13 @@ export function App() {
     !!active &&
     activeIsTor &&
     (active.url === TOR_HOME_URL || active.url === HOME_URL || active.url === 'about:blank');
-  const [draft, setDraft] = useState(isHome || isTorHome ? '' : (active?.url ?? ''));
-  /** Omnibox: user is editing — ignore navigations / tab URL sync for draft */
-  const omniEditingRef = useRef(false);
-  const omniFocusedRef = useRef(false);
+  const { draft, setDraft, omniEditingRef, omniFocusedRef } = useOmniboxDraft({
+    activeUrl: active?.url,
+    activeId: active?.id,
+    isHome,
+    isTorHome,
+    isInternalAbout,
+  });
   const [saveOffer, setSaveOffer] = useState<SaveOffer | null>(null);
   const [pwForPage, setPwForPage] = useState(0);
   const [taskMgrOpen, setTaskMgrOpen] = useState(false);
@@ -292,12 +296,6 @@ export function App() {
     if (!media?.playing) return;
     runPictureInPictureOnTab(prevId, { enterOnly: true });
   }, [activeId, settings.autoPipOnTabSwitch, runPictureInPictureOnTab]);
-
-  useEffect(() => {
-    if (omniEditingRef.current && omniFocusedRef.current) return;
-    if (isHome || isTorHome || isInternalAbout) setDraft('');
-    else setDraft(active?.url ?? '');
-  }, [active?.id, active?.url, isHome, isTorHome, isInternalAbout]);
 
   useEffect(() => {
     void window.shell?.setDevtoolsEnabled?.(Boolean(settings.allowInspect));
