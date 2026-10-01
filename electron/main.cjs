@@ -698,7 +698,14 @@ app.whenReady().then(async () => {
 
   createWindow();
   // Smoke hooks: unpackaged (dev) only — never in built/installed app
-  if (!app.isPackaged && process.env.SMOKE_MOUSE === '1') {
+  if (!app.isPackaged && process.env.CAPTURE_NOTES === '1') {
+    try {
+      const cap = require('../scripts/capture-notes-layout.cjs');
+      void cap.run(() => mainWindow);
+    } catch (err) {
+      console.error('[capture-notes] failed', err);
+    }
+  } else if (!app.isPackaged && process.env.SMOKE_MOUSE === '1') {
     try {
       const smoke = require('../scripts/smoke-mouse-xbutton.cjs');
       void smoke.run(() => mainWindow);
