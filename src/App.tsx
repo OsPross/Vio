@@ -19,10 +19,7 @@ import {
   isTorTab,
   normalizeInput,
   useStore,
-  type Tab,
-  type ThemeId,
 } from './store';
-import { buildSessionSnapshot } from './lib/sessionSnapshot';
 import type { TorStatusInfo } from './components/TorLanding';
 import { isEditableDomTarget } from './lib/shortcutsRegistry';
 import {
@@ -51,6 +48,7 @@ import {
 import { useIpcEvents } from './hooks/useIpcEvents';
 import { useShortcuts } from './hooks/useShortcuts';
 import { useBindCommandHost } from './hooks/useAppMenuActions';
+import { useSessionPersist } from './hooks/useSessionPersist';
 
 /** Heavy routes / dialogs — not needed for first paint */
 const SettingsPage = lazy(() =>
@@ -86,8 +84,6 @@ export function App() {
   const duplicateTab = useStore((s) => s.duplicateTab);
   const restoreSessionTabs = useStore((s) => s.restoreSessionTabs);
   const setSessionReady = useStore((s) => s.setSessionReady);
-  const closedTabs = useStore((s) => s.closedTabs);
-  const sessionReady = useStore((s) => s.sessionReady);
   const setView = useStore((s) => s.setView);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
   const patchSettings = useStore((s) => s.patchSettings);
@@ -145,7 +141,6 @@ export function App() {
   const [shieldOpen, setShieldOpen] = useState(false);
   const [pageHasVideo, setPageHasVideo] = useState(false);
   const [permRemember, setPermRemember] = useState(true);
-  const [crashOffer, setCrashOffer] = useState(false);
   const [tabMenu, setTabMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
   const [newTabMenu, setNewTabMenu] = useState<{ x: number; y: number } | null>(null);
   const [omniMenu, setOmniMenu] = useState<{ x: number; y: number } | null>(null);
@@ -171,8 +166,8 @@ export function App() {
   const [fsToast, setFsToast] = useState(false);
   const [certRemember, setCertRemember] = useState(false);
   const zoomFlashTimer = useRef<number | null>(null);
-  const navHistoryRef = useRef<Record<string, Tab['navHistory']>>({});
-  const sessionBooted = useRef(false);
+
+  const { crashOffer, setCrashOffer } = useSessionPersist({ guestWc, windowMode });
 
   const metricsActive =
     taskMgrOpen ||
@@ -284,143 +279,6 @@ export function App() {
     }, 30_000);
     return () => clearInterval(t);
   }, [settings.perfDiscardTabs, settings.perfDiscardMinutes]);
-
-  // Session restore on boot
-  useEffect(() => {
-    if (sessionBooted.current) return;
-    sessionBooted.current = true;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const boot = await window.shell?.getWindowBoot?.();
-        if (cancelled) return;
-        if (boot?.mode === 'private' || boot?.mode === 'tor') {
-          setSessionReady(true);
-          return;
-        }
-        if (Array.isArray(boot?.restoreTabs) && boot.restoreTabs.length) {
-          const lazy = useStore.getState().settings.perfLazyTabs !== false;
-          const tabs = boot.restoreTabs.map((t, i) => ({
-            id: Math.random().toString(36).slice(2, 10),
-            url: t.url,
-            title: t.title || t.url,
-            favicon: t.favicon,
-            pinned: Boolean(t.pinned),
-            navHistory: (t.navHistory as Tab['navHistory']) || null,
-            mode: 'normal' as const,
-            discarded: lazy && i !== 0,
-            lastActiveAt: Date.now(),
-          }));
-          restoreSessionTabs(tabs, tabs[0]?.id || null, []);
-          setSessionReady(true);
-          return;
-        }
-        const status = await window.shell?.sessionStatus?.();
-        const saved = await window.shell?.sessionLoad?.();
-        if (cancelled) return;
-        const mode = useStore.getState().settings.startupMode || 'session';
-        const pages = String(useStore.getState().settings.startupPages || '')
-          .split(/\r?\n/)
-          .map((l) => l.trim())
-          .filter(Boolean);
-
-        if (status?.dirtyExit && saved?.tabs?.length && mode === 'session') {
-          setCrashOffer(true);
-          setSessionReady(true);
-          return;
-        }
-
-        if (mode === 'session' && saved?.tabs?.length) {
-          const lazy = useStore.getState().settings.perfLazyTabs !== false;
-          restoreSessionTabs(
-            saved.tabs.map((t) => ({
-              id: t.id,
-              url: t.url,
-              title: t.title,
-              favicon: t.favicon,
-              pinned: Boolean(t.pinned),
-              navHistory: t.navHistory || null,
-              mode: 'normal' as const,
-              discarded: lazy && t.id !== saved.activeId,
-            })),
-            saved.activeId,
-            saved.closedTabs || [],
-          );
-          return;
-        }
-
-        if (mode === 'pages' && pages.length) {
-          const lazy = useStore.getState().settings.perfLazyTabs !== false;
-          const tabs = pages.map((url, i) => ({
-            id: Math.random().toString(36).slice(2, 10),
-            url,
-            title: url,
-            mode: 'normal' as const,
-            pinned: false,
-            discarded: lazy && i !== 0,
-            lastActiveAt: Date.now(),
-          }));
-          restoreSessionTabs(tabs, tabs[0].id, saved?.closedTabs || []);
-          return;
-        }
-
-        // newtab / empty session
-        if (saved?.closedTabs?.length) {
-          useStore.getState().setClosedTabs(saved.closedTabs);
-        }
-        setSessionReady(true);
-      } catch {
-        setSessionReady(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [restoreSessionTabs, setSessionReady]);
-
-  const persistSessionNow = useCallback(async () => {
-    if (windowMode === 'private' || windowMode === 'tor') return;
-    const st = useStore.getState();
-    // Refresh nav history for live guests
-    const navMap = { ...navHistoryRef.current };
-    await Promise.all(
-      Object.entries(guestWc).map(async ([tabId, wcId]) => {
-        const tab = st.tabs.find((t) => t.id === tabId);
-        if (!tab || isTorTab(tab)) return;
-        try {
-          const nh = await window.shell?.sessionNavHistory?.(wcId);
-          if (nh) navMap[tabId] = nh;
-        } catch {
-          /* */
-        }
-      }),
-    );
-    navHistoryRef.current = navMap;
-    const snap = buildSessionSnapshot(st.tabs, st.activeId, st.closedTabs, navMap);
-    await window.shell?.sessionSave?.(snap);
-  }, [guestWc, windowMode]);
-
-  // Debounced session save
-  useEffect(() => {
-    if (!sessionReady) return;
-    const t = setTimeout(() => {
-      void persistSessionNow();
-    }, 1000);
-    return () => clearTimeout(t);
-  }, [tabs, activeId, closedTabs, sessionReady, persistSessionNow]);
-
-  // Flush on page hide / before unload
-  useEffect(() => {
-    const flush = () => {
-      void persistSessionNow();
-    };
-    window.addEventListener('pagehide', flush);
-    window.addEventListener('beforeunload', flush);
-    return () => {
-      window.removeEventListener('pagehide', flush);
-      window.removeEventListener('beforeunload', flush);
-    };
-  }, [persistSessionNow]);
 
   useEffect(() => {
     setSaveOffer(null);
