@@ -235,7 +235,12 @@ function TabWebview({
   zoomFactors: Record<string, number>;
   onZoomWheel?: (deltaY: number, url: string) => void;
   onFoundInPage?: (result: { activeMatchOrdinal?: number; matches?: number }) => void;
-  onLoadFailed?: (payload: { errorCode: number; description: string; url: string }) => void;
+  onLoadFailed?: (payload: {
+    errorCode: number;
+    description: string;
+    url: string;
+    kind?: 'crash' | 'network';
+  }) => void;
   onHtmlFullscreen?: (active: boolean) => void;
   darkPageScrollbars: boolean;
   appTheme: ThemeId;
@@ -388,6 +393,53 @@ function TabWebview({
         errorCode: ev.errorCode ?? 0,
         description: String(ev.errorDescription || ''),
         url: String(ev.validatedURL || tab.url),
+        kind: 'network',
+      });
+    };
+
+    const onCrashed = () => {
+      let url = tab.url;
+      try {
+        url = el.getURL?.() || tab.url;
+      } catch {
+        /* */
+      }
+      onLoadFailed?.({
+        errorCode: -9001,
+        description: 'Proces renderowania strony został zakończony.',
+        url,
+        kind: 'crash',
+      });
+    };
+
+    const onRenderGone = (raw: unknown) => {
+      const ev = raw as { reason?: string };
+      let url = tab.url;
+      try {
+        url = el.getURL?.() || tab.url;
+      } catch {
+        /* */
+      }
+      onLoadFailed?.({
+        errorCode: -9001,
+        description: `Proces strony: ${ev.reason || 'crashed'}`,
+        url,
+        kind: 'crash',
+      });
+    };
+
+    const onUnresponsive = () => {
+      let url = tab.url;
+      try {
+        url = el.getURL?.() || tab.url;
+      } catch {
+        /* */
+      }
+      onLoadFailed?.({
+        errorCode: -9001,
+        description: 'Strona nie odpowiada.',
+        url,
+        kind: 'crash',
       });
     };
 
@@ -536,6 +588,9 @@ function TabWebview({
     el.addEventListener('did-finish-load', onFinish);
     el.addEventListener('found-in-page', onFound);
     el.addEventListener('did-fail-load', onFailLoad);
+    el.addEventListener('crashed', onCrashed);
+    el.addEventListener('render-process-gone', onRenderGone as EventListener);
+    el.addEventListener('unresponsive', onUnresponsive);
     el.addEventListener('enter-html-full-screen', onEnterFs);
     el.addEventListener('leave-html-full-screen', onLeaveFs);
     el.addEventListener('wheel', onWheel as EventListener, { passive: false });
@@ -564,6 +619,9 @@ function TabWebview({
       el.removeEventListener('did-finish-load', onFinish);
       el.removeEventListener('found-in-page', onFound);
       el.removeEventListener('did-fail-load', onFailLoad);
+      el.removeEventListener('crashed', onCrashed);
+      el.removeEventListener('render-process-gone', onRenderGone as EventListener);
+      el.removeEventListener('unresponsive', onUnresponsive);
       el.removeEventListener('enter-html-full-screen', onEnterFs);
       el.removeEventListener('leave-html-full-screen', onLeaveFs);
       el.removeEventListener('wheel', onWheel as EventListener);
@@ -3498,6 +3556,7 @@ export function App() {
                 url={active.loadError.url}
                 errorCode={active.loadError.errorCode}
                 description={active.loadError.description}
+                kind={active.loadError.kind === 'crash' ? 'crash' : 'network'}
                 onRetry={() => {
                   const err = active.loadError;
                   updateTab(active.id, { loadError: null });

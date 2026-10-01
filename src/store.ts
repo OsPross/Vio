@@ -12,7 +12,12 @@ export type Tab = {
   /** Isolated Tor browsing — never mix with normal tabs */
   mode?: 'normal' | 'tor' | 'private';
   /** Last main-frame load failure (shown as in-app error page) */
-  loadError?: { errorCode: number; description: string; url: string } | null;
+  loadError?: {
+    errorCode: number;
+    description: string;
+    url: string;
+    kind?: 'crash' | 'network';
+  } | null;
   /** Ephemeral partition name from main (tor-<uuid>) */
   partition?: string;
   /** Pinned tabs stay left, restore always, narrow chrome */
