@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'motion/react';
 import {
   ArrowLeft,
@@ -209,7 +209,7 @@ function pageOrigin(url: string) {
   }
 }
 
-function TabWebview({
+function TabWebviewInner({
   tab,
   active,
   alive,
@@ -258,6 +258,24 @@ function TabWebview({
   const scrollbarsGenRef = useRef(-1);
   const pageScriptsGenRef = useRef(-1);
   const updateTab = useStore((s) => s.updateTab);
+  const onNavRef = useRef(onNav);
+  const onSaveOfferRef = useRef(onSaveOffer);
+  const onGuestMetaRef = useRef(onGuestMeta);
+  const onZoomWheelRef = useRef(onZoomWheel);
+  const onFoundInPageRef = useRef(onFoundInPage);
+  const onLoadFailedRef = useRef(onLoadFailed);
+  const onHtmlFullscreenRef = useRef(onHtmlFullscreen);
+  const onMediaStateRef = useRef(onMediaState);
+  const onBrowserNavRef = useRef(onBrowserNav);
+  onNavRef.current = onNav;
+  onSaveOfferRef.current = onSaveOffer;
+  onGuestMetaRef.current = onGuestMeta;
+  onZoomWheelRef.current = onZoomWheel;
+  onFoundInPageRef.current = onFoundInPage;
+  onLoadFailedRef.current = onLoadFailed;
+  onHtmlFullscreenRef.current = onHtmlFullscreen;
+  onMediaStateRef.current = onMediaState;
+  onBrowserNavRef.current = onBrowserNav;
 
   const applyPageScrollbars = useCallback(
     async (el: WebviewEl) => {
@@ -294,8 +312,14 @@ function TabWebview({
       try {
         const url = el.getURL();
         const title = el.getTitle() || 'Karta';
-        updateTab(tab.id, { url, title, lastActiveAt: Date.now() });
-        if (active) onNav(el.canGoBack(), el.canGoForward(), url, title);
+        const cur = useStore.getState().tabs.find((t) => t.id === tab.id);
+        const patch: Partial<Tab> = {};
+        if (!cur || cur.url !== url) patch.url = url;
+        if (!cur || cur.title !== title) patch.title = title;
+        // Do NOT bump lastActiveAt here — that forced store updates on every
+        // did-stop-loading / title event and re-rendered the whole chrome.
+        if (Object.keys(patch).length) updateTab(tab.id, patch);
+        if (active) onNavRef.current(el.canGoBack(), el.canGoForward(), url, title);
         if (tab.mode !== 'tor' && title && title !== '…' && title !== 'Karta' && /^https?:/i.test(url)) {
           recordVisitFromTab(tab, url, title, { soft: true });
         }
@@ -337,15 +361,15 @@ function TabWebview({
     const reportGuest = () => {
       try {
         const id = el.getWebContentsId?.() ?? null;
-        onGuestMeta?.(tab.id, typeof id === 'number' ? id : null);
+        onGuestMetaRef.current?.(tab.id, typeof id === 'number' ? id : null);
       } catch {
-        onGuestMeta?.(tab.id, null);
+        onGuestMetaRef.current?.(tab.id, null);
       }
     };
 
     const onStart = (e: unknown) => {
       const url = (e as { url?: string }).url;
-      if (url && active) onNav(el.canGoBack(), el.canGoForward(), url, el.getTitle() || '…');
+      if (url && active) onNavRef.current(el.canGoBack(), el.canGoForward(), url, el.getTitle() || '…');
     };
 
     const applyStoredZoom = () => {
@@ -374,7 +398,8 @@ function TabWebview({
 
     const onNavigateZoom = () => {
       applyStoredZoom();
-      updateTab(tab.id, { loadError: null });
+      const cur = useStore.getState().tabs.find((t) => t.id === tab.id);
+      if (cur?.loadError) updateTab(tab.id, { loadError: null });
     };
 
     const onFound = (raw: unknown) => {
@@ -382,7 +407,7 @@ function TabWebview({
       const ev = raw as {
         result?: { activeMatchOrdinal?: number; matches?: number; finalUpdate?: boolean };
       };
-      if (ev.result) onFoundInPage?.(ev.result);
+      if (ev.result) onFoundInPageRef.current?.(ev.result);
     };
 
     const onFailLoad = (raw: unknown) => {
@@ -393,7 +418,7 @@ function TabWebview({
         isMainFrame?: boolean;
       };
       if (!ev.isMainFrame || ev.errorCode === -3) return;
-      onLoadFailed?.({
+      onLoadFailedRef.current?.({
         errorCode: ev.errorCode ?? 0,
         description: String(ev.errorDescription || ''),
         url: String(ev.validatedURL || tab.url),
@@ -408,7 +433,7 @@ function TabWebview({
       } catch {
         /* */
       }
-      onLoadFailed?.({
+      onLoadFailedRef.current?.({
         errorCode: -9001,
         description: 'Proces renderowania strony został zakończony.',
         url,
@@ -424,7 +449,7 @@ function TabWebview({
       } catch {
         /* */
       }
-      onLoadFailed?.({
+      onLoadFailedRef.current?.({
         errorCode: -9001,
         description: `Proces strony: ${ev.reason || 'crashed'}`,
         url,
@@ -439,7 +464,7 @@ function TabWebview({
       } catch {
         /* */
       }
-      onLoadFailed?.({
+      onLoadFailedRef.current?.({
         errorCode: -9001,
         description: 'Strona nie odpowiada.',
         url,
@@ -447,8 +472,8 @@ function TabWebview({
       });
     };
 
-    const onEnterFs = () => onHtmlFullscreen?.(true);
-    const onLeaveFs = () => onHtmlFullscreen?.(false);
+    const onEnterFs = () => onHtmlFullscreenRef.current?.(true);
+    const onLeaveFs = () => onHtmlFullscreenRef.current?.(false);
 
     const onWheel = (ev: WheelEvent) => {
       if (!active || !ev.ctrlKey) return;
@@ -459,7 +484,7 @@ function TabWebview({
       } catch {
         return;
       }
-      onZoomWheel?.(ev.deltaY, url);
+      onZoomWheelRef.current?.(ev.deltaY, url);
     };
 
     const onFavicon = (raw: unknown) => {
@@ -467,7 +492,9 @@ function TabWebview({
         // Only accept data: from the page itself (loaded via Tor). Never clearnet CDN.
         const favs = (raw as { favicons?: string[] }).favicons;
         const src = favs?.find((f) => typeof f === 'string' && f.startsWith('data:'));
-        updateTab(tab.id, { favicon: src || letterFavicon(el.getURL?.() || 'tor') });
+        const next = src || letterFavicon(el.getURL?.() || 'tor');
+        const cur = useStore.getState().tabs.find((t) => t.id === tab.id);
+        if (cur?.favicon !== next) updateTab(tab.id, { favicon: next });
         return;
       }
       const favs = (raw as { favicons?: string[] }).favicons;
@@ -475,16 +502,18 @@ function TabWebview({
       if (!src) return;
       try {
         const page = el.getURL();
+        const cur = useStore.getState().tabs.find((t) => t.id === tab.id);
         if (src.startsWith('data:')) {
-          updateTab(tab.id, { favicon: src });
+          if (cur?.favicon !== src) updateTab(tab.id, { favicon: src });
           void window.shell?.faviconCachePut?.(page, src);
           return;
         }
         // Show page favicon immediately; cache as data: in background for later
-        updateTab(tab.id, { favicon: src });
+        if (cur?.favicon !== src) updateTab(tab.id, { favicon: src });
         void window.shell?.faviconCachePut?.(page, src).then((local) => {
           if (typeof local === 'string' && local.startsWith('data:')) {
-            updateTab(tab.id, { favicon: local });
+            const latest = useStore.getState().tabs.find((t) => t.id === tab.id);
+            if (latest?.favicon !== local) updateTab(tab.id, { favicon: local });
           }
         });
       } catch {
@@ -496,7 +525,7 @@ function TabWebview({
       const e = raw as { channel?: string; args?: unknown[] };
       if (e.channel === 'djxxr-media') {
         const msg = e.args?.[0] as { hasVideo?: boolean; playing?: boolean } | undefined;
-        onMediaState?.({
+        onMediaStateRef.current?.({
           hasVideo: Boolean(msg?.hasVideo),
           playing: Boolean(msg?.playing),
         });
@@ -505,7 +534,7 @@ function TabWebview({
       if (e.channel === 'djxxr-mouse-nav') {
         const msg = e.args?.[0] as { dir?: string; source?: string } | undefined;
         if (msg?.dir === 'back' || msg?.dir === 'forward') {
-          onBrowserNav?.(msg.dir, msg.source || 'guest-mouseup');
+          onBrowserNavRef.current?.(msg.dir, msg.source || 'guest-mouseup');
         }
         return;
       }
@@ -535,7 +564,7 @@ function TabWebview({
             String(payload.password || ''),
           );
           if (offer && 'offer' in offer && offer.offer && offer.origin) {
-            onSaveOffer({
+            onSaveOfferRef.current({
               mode: (offer.mode as 'create' | 'update') || 'create',
               origin: offer.origin,
               username: offer.username || '',
@@ -637,21 +666,13 @@ function TabWebview({
   }, [
     tab.id,
     tab.mode,
-    tab.url,
+    // Intentionally omit tab.url — sync updates url and must not re-bind listeners
+    // (that caused Maximum update depth with live webviews).
     active,
-    onNav,
     updateTab,
-    onSaveOffer,
-    onGuestMeta,
     passwordsEnabled,
     passwordsAutofill,
     zoomFactors,
-    onZoomWheel,
-    onFoundInPage,
-    onLoadFailed,
-    onHtmlFullscreen,
-    onMediaState,
-    onBrowserNav,
     applyPageScrollbars,
   ]);
 
@@ -713,6 +734,29 @@ function TabWebview({
     />
   );
 }
+
+const TabWebview = memo(TabWebviewInner, (prev, next) => {
+  const a = prev.tab;
+  const b = next.tab;
+  return (
+    prev.active === next.active &&
+    prev.alive === next.alive &&
+    prev.passwordsEnabled === next.passwordsEnabled &&
+    prev.passwordsAutofill === next.passwordsAutofill &&
+    prev.darkPageScrollbars === next.darkPageScrollbars &&
+    prev.appTheme === next.appTheme &&
+    prev.zoomFactors === next.zoomFactors &&
+    a.id === b.id &&
+    a.url === b.url &&
+    a.title === b.title &&
+    a.favicon === b.favicon &&
+    a.mode === b.mode &&
+    a.partition === b.partition &&
+    a.muted === b.muted &&
+    a.discarded === b.discarded &&
+    JSON.stringify(a.loadError ?? null) === JSON.stringify(b.loadError ?? null)
+  );
+});
 
 export function App() {
   const tabs = useStore((s) => s.tabs);
@@ -866,13 +910,17 @@ export function App() {
   useEffect(() => {
     if (!metricsData?.rows) return;
     setHotTabs((prev) => {
-      const next = { ...prev };
+      let changed = false;
+      const next: Record<string, number> = { ...prev };
       for (const r of metricsData.rows) {
         if (r.kind !== 'tab') continue;
-        if (r.cpu >= 25) next[r.id] = (next[r.id] || 0) + 1;
-        else next[r.id] = 0;
+        const val = r.cpu >= 25 ? (prev[r.id] || 0) + 1 : 0;
+        if ((prev[r.id] || 0) !== val) {
+          next[r.id] = val;
+          changed = true;
+        }
       }
-      return next;
+      return changed ? next : prev;
     });
   }, [metricsData?.ts]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1567,9 +1615,13 @@ export function App() {
   }, [settings.allowInspect]);
 
   const onNav = useCallback((canBack: boolean, canForward: boolean, url: string, _title?: string) => {
-    setNav({ back: canBack, forward: canForward });
+    setNav((prev) =>
+      prev.back === canBack && prev.forward === canForward ? prev : { back: canBack, forward: canForward },
+    );
     if (omniEditingRef.current && omniFocusedRef.current) return;
-    if (!url.startsWith('about:')) setDraft(url);
+    if (!url.startsWith('about:')) {
+      setDraft((d) => (d === url ? d : url));
+    }
   }, []);
 
   /** Deduped history nav — mouseup (primary) + app-command (fallback) share one gate */
@@ -3745,7 +3797,10 @@ export function App() {
                 }}
                 onMediaState={(st) => {
                   tabMediaRef.current[t.id] = st;
-                  if (t.id === activeId) setPageHasVideo(Boolean(st.hasVideo || st.playing));
+                  if (t.id === activeId) {
+                    const next = Boolean(st.hasVideo || st.playing);
+                    setPageHasVideo((prev) => (prev === next ? prev : next));
+                  }
                 }}
                 onBrowserNav={(dir, source) => doBrowserNav(dir, source)}
                 onNav={(b, f, u, title) => onNav(b, f, u, title)}

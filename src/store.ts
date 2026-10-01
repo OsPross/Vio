@@ -1426,9 +1426,30 @@ export const useStore = create<State>()(
           ),
         })),
       updateTab: (id, patch) =>
-        set((s) => ({
-          tabs: s.tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)),
-        })),
+        set((s) => {
+          const tab = s.tabs.find((t) => t.id === id);
+          if (!tab) return s;
+          let changed = false;
+          for (const key of Object.keys(patch) as (keyof Tab)[]) {
+            const next = patch[key];
+            const prev = tab[key];
+            if (key === 'loadError' || key === 'navHistory') {
+              if (JSON.stringify(prev ?? null) !== JSON.stringify(next ?? null)) {
+                changed = true;
+                break;
+              }
+              continue;
+            }
+            if (prev !== next) {
+              changed = true;
+              break;
+            }
+          }
+          if (!changed) return s;
+          return {
+            tabs: s.tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+          };
+        }),
       pinTab: (id, pinned) =>
         set((s) => {
           const nextPinned = pinned ?? !s.tabs.find((t) => t.id === id)?.pinned;

@@ -63,6 +63,7 @@ contextBridge.exposeInMainWorld('__djxxrPw', {
 });
 
 /** Video presence / playback → chrome PiP button */
+let lastMediaSent = '';
 function reportMedia() {
   try {
     const videos = Array.from(document.querySelectorAll('video'));
@@ -80,6 +81,9 @@ function reportMedia() {
         return false;
       }
     });
+    const key = `${hasVideo ? 1 : 0}:${playing ? 1 : 0}`;
+    if (key === lastMediaSent) return;
+    lastMediaSent = key;
     ipcRenderer.sendToHost('djxxr-media', { hasVideo, playing });
   } catch {
     /* */
