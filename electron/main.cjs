@@ -591,7 +591,15 @@ app.whenReady().then(async () => {
   metrics.attachNetwork(ses);
 
   createWindow();
-  if (process.env.SMOKE_ROUND4 === '1') {
+  // Smoke hooks: unpackaged (dev) only — never in built/installed app
+  if (!app.isPackaged && process.env.SMOKE_ROUND5 === '1') {
+    try {
+      const smoke = require('../scripts/smoke-round5-live.cjs');
+      void smoke.run(() => mainWindow);
+    } catch (err) {
+      console.error('[smoke5] failed to start', err);
+    }
+  } else if (!app.isPackaged && process.env.SMOKE_ROUND4 === '1') {
     try {
       const smoke = require('../scripts/smoke-round4-live.cjs');
       void smoke.run(() => mainWindow);
@@ -1388,23 +1396,23 @@ function suggestedSaveName(wc, ext) {
 
 ipcMain.handle(
   'shell:print',
-  wrapApp(async (_event, webContentsId) => {
+  wrapApp(async (_event, webContentsId, opts) => {
     const wc = guestWebContentsById(webContentsId);
     if (!wc) return { ok: false, error: 'no-guest' };
+    const silent = Boolean(opts && opts.silent);
     try {
       // Print via guest webContents (webview.print() often shows blank preview).
       await new Promise((resolve, reject) => {
-        wc.print({ silent: false, printBackground: true }, (success, failureReason) => {
+        wc.print({ silent, printBackground: true }, (success, failureReason) => {
           if (success) resolve(true);
           else reject(new Error(failureReason || 'print-failed'));
         });
       });
-      return { ok: true };
+      return { ok: true, silent };
     } catch (err) {
-      // Older Electron: print() may not take a callback — fire-and-forget
       try {
-        wc.print({ printBackground: true });
-        return { ok: true, mode: 'fire' };
+        wc.print({ silent, printBackground: true });
+        return { ok: true, mode: 'fire', silent };
       } catch (e2) {
         return { ok: false, error: String(err?.message || e2?.message || err) };
       }

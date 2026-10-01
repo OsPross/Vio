@@ -194,7 +194,7 @@ contextBridge.exposeInMainWorld('shell', {
   },
   savePage: (webContentsId, opts) => ipcRenderer.invoke('shell:save-page', webContentsId, opts || {}),
   printToPdf: (webContentsId, opts) => ipcRenderer.invoke('shell:print-to-pdf', webContentsId, opts || {}),
-  printPage: (webContentsId) => ipcRenderer.invoke('shell:print', webContentsId),
+  printPage: (webContentsId, opts) => ipcRenderer.invoke('shell:print', webContentsId, opts || {}),
   certificateRespond: (webContentsId, proceed, rememberHost) =>
     ipcRenderer.invoke('shell:certificate-respond', webContentsId, proceed, rememberHost),
   onCertificateError: (cb) => {

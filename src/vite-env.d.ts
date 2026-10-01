@@ -479,7 +479,10 @@ declare global {
         webContentsId: number,
         opts?: { forcePath?: string },
       ) => Promise<{ ok: boolean; canceled?: boolean; filePath?: string; error?: string; bytes?: number }>;
-      printPage: (webContentsId: number) => Promise<{ ok: boolean; error?: string; mode?: string }>;
+      printPage: (
+        webContentsId: number,
+        opts?: { silent?: boolean },
+      ) => Promise<{ ok: boolean; error?: string; mode?: string; silent?: boolean }>;
       certificateRespond: (
         webContentsId: number,
         proceed: boolean,
