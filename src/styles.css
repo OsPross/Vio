@@ -3916,8 +3916,8 @@ button {
   width: 320px;
   max-width: min(320px, 100vw - 16px);
   max-height: min(720px, calc(100vh - 24px));
-  overflow-x: hidden;
-  overflow-y: auto;
+  /* visible so submenu does not force horizontal scroll / shift of items */
+  overflow: visible;
   padding: 6px 4px 6px 6px;
   border-radius: 12px;
   background: color-mix(in srgb, var(--bg-elev) 96%, #000 4%);
@@ -3927,6 +3927,18 @@ button {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--fg) 22%, transparent) transparent;
+}
+.app-menu-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: min(700px, calc(100vh - 36px));
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--fg) 22%, transparent) transparent;
 }
@@ -4102,6 +4114,18 @@ button {
 }
 .app-menu-subwrap {
   position: relative;
+  width: 100%;
+  display: block;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.app-menu-subwrap > .app-menu-item {
+  width: 100%;
+  box-sizing: border-box;
+}
+.app-menu-item.has-sub {
+  /* same grid as plain items — chevron sits in the trailing max-content column */
+  grid-template-columns: 20px minmax(0, 1fr) max-content;
 }
 .app-menu-submenu {
   position: absolute;

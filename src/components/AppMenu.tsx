@@ -567,6 +567,7 @@ export function AppMenu({ actions }: Props) {
       </button>
       {open && (
         <div className="app-menu-popover" id={menuId} role="menu" ref={popoverRef}>
+          <div className="app-menu-scroll">
           {items.map((it, i) => {
             if (it.kind === 'sep') return <hr key={`sep-${i}`} className="app-menu-sep" />;
             const fIdx = focusables.findIndex((f) => f.i === i);
