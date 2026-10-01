@@ -513,6 +513,10 @@ function trackGuestTab(guestWc, hostWin, opts = {}) {
   if (!chromeExtApi || !guestWc || guestWc.isDestroyed()) return;
   if (opts.tor) return;
   try {
+    if (hostWin && !hostWin.isDestroyed()) {
+      // Coalesce per-tab window.on('focus'|'resized') from electron-chrome-extensions
+      require('./window-events.cjs').patchWindow(hostWin);
+    }
     chromeExtApi.addTab(guestWc, hostWin);
   } catch (err) {
     console.warn('[ext] addTab', err && err.message);

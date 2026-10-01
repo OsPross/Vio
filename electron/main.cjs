@@ -156,6 +156,9 @@ function ensurePrivateSession(ses) {
 }
 
 function wireGuestNavigation(guestWc) {
+  if (!guestWc || guestWc.isDestroyed?.()) return;
+  if (guestWc.__djxxrGuestWired) return;
+  guestWc.__djxxrGuestWired = true;
   try {
     if (guestWc.session === session.fromPartition('persist:private')) {
       ensurePrivateSession(guestWc.session);
@@ -568,7 +571,7 @@ function createWindow(optsExtra = {}) {
         const host = BrowserWindow.fromWebContents(bw.webContents) || bw;
         extensions.trackGuestTab(guestContents, host, { tor: false });
       }
-      mouseNav.attachSideButtons(guestContents, { host: bw, label: `guest:${guestContents.id}` });
+      // mouseNav already attached inside wireGuestNavigation (idempotent)
     } catch (err) {
       console.warn('[ext] trackGuestTab', err);
     }
