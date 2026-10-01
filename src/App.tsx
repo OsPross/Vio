@@ -4,8 +4,6 @@ import { X } from 'lucide-react';
 import { BookmarksBar } from './components/BookmarksBar';
 import { hostFromPageUrl, zoomFactorForHost } from './lib/pageHost';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { useMetrics, useMetricsGuests } from './lib/useMetrics';
-import type { MetricsGuest } from './lib/metricsTypes';
 import {
   applyThemeToDom,
   HOME_URL,
@@ -49,6 +47,7 @@ import { useIpcEvents } from './hooks/useIpcEvents';
 import { useShortcuts } from './hooks/useShortcuts';
 import { useBindCommandHost } from './hooks/useAppMenuActions';
 import { useSessionPersist } from './hooks/useSessionPersist';
+import { useTabLifecycle, useTabMediaFlags } from './hooks/useTabLifecycle';
 
 /** Heavy routes / dialogs — not needed for first paint */
 const SettingsPage = lazy(() =>
@@ -72,7 +71,6 @@ export function App() {
   const settings = useStore((s) => s.settings);
   const bangs = useStore((s) => s.bangs);
   const view = useStore((s) => s.view);
-  const settingsTab = useStore((s) => s.settingsTab);
   const newTab = useStore((s) => s.newTab);
   const newTorTab = useStore((s) => s.newTorTab);
   const muteTab = useStore((s) => s.muteTab);
@@ -126,20 +124,12 @@ export function App() {
   const [saveOffer, setSaveOffer] = useState<SaveOffer | null>(null);
   const [pwForPage, setPwForPage] = useState(0);
   const [taskMgrOpen, setTaskMgrOpen] = useState(false);
-  const [guestWc, setGuestWc] = useState<Record<string, number>>({});
-  const tabMediaRef = useRef<Record<string, { hasVideo: boolean; playing: boolean }>>({});
   const prevActiveIdRef = useRef(activeId);
-  const [hotTabs, setHotTabs] = useState<Record<string, number>>({});
-  const [mediaFlags, setMediaFlags] = useState<{ mic: boolean; cam: boolean }>({
-    mic: false,
-    cam: false,
-  });
   const [torInfo, setTorInfo] = useState<TorStatusInfo | null>(null);
   const [torBusy, setTorBusy] = useState(false);
   const [torError, setTorError] = useState<string | null>(null);
   const [torProgress, setTorProgress] = useState<string | null>(null);
   const [shieldOpen, setShieldOpen] = useState(false);
-  const [pageHasVideo, setPageHasVideo] = useState(false);
   const [permRemember, setPermRemember] = useState(true);
   const [tabMenu, setTabMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
   const [newTabMenu, setNewTabMenu] = useState<{ x: number; y: number } | null>(null);
@@ -167,60 +157,18 @@ export function App() {
   const [certRemember, setCertRemember] = useState(false);
   const zoomFlashTimer = useRef<number | null>(null);
 
+  const {
+    guestWc,
+    onGuestMeta,
+    tabMediaRef,
+    hotTabs,
+    mediaFlags,
+    setMediaFlags,
+    pageHasVideo,
+    setPageHasVideo,
+  } = useTabLifecycle({ taskMgrOpen, isHome });
+
   const { crashOffer, setCrashOffer } = useSessionPersist({ guestWc, windowMode });
-
-  const metricsActive =
-    taskMgrOpen ||
-    (view === 'settings' && settingsTab === 'resources') ||
-    (isHome && settings.homeShowStats);
-  // CPU hot-tab hints: sample slowly when discard is on and nobody watches the UI
-  const metricsDiscardActive = Boolean(settings.perfDiscardTabs) && !metricsActive;
-  const metricsData = useMetrics(
-    metricsActive || metricsDiscardActive,
-    settings.perfLowPowerClock,
-    metricsActive ? 'live' : 'discard',
-  );
-
-  const metricsGuests: MetricsGuest[] = tabs
-    .filter((t) => t.url !== HOME_URL && !t.url.startsWith('about:') && !t.discarded)
-    .map((t) => ({
-      id: t.id,
-      kind: 'tab' as const,
-      title: t.title,
-      url: t.url,
-      favicon: t.favicon,
-      webContentsId: guestWc[t.id] ?? null,
-    }));
-  useMetricsGuests(metricsActive || metricsDiscardActive, metricsGuests);
-
-  useEffect(() => {
-    if (!metricsData?.rows) return;
-    setHotTabs((prev) => {
-      let changed = false;
-      const next: Record<string, number> = { ...prev };
-      for (const r of metricsData.rows) {
-        if (r.kind !== 'tab') continue;
-        const val = r.cpu >= 25 ? (prev[r.id] || 0) + 1 : 0;
-        if ((prev[r.id] || 0) !== val) {
-          next[r.id] = val;
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [metricsData?.ts]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const onGuestMeta = useCallback((tabId: string, webContentsId: number | null) => {
-    setGuestWc((m) => {
-      if (webContentsId == null) {
-        if (!(tabId in m)) return m;
-        const { [tabId]: _, ...rest } = m;
-        return rest;
-      }
-      if (m[tabId] === webContentsId) return m;
-      return { ...m, [tabId]: webContentsId };
-    });
-  }, []);
 
   useEffect(() => {
     applyThemeToDom(settings);
@@ -255,30 +203,6 @@ export function App() {
     settings.perfMode,
     settings.perfSpellcheck,
   ]);
-
-  // Wyrzucanie nieaktywnych kart z pamięci (odmontowanie webview)
-  useEffect(() => {
-    if (!settings.perfDiscardTabs) return;
-    const ms = Math.max(1, settings.perfDiscardMinutes) * 60_000;
-    const t = setInterval(() => {
-      const st = useStore.getState();
-      const now = Date.now();
-      for (const tab of st.tabs) {
-        if (tab.id === st.activeId) continue;
-        if (tab.pinned) continue;
-        if (tab.url === HOME_URL || tab.url.startsWith('about:')) continue;
-        if (tab.discarded) continue;
-        // Never discard while media is playing (YouTube/Discord audio) or video present (PiP risk)
-        const media = tabMediaRef.current[tab.id];
-        if (media?.playing || media?.hasVideo) continue;
-        const last = tab.lastActiveAt ?? 0;
-        if (last && now - last >= ms) {
-          st.updateTab(tab.id, { discarded: true });
-        }
-      }
-    }, 30_000);
-    return () => clearInterval(t);
-  }, [settings.perfDiscardTabs, settings.perfDiscardMinutes]);
 
   useEffect(() => {
     setSaveOffer(null);
@@ -562,34 +486,7 @@ export function App() {
     setCertRemember,
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    const url = active?.url || '';
-    void (async () => {
-      try {
-        const origin = new URL(url).origin;
-        if (!/^https:/i.test(origin)) {
-          if (!cancelled) setMediaFlags({ mic: false, cam: false });
-          return;
-        }
-        const list = (await window.shell?.permissionsList?.()) as
-          | Record<string, Record<string, string>>
-          | undefined;
-        const entry = list?.[origin] || {};
-        if (!cancelled) {
-          setMediaFlags({
-            mic: entry.microphone === 'allow' || entry.media === 'allow',
-            cam: entry.camera === 'allow' || entry.media === 'allow',
-          });
-        }
-      } catch {
-        if (!cancelled) setMediaFlags({ mic: false, cam: false });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [active?.url, permAsk]);
+  useTabMediaFlags(active?.url, permAsk, setMediaFlags);
 
   // Clear blocked-popup badge when navigating away
   useEffect(() => {
