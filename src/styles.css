@@ -4124,33 +4124,35 @@ button {
   box-sizing: border-box;
 }
 .app-menu-item.has-sub {
-  /* same grid as plain items — chevron sits in the trailing max-content column */
   grid-template-columns: 20px minmax(0, 1fr) max-content;
 }
+/* Flyout beside main menu (portaled + position:fixed — not clipped by .app-menu-scroll) */
 .app-menu-submenu {
-  position: absolute;
+  position: fixed;
   top: 0;
-  min-width: 260px;
+  left: 0;
+  z-index: 95;
+  width: 280px;
   max-width: min(300px, 100vw - 16px);
   max-height: min(420px, 100vh - 24px);
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 6px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--bg-elev) 98%, #000 2%);
+  padding: 6px 4px 6px 6px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-elev) 96%, #000 4%);
   border: 1px solid var(--line);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-  z-index: 92;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--fg) 22%, transparent) transparent;
 }
-.app-menu-submenu.side-right {
-  left: calc(100% - 6px);
-  right: auto;
-}
+.app-menu-submenu.side-right,
 .app-menu-submenu.side-left {
-  right: calc(100% - 6px);
-  left: auto;
+  /* left/top set by placeSubmenu() */
+  right: auto;
 }
 .app-menu-submenu .app-menu-item {
   grid-template-columns: 20px minmax(0, 1fr) auto;

@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Bookmark,
   ClipboardCopy,
@@ -377,20 +378,26 @@ export function AppMenu({ actions }: Props) {
     const panel = subPanelRef.current;
     if (!wrap || !panel) return;
     const wr = wrap.getBoundingClientRect();
-    panel.style.top = '0px';
-    const pr = panel.getBoundingClientRect();
+    // Force layout so width/height are real before placing
+    const pw = panel.offsetWidth || 280;
+    const ph = panel.offsetHeight || 120;
+    const gap = 2;
     const spaceRight = window.innerWidth - wr.right;
     const spaceLeft = wr.left;
-    const preferLeft = spaceRight < pr.width + 12 && spaceLeft >= spaceRight;
+    const preferLeft = spaceRight < pw + 12 && spaceLeft >= spaceRight;
     setSubSide(preferLeft ? 'left' : 'right');
 
-    let top = 0;
-    const below = window.innerHeight - wr.top;
-    if (pr.height > below - 8) {
-      top = Math.min(0, below - pr.height - 8);
+    let left = preferLeft ? wr.left - pw + 6 : wr.right - 6;
+    left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+
+    // Align top edge of flyout with the submenu trigger row
+    let top = wr.top - gap;
+    if (top + ph > window.innerHeight - 8) {
+      top = Math.max(8, window.innerHeight - ph - 8);
     }
-    if (wr.top + top < 4) top = 4 - wr.top;
-    panel.style.top = `${top}px`;
+    if (top < 4) top = 4;
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
   }, []);
 
   useLayoutEffect(() => {
@@ -403,7 +410,9 @@ export function AppMenu({ actions }: Props) {
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) close();
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t) || subPanelRef.current?.contains(t)) return;
+      close();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -675,38 +684,6 @@ export function AppMenu({ actions }: Props) {
                       ›
                     </span>
                   </button>
-                  {subOpen === it.id && (
-                    <div
-                      className={`app-menu-submenu side-${subSide}`}
-                      role="menu"
-                      ref={subPanelRef}
-                      onMouseEnter={() => clearCloseSubTimer()}
-                      onMouseLeave={() => scheduleCloseSub()}
-                    >
-                      {it.children.map((ch, ci) => (
-                        <button
-                          key={ch.id}
-                          type="button"
-                          role="menuitem"
-                          className={`app-menu-item ${subFocus === ci ? 'focused' : ''}`}
-                          disabled={ch.disabled}
-                          title={ch.hint}
-                          onMouseEnter={() => setSubFocus(ci)}
-                          onClick={() => {
-                            ch.run();
-                            close();
-                          }}
-                        >
-                          <Ico>{ch.icon}</Ico>
-                          <span className="app-menu-label">
-                            {ch.label}
-                            {ch.hint ? <em className="app-menu-hint">{ch.hint}</em> : null}
-                          </span>
-                          {ch.shortcut ? <kbd>{ch.shortcut}</kbd> : null}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               );
             }
@@ -735,8 +712,48 @@ export function AppMenu({ actions }: Props) {
               </button>
             );
           })}
+          </div>
         </div>
       )}
+      {open &&
+        subOpen &&
+        (() => {
+          const sub = items.find((x) => x.kind === 'submenu' && x.id === subOpen);
+          if (!sub || sub.kind !== 'submenu') return null;
+          return createPortal(
+            <div
+              className={`app-menu-submenu side-${subSide}`}
+              role="menu"
+              ref={subPanelRef}
+              onMouseEnter={() => clearCloseSubTimer()}
+              onMouseLeave={() => scheduleCloseSub()}
+            >
+              {sub.children.map((ch, ci) => (
+                <button
+                  key={ch.id}
+                  type="button"
+                  role="menuitem"
+                  className={`app-menu-item ${subFocus === ci ? 'focused' : ''}`}
+                  disabled={ch.disabled}
+                  title={ch.hint}
+                  onMouseEnter={() => setSubFocus(ci)}
+                  onClick={() => {
+                    ch.run();
+                    close();
+                  }}
+                >
+                  <Ico>{ch.icon}</Ico>
+                  <span className="app-menu-label">
+                    {ch.label}
+                    {ch.hint ? <em className="app-menu-hint">{ch.hint}</em> : null}
+                  </span>
+                  {ch.shortcut ? <kbd>{ch.shortcut}</kbd> : null}
+                </button>
+              ))}
+            </div>,
+            document.body,
+          );
+        })()}
     </div>
   );
 }
