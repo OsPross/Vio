@@ -17,6 +17,9 @@ function timedRequire(label, id) {
   return mod;
 }
 
+const homeBgEarly = require('./home-bg.cjs');
+homeBgEarly.registerPrivilegedScheme();
+
 const adblock = timedRequire('adblock-plus', './adblock-plus.cjs');
 const perf = timedRequire('perf', './perf.cjs');
 const passwords = timedRequire('passwords', './passwords.cjs');

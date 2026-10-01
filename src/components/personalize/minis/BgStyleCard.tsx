@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { BgStyle } from '../../../store';
+import { homeBgCssUrl } from '../../../lib/homeBg';
 
 const LABELS: Record<string, string> = {
   soft: 'Miękkie',
@@ -20,6 +21,7 @@ export function BgStyleCard({
   onSelect: () => void;
   imageUrl?: string | null;
 }) {
+  const cssUrl = id === 'custom' ? homeBgCssUrl(imageUrl) : null;
   return (
     <button
       type="button"
@@ -30,8 +32,8 @@ export function BgStyleCard({
       <span
         className={`pz-bg-face pz-bg-face-${id}`}
         style={
-          id === 'custom' && imageUrl
-            ? ({ ['--pz-bg-img' as string]: `url("${imageUrl}")` } as CSSProperties)
+          cssUrl
+            ? ({ ['--pz-bg-img' as string]: `url("${cssUrl}")` } as CSSProperties)
             : undefined
         }
       />

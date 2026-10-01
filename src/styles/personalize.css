@@ -3,7 +3,7 @@
 .pz-sheet-scrim {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 200;
   border: 0;
   padding: 0;
   cursor: default;
@@ -14,7 +14,7 @@
 
 .pz-sheet {
   position: fixed;
-  z-index: 81;
+  z-index: 201;
   top: 50%;
   left: 50%;
   translate: -50% -50%;
@@ -830,6 +830,18 @@
 .home.home-bg-custom > * {
   position: relative;
   z-index: 1;
+}
+/* Personalize sheet must stay above home chrome/widgets even when custom bg forces z-index */
+.home.home-bg-custom > .pz-sheet-scrim {
+  position: fixed;
+  z-index: 200;
+}
+.home.home-bg-custom > .pz-sheet,
+.pz-sheet-scrim {
+  z-index: 200;
+}
+.pz-sheet {
+  z-index: 201;
 }
 
 /* Density */

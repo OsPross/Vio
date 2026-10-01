@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check } from 'lucide-react';
 import { Segmented } from '../ui';
@@ -31,7 +32,7 @@ export function PersonalizeSheet({
   const [tab, setTab] = useState<TabId>('look');
   const dur = reduced ? 0 : 0.18;
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -102,6 +103,7 @@ export function PersonalizeSheet({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
