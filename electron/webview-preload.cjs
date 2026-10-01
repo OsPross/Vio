@@ -135,22 +135,25 @@ function isEditableTarget(el) {
   return false;
 }
 
-// Mouse X1/X2 fallback (when app-command is not delivered into the guest)
-window.addEventListener(
-  'mouseup',
-  (e) => {
-    if (e.button === 3 || e.button === 4) {
-      try {
-        e.preventDefault();
-        e.stopPropagation();
-      } catch {
-        /* */
+// Mouse X1/X2: on Windows, BrowserWindow 'app-command' is the sole source (avoids double-back).
+// Other platforms keep this fallback.
+if (process.platform !== 'win32') {
+  window.addEventListener(
+    'mouseup',
+    (e) => {
+      if (e.button === 3 || e.button === 4) {
+        try {
+          e.preventDefault();
+          e.stopPropagation();
+        } catch {
+          /* */
+        }
+        ipcRenderer.sendToHost('djxxr-mouse-nav', { dir: e.button === 3 ? 'back' : 'forward' });
       }
-      ipcRenderer.sendToHost('djxxr-mouse-nav', { dir: e.button === 3 ? 'back' : 'forward' });
-    }
-  },
-  true,
-);
+    },
+    true,
+  );
+}
 
 // Chrome: Backspace must NOT navigate history
 window.addEventListener(

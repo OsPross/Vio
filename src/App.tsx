@@ -1602,26 +1602,24 @@ export function App() {
     return () => off?.();
   }, [doBrowserNav]);
 
-  // Chrome UI fallback (settings / home) for mouse X1/X2 when focus is not in webview
+  // Chrome UI fallback (settings / home) for mouse X1/X2 when focus is not in webview.
+  // On Windows app-command is the sole path — skip mouseup to avoid double navigation.
   useEffect(() => {
     const onUp = (e: MouseEvent) => {
-      if (e.button === 3) {
-        e.preventDefault();
-        doBrowserNav('back');
-      } else if (e.button === 4) {
-        e.preventDefault();
-        doBrowserNav('forward');
-      }
+      if (e.button !== 3 && e.button !== 4) return;
+      e.preventDefault();
+      doBrowserNav(e.button === 3 ? 'back' : 'forward');
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Backspace' || e.altKey || e.ctrlKey || e.metaKey) return;
       if (isEditableDomTarget(e.target)) return;
       e.preventDefault();
     };
-    window.addEventListener('mouseup', onUp, true);
+    const isWin = typeof navigator !== 'undefined' && /Win/i.test(navigator.platform || '');
+    if (!isWin) window.addEventListener('mouseup', onUp, true);
     window.addEventListener('keydown', onKey, true);
     return () => {
-      window.removeEventListener('mouseup', onUp, true);
+      if (!isWin) window.removeEventListener('mouseup', onUp, true);
       window.removeEventListener('keydown', onKey, true);
     };
   }, [doBrowserNav]);
