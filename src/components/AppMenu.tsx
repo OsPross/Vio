@@ -101,28 +101,23 @@ const Ico = ({ children }: { children: ReactNode }) => (
   </span>
 );
 
-function useSafeTriangle(open: boolean, anchorRef: React.RefObject<HTMLElement | null>, panelRef: React.RefObject<HTMLElement | null>) {
-  const [armed, setArmed] = useState(false);
-  useEffect(() => {
-    if (!open) {
-      setArmed(false);
-      return;
-    }
-    const t = window.setTimeout(() => setArmed(true), 40);
-    return () => clearTimeout(t);
-  }, [open]);
-
-  const containsWithBridge = useCallback(
-    (target: Node | null) => {
-      if (!target || !armed) return false;
-      if (anchorRef.current?.contains(target) || panelRef.current?.contains(target)) return true;
-      // Bridge: if cursor moves diagonally toward submenu, keep open (checked via mouse move elsewhere)
-      return false;
-    },
-    [armed, anchorRef, panelRef],
-  );
-
-  return { containsWithBridge };
+/** Point-in-triangle (barycentric) — macOS-style submenu safe zone. */
+function pointInTriangle(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  cx: number,
+  cy: number,
+) {
+  const d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy);
+  if (Math.abs(d) < 1e-6) return false;
+  const a = ((by - cy) * (px - cx) + (cx - bx) * (py - cy)) / d;
+  const b = ((cy - ay) * (px - cx) + (ax - cx) * (py - cy)) / d;
+  const c = 1 - a - b;
+  return a >= -0.02 && b >= -0.02 && c >= -0.02;
 }
 
 export function AppMenu({ actions }: Props) {
@@ -137,6 +132,7 @@ export function AppMenu({ actions }: Props) {
   const subPanelRef = useRef<HTMLDivElement>(null);
   const hoverTimer = useRef<number | null>(null);
   const closeSubTimer = useRef<number | null>(null);
+  const lastMouse = useRef({ x: 0, y: 0 });
   const menuId = useId();
   const hasPage = actions.hasPage !== false;
 
@@ -372,23 +368,28 @@ export function AppMenu({ actions }: Props) {
     const panel = subPanelRef.current;
     if (!wrap || !panel) return;
     const wr = wrap.getBoundingClientRect();
+    panel.style.top = '0px';
     const pr = panel.getBoundingClientRect();
     const spaceRight = window.innerWidth - wr.right;
     const spaceLeft = wr.left;
-    const preferLeft = spaceRight < pr.width + 12 && spaceLeft > spaceRight;
+    const preferLeft = spaceRight < pr.width + 12 && spaceLeft >= spaceRight;
     setSubSide(preferLeft ? 'left' : 'right');
-    // Vertical flip/shift
+
     let top = 0;
     const below = window.innerHeight - wr.top;
     if (pr.height > below - 8) {
       top = Math.min(0, below - pr.height - 8);
     }
+    if (wr.top + top < 4) top = 4 - wr.top;
     panel.style.top = `${top}px`;
   }, []);
 
   useLayoutEffect(() => {
-    if (subOpen) placeSubmenu();
-  }, [subOpen, placeSubmenu]);
+    if (!subOpen) return;
+    placeSubmenu();
+    const id = window.requestAnimationFrame(() => placeSubmenu());
+    return () => window.cancelAnimationFrame(id);
+  }, [subOpen, subSide, placeSubmenu]);
 
   useEffect(() => {
     if (!open) return;
@@ -450,6 +451,7 @@ export function AppMenu({ actions }: Props) {
         const cur = focusables[focusIdx]?.it;
         if (cur?.kind === 'submenu') {
           e.preventDefault();
+          clearCloseSubTimer();
           setSubOpen(cur.id);
           setSubFocus(0);
         }
@@ -462,6 +464,7 @@ export function AppMenu({ actions }: Props) {
           cur.run();
           close();
         } else if (cur.kind === 'submenu') {
+          clearCloseSubTimer();
           setSubOpen(cur.id);
           setSubFocus(0);
         }
@@ -481,16 +484,23 @@ export function AppMenu({ actions }: Props) {
     hoverTimer.current = window.setTimeout(() => {
       setSubOpen(id);
       setSubFocus(0);
-    }, 120);
+    }, 100);
   };
 
   const scheduleCloseSub = () => {
     clearHoverTimer();
     clearCloseSubTimer();
-    closeSubTimer.current = window.setTimeout(() => setSubOpen(null), 180);
+    closeSubTimer.current = window.setTimeout(() => setSubOpen(null), 300);
   };
 
-  // Safe triangle: while moving toward submenu, cancel close
+  const openSubNow = (id: string) => {
+    clearHoverTimer();
+    clearCloseSubTimer();
+    setSubOpen(id);
+    setSubFocus(0);
+  };
+
+  // Safe triangle: diagonal travel toward submenu cancels the close timer
   useEffect(() => {
     if (!subOpen) return;
     const onMove = (e: MouseEvent) => {
@@ -501,21 +511,36 @@ export function AppMenu({ actions }: Props) {
       const pr = panel.getBoundingClientRect();
       const x = e.clientX;
       const y = e.clientY;
-      const inWrap = x >= wr.left && x <= wr.right && y >= wr.top && y <= wr.bottom;
-      const inPanel = x >= pr.left && x <= pr.right && y >= pr.top && y <= pr.bottom;
-      // Triangle between wrap right/left edge and panel
-      const bridgeLeft = Math.min(wr.left, pr.left) - 4;
-      const bridgeRight = Math.max(wr.right, pr.right) + 4;
-      const bridgeTop = Math.min(wr.top, pr.top) - 8;
-      const bridgeBottom = Math.max(wr.bottom, pr.bottom) + 8;
-      const inBridge = x >= bridgeLeft && x <= bridgeRight && y >= bridgeTop && y <= bridgeBottom;
-      if (inWrap || inPanel || inBridge) clearCloseSubTimer();
+      const prev = lastMouse.current;
+      lastMouse.current = { x, y };
+
+      const inWrap = x >= wr.left - 2 && x <= wr.right + 2 && y >= wr.top - 2 && y <= wr.bottom + 2;
+      const inPanel = x >= pr.left - 2 && x <= pr.right + 2 && y >= pr.top - 2 && y <= pr.bottom + 2;
+      if (inWrap || inPanel) {
+        clearCloseSubTimer();
+        return;
+      }
+
+      const openOnRight = pr.left >= wr.right - 8;
+      const ax = prev.x;
+      const ay = prev.y;
+      const bx = openOnRight ? pr.left : pr.right;
+      const inTriangle = pointInTriangle(x, y, ax, ay, bx, pr.top, bx, pr.bottom);
+      const corridorLeft = Math.min(wr.right, pr.left) - 2;
+      const corridorRight = Math.max(wr.left, pr.right) + 2;
+      const corridorTop = Math.min(wr.top, pr.top) - 4;
+      const corridorBottom = Math.max(wr.bottom, pr.bottom) + 4;
+      const inCorridor =
+        x >= Math.min(corridorLeft, corridorRight) &&
+        x <= Math.max(corridorLeft, corridorRight) &&
+        y >= corridorTop &&
+        y <= corridorBottom;
+
+      if (inTriangle || inCorridor) clearCloseSubTimer();
     };
-    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mousemove', onMove, { passive: true });
     return () => document.removeEventListener('mousemove', onMove);
   }, [subOpen]);
-
-  void useSafeTriangle; // keep helper available for future; bridge handled above
 
   return (
     <div className="app-menu" ref={rootRef}>
@@ -612,7 +637,8 @@ export function AppMenu({ actions }: Props) {
                   key={it.id}
                   className="app-menu-subwrap"
                   ref={subWrapRef}
-                  onMouseEnter={() => {
+                  onMouseEnter={(e) => {
+                    lastMouse.current = { x: e.clientX, y: e.clientY };
                     setFocusIdx(fIdx);
                     scheduleOpenSub(it.id);
                   }}
@@ -621,10 +647,15 @@ export function AppMenu({ actions }: Props) {
                   <button
                     type="button"
                     role="menuitem"
+                    aria-haspopup="menu"
+                    aria-expanded={subOpen === it.id}
                     className={`app-menu-item has-sub ${focused ? 'focused' : ''} ${subOpen === it.id ? 'active' : ''}`}
                     onClick={() => {
-                      setSubOpen((s) => (s === it.id ? null : it.id));
-                      setSubFocus(0);
+                      if (subOpen === it.id) {
+                        setSubOpen(null);
+                      } else {
+                        openSubNow(it.id);
+                      }
                     }}
                   >
                     <Ico>{it.icon}</Ico>
