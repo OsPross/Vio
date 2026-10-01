@@ -29,7 +29,6 @@ const {
   isTorTab,
   migrateHomeWidgets,
   normalizeHomeWidgets,
-  presetHomeWidgets,
   sortTabsPinnedFirst,
   useStore,
 } = await import('../src/store.ts');
@@ -58,7 +57,6 @@ assert.equal(isBookmarkableUrl('about:home'), false);
   assert.equal(tabs[0].id, 'b');
 }
 
-assert.deepEqual(presetHomeWidgets('centered'), []);
 assert.equal(applyHomeLayoutPreset('top').homeLayoutPreset, 'top');
 assert.equal(applyHomeLayoutPreset('left').homeAlign, 'left');
 assert.equal(deriveHomeLayoutPreset({ homeLayout: 'minimal' }), 'top');

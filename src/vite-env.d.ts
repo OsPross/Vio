@@ -70,9 +70,6 @@ declare global {
       quitApp: () => Promise<{ ok: boolean }>;
       windowToggleFullscreen: () => Promise<{ ok: boolean; fullScreen?: boolean }>;
       openExternal: (url: string) => Promise<void>;
-      setProxy: (
-        proxyRules: string | null,
-      ) => Promise<{ ok: boolean; mode: string; rules?: string; note?: string }>;
       torStart: (opts?: { proxyUrl?: string }) => Promise<{
         ok: boolean;
         active?: boolean;

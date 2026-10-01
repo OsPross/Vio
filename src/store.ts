@@ -316,8 +316,6 @@ export type Settings = {
   searchEngine: SearchEngine;
   searxUrl: string;
   customSearchUrl: string;
-  /** @deprecated Global SOCKS on persist:main removed — kept for migrate; UI uses Tryb Tor */
-  torProxyEnabled: boolean;
   /** SOCKS address for Tryb Tor (9050 daemon / 9150 Tor Browser) */
   torProxyUrl: string;
   /** User acknowledged Tor mode limitations once */
@@ -629,7 +627,6 @@ export const DEFAULT_SETTINGS: Settings = {
   searchEngine: 'brave',
   searxUrl: 'http://127.0.0.1:8080',
   customSearchUrl: 'https://duckduckgo.com/?q=%s',
-  torProxyEnabled: false,
   torProxyUrl: 'socks5://127.0.0.1:9050',
   torSeenDisclaimer: false,
   torDaemonAutostart: false,
@@ -995,11 +992,6 @@ export function applyHomeLayoutPreset(
       extras.length ? extras : defaultHomeWidgets({ homeShowApps: true }),
     ),
   };
-}
-
-/** @deprecated use applyHomeLayoutPreset — kept for call sites that only need widget list */
-export function presetHomeWidgets(_preset: 'centered' | 'search' | 'left'): HomeWidget[] {
-  return [];
 }
 
 /** True when widget looks unplaced / legacy default (should re-pack). */

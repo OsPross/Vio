@@ -23,8 +23,6 @@ contextBridge.exposeInMainWorld('shell', {
   quitApp: () => ipcRenderer.invoke('shell:quit'),
   windowToggleFullscreen: () => ipcRenderer.invoke('shell:window-toggle-fullscreen'),
   openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
-  /** @deprecated no-op reset; Tor uses shell:tor-* */
-  setProxy: (proxyRules) => ipcRenderer.invoke('shell:set-proxy', proxyRules),
   torStart: (opts) => ipcRenderer.invoke('shell:tor-start', opts || {}),
   torStop: () => ipcRenderer.invoke('shell:tor-stop'),
   torStatus: () => ipcRenderer.invoke('shell:tor-status'),

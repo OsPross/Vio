@@ -996,20 +996,6 @@ ipcMain.handle(
   }),
 );
 
-/** @deprecated Global proxy on persist:main removed — Tor uses isolated partition via shell:tor-* */
-ipcMain.handle(
-  'shell:set-proxy',
-  wrapApp(async () => {
-    const ses = session.fromPartition('persist:main');
-    await ses.setProxy({ mode: 'system' });
-    return {
-      ok: true,
-      mode: 'system',
-      note: 'Globalny proxy Tor usunięty. Użyj shell:tor-start / kart Tor.',
-    };
-  }),
-);
-
 ipcMain.handle(
   'shell:tor-start',
   wrapApp(async (_e, opts) => {

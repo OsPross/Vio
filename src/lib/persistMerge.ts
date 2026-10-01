@@ -126,6 +126,8 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
   if (typeof s.showBookmarksBar !== 'boolean') s.showBookmarksBar = false;
   if (typeof s.darkPageScrollbars !== 'boolean') s.darkPageScrollbars = true;
   if (typeof s.autoPipOnTabSwitch !== 'boolean') s.autoPipOnTabSwitch = false;
+  // Drop removed legacy keys from older persists
+  delete s.torProxyEnabled;
   return s;
 }
 
