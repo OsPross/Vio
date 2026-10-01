@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getWindowPartition } from './lib/windowBoot';
+import {
+  applyOneShotLocalFlags,
+  deriveHomeLayoutPreset,
+  historyMustStayEphemeral,
+  mergeBangs,
+  normalizeSettingsFields,
+} from './lib/persistMerge';
 
 export type Tab = {
   id: string;
@@ -1841,127 +1848,25 @@ export const useStore = create<State>()(
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<State>;
-        const mergedSettings: Settings = { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) };
+        let mergedSettings: Settings = { ...DEFAULT_SETTINGS, ...(p.settings ?? {}) };
         mergedSettings.homeWidgets = migrateHomeWidgets(mergedSettings);
         mergedSettings.homeChrome = normalizeHomeChrome(mergedSettings.homeChrome);
-        if (!Array.isArray(mergedSettings.homeTodos)) mergedSettings.homeTodos = [];
-        if (!mergedSettings.homeLayoutPreset) {
-          const a = mergedSettings.homeAlign;
-          const l = mergedSettings.homeLayout;
-          if (l === 'minimal' || (!mergedSettings.homeShowClock && !mergedSettings.homeShowApps)) {
-            mergedSettings.homeLayoutPreset = 'top';
-          } else if (a === 'left' || l === 'stack') {
-            mergedSettings.homeLayoutPreset = 'left';
-          } else {
-            mergedSettings.homeLayoutPreset = 'centered';
-          }
+        mergedSettings = normalizeSettingsFields(mergedSettings as unknown as Record<string, unknown>) as unknown as Settings;
+        // Ensure derive path matches legacy when preset already set via normalizeSettingsFields
+        if (!(p.settings as Settings | undefined)?.homeLayoutPreset) {
+          mergedSettings.homeLayoutPreset = deriveHomeLayoutPreset(mergedSettings);
         }
-        if (!mergedSettings.homeWidgetStyle) mergedSettings.homeWidgetStyle = 'transparent';
-        if (typeof mergedSettings.homeWidgetRadius !== 'number') mergedSettings.homeWidgetRadius = 14;
-        if (typeof mergedSettings.homeGridGap !== 'number') mergedSettings.homeGridGap = 12;
-        if (typeof mergedSettings.homeLayoutLock !== 'boolean') mergedSettings.homeLayoutLock = false;
-        if (mergedSettings.homeBgImage === undefined) mergedSettings.homeBgImage = null;
-        if (
-          typeof mergedSettings.homeBgImage === 'string' &&
-          mergedSettings.homeBgImage.startsWith('data:')
-        ) {
-          mergedSettings.homeBgImage = null;
-          if (mergedSettings.bgStyle === 'custom') mergedSettings.bgStyle = 'soft';
-        }
-        if (typeof mergedSettings.homeBgBlur !== 'number') mergedSettings.homeBgBlur = 12;
-        if (typeof mergedSettings.homeBgDim !== 'number') mergedSettings.homeBgDim = 35;
-        if (
-          mergedSettings.homeClockStyle !== 'thin' &&
-          mergedSettings.homeClockStyle !== 'classic' &&
-          mergedSettings.homeClockStyle !== 'mono'
-        ) {
-          mergedSettings.homeClockStyle = 'thin';
-        }
-        if (typeof mergedSettings.homeShowSeconds !== 'boolean') mergedSettings.homeShowSeconds = false;
-        if (
-          mergedSettings.homeDensity !== 'compact' &&
-          mergedSettings.homeDensity !== 'comfortable' &&
-          mergedSettings.homeDensity !== 'spacious'
-        ) {
-          mergedSettings.homeDensity = 'comfortable';
-        }
-        if (mergedSettings.bgStyle === ('custom' as BgStyle) && !mergedSettings.homeBgImage) {
-          mergedSettings.bgStyle = 'soft';
-        }
-        if (
-          mergedSettings.sidebarMode !== 'on' &&
-          mergedSettings.sidebarMode !== 'auto' &&
-          mergedSettings.sidebarMode !== 'off'
-        ) {
-          mergedSettings.sidebarMode = mergedSettings.showSidebar ? 'on' : 'off';
-        } else {
-          mergedSettings.showSidebar = mergedSettings.sidebarMode !== 'off';
-        }
-        if (typeof mergedSettings.allowInspect !== 'boolean') {
-          mergedSettings.allowInspect = true;
-        }
-        try {
-          if (
-            typeof localStorage !== 'undefined' &&
-            !localStorage.getItem('djxxr-allow-inspect-default-v1')
-          ) {
-            mergedSettings.allowInspect = true;
-            localStorage.setItem('djxxr-allow-inspect-default-v1', '1');
-          }
-        } catch {
-          /* */
-        }
-        // Round 4+: wyszukiwarka / sugestie silnika — włączone (strict wcześniej je gasił)
-        try {
-          if (
-            typeof localStorage !== 'undefined' &&
-            !localStorage.getItem('djxxr-search-suggest-on-v1')
-          ) {
-            mergedSettings.privacySearchSuggest = true;
-            mergedSettings.privacyAllowAppNetwork = true;
-            mergedSettings.suggestHistory = true;
-            mergedSettings.newTabIsSearch = true;
-            localStorage.setItem('djxxr-search-suggest-on-v1', '1');
-          }
-        } catch {
-          /* */
-        }
-        if (typeof mergedSettings.privacySearchSuggest !== 'boolean') {
-          mergedSettings.privacySearchSuggest = true;
-        }
-        if (typeof mergedSettings.privacyAllowAppNetwork !== 'boolean') {
-          mergedSettings.privacyAllowAppNetwork = true;
-        }
-        if (typeof mergedSettings.newTabIsSearch !== 'boolean') {
-          mergedSettings.newTabIsSearch = true;
-        }
-        // One-shot: old DEFAULT was false; flip to true once unless user already on
-        if (typeof mergedSettings.perfSpellcheck !== 'boolean') {
-          mergedSettings.perfSpellcheck = true;
-        }
-        try {
-          if (
-            typeof localStorage !== 'undefined' &&
-            !localStorage.getItem('djxxr-spellcheck-default-v1')
-          ) {
-            mergedSettings.perfSpellcheck = true;
-            localStorage.setItem('djxxr-spellcheck-default-v1', '1');
-          }
-        } catch {
-          /* */
-        }
-        if (!mergedSettings.zoomFactors || typeof mergedSettings.zoomFactors !== 'object') {
-          mergedSettings.zoomFactors = {};
-        }
-        if (typeof mergedSettings.showBookmarksBar !== 'boolean') {
-          mergedSettings.showBookmarksBar = false;
-        }
-        if (typeof mergedSettings.darkPageScrollbars !== 'boolean') {
-          mergedSettings.darkPageScrollbars = true;
-        }
-        if (typeof mergedSettings.autoPipOnTabSwitch !== 'boolean') {
-          mergedSettings.autoPipOnTabSwitch = false;
-        }
+        const storage =
+          typeof localStorage !== 'undefined'
+            ? {
+                getItem: (k: string) => localStorage.getItem(k),
+                setItem: (k: string, v: string) => localStorage.setItem(k, v),
+              }
+            : null;
+        mergedSettings = applyOneShotLocalFlags(
+          mergedSettings as unknown as Record<string, unknown>,
+          storage,
+        ) as unknown as Settings;
         const bookmarkFolders = Array.isArray(p.bookmarkFolders) ? p.bookmarkFolders : current.bookmarkFolders;
         const folders = [...bookmarkFolders];
         for (const def of DEFAULT_BOOKMARK_FOLDERS) {
@@ -1971,11 +1876,10 @@ export const useStore = create<State>()(
           ...current,
           ...p,
           settings: mergedSettings,
-          bangs: migrateBangsToDdg(p.bangs?.length ? p.bangs : current.bangs),
+          bangs: mergeBangs(p.bangs, current.bangs),
           shortcuts: p.shortcuts?.length ? p.shortcuts : current.shortcuts,
           sideApps: p.sideApps?.length ? p.sideApps : current.sideApps,
-          // history lives in electron/history.cjs — keep ephemeral for one-shot migrate
-          history: Array.isArray(p.history) ? p.history : [],
+          history: historyMustStayEphemeral<State['history'][number]>(p.history),
           bookmarks: Array.isArray(p.bookmarks) ? p.bookmarks : current.bookmarks,
           bookmarkFolders: folders,
         };

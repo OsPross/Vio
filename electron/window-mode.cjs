@@ -2,26 +2,20 @@
  * Window chrome mode for secondary BrowserWindows (private / tor).
  * Ephemeral private partitions: private-<uuid> (no persist).
  */
-const { randomUUID } = require('node:crypto');
 const { session } = require('electron');
 const security = require('./security.cjs');
 const privacy = require('./privacy.cjs');
 const downloads = require('./downloads.cjs');
 const adblock = require('./adblock-plus.cjs');
 const spellcheck = require('./spellcheck.cjs');
+const {
+  isPrivatePartition,
+  createPrivatePartition,
+  PRIVATE_PARTITION_RE,
+} = require('./lib/partition-names.cjs');
 
 /** @type {WeakMap<import('electron').BrowserWindow, { mode: string, partition: string|null, restoreTabs?: unknown[]|null }>} */
 const windowMeta = new WeakMap();
-
-const PRIVATE_PARTITION_RE = /^private-[0-9a-f-]{8,}$/i;
-
-function isPrivatePartition(name) {
-  return PRIVATE_PARTITION_RE.test(String(name || ''));
-}
-
-function createPrivatePartition() {
-  return `private-${randomUUID()}`;
-}
 
 /**
  * @param {import('electron').BrowserWindow} bw

@@ -9,6 +9,7 @@
 'use strict';
 
 const { app } = require('electron');
+const brands = require('./lib/ua-brands.cjs');
 
 function chromeFull() {
   try {
@@ -23,42 +24,11 @@ function chromeMajor() {
 }
 
 function buildChromeUa() {
-  const full = chromeFull();
-  return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${full} Safari/537.36`;
-}
-
-function brandList(full) {
-  const major = String(full).split('.')[0];
-  // Match current Chromium Client Hints brand order (grease Not.A/Brand)
-  return [
-    { brand: 'Not.A/Brand', version: '99' },
-    { brand: 'Google Chrome', version: major },
-    { brand: 'Chromium', version: major },
-  ];
-}
-
-function fullVersionList(full) {
-  return [
-    { brand: 'Not.A/Brand', version: '10.0.0.0' },
-    { brand: 'Google Chrome', version: full },
-    { brand: 'Chromium', version: full },
-  ];
+  return brands.buildChromeUa(chromeFull());
 }
 
 function userAgentMetadata() {
-  const full = chromeFull();
-  return {
-    brands: brandList(full),
-    fullVersion: full,
-    fullVersionList: fullVersionList(full),
-    platform: 'Windows',
-    platformVersion: '15.0.0',
-    architecture: 'x86',
-    model: '',
-    mobile: false,
-    bitness: '64',
-    wow64: false,
-  };
+  return brands.userAgentMetadataFromFull(chromeFull());
 }
 
 function clientHintHeaders() {
@@ -147,6 +117,8 @@ module.exports = {
   chromeMajor,
   clientHintHeaders,
   userAgentMetadata,
+  brandList: brands.brandList,
+  fullVersionList: brands.fullVersionList,
   applyBootFallback,
   applyToWebContents,
   CHROME_UA: buildChromeUa,

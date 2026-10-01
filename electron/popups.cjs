@@ -12,11 +12,15 @@
 
 const path = require('node:path');
 const { BrowserWindow, WebContentsView, ipcMain } = require('electron');
+const {
+  OAUTH_HOST_RE,
+  parseFeatureSize,
+  looksLikePopupFeatures,
+  looksLikeOauthUrl,
+} = require('./lib/popup-policy.cjs');
 
 const GESTURE_MS = 5000;
 const TOOLBAR_H = 36;
-const OAUTH_HOST_RE =
-  /(?:^|\.)((accounts|login|signin|oauth|auth|sso)\.)|(google\.com|googleapis\.com|gstatic\.com|microsoftonline\.com|live\.com|login\.microsoftonline\.com|github\.com|discord\.com|discordapp\.com|apple\.com|facebook\.com|twitter\.com|x\.com|okta\.com|auth0\.com)/i;
 
 /** Multi-part public suffixes (fallback when tldts unavailable). */
 const MULTI_TLD = new Set([
@@ -71,29 +75,6 @@ function noteGesture(wc) {
 function hasRecentGesture(wc) {
   const t = lastGestureAt.get(wc) || 0;
   return Date.now() - t < GESTURE_MS;
-}
-
-function parseFeatureSize(features, key, fallback) {
-  const m = String(features || '').match(new RegExp(`(?:^|[,;\\s])${key}=(\\d+)`, 'i'));
-  if (!m) return fallback;
-  const n = Number(m[1]);
-  return Number.isFinite(n) && n > 0 ? Math.min(1600, Math.max(200, n)) : fallback;
-}
-
-function looksLikePopupFeatures(features) {
-  const feat = String(features || '');
-  return /(?:^|[,;\s])(width|height|popup)=/i.test(feat);
-}
-
-function looksLikeOauthUrl(url) {
-  try {
-    const u = new URL(url);
-    if (OAUTH_HOST_RE.test(u.hostname)) return true;
-    if (/\/(oauth|authorize|signin|login|sso)\b/i.test(u.pathname)) return true;
-  } catch {
-    /* */
-  }
-  return false;
 }
 
 function originOf(url) {
@@ -604,8 +585,11 @@ module.exports = {
   allowPopupsForOrigin,
   isPopupAllowedForOrigin,
   looksLikeOauthUrl,
+  looksLikePopupFeatures,
+  parseFeatureSize,
   registrableDomain,
   GESTURE_MS,
   TOOLBAR_H,
   DARK_SCROLLBAR_CSS,
+  OAUTH_HOST_RE,
 };
