@@ -348,6 +348,9 @@ export function App() {
         if (tab.pinned) continue;
         if (tab.url === HOME_URL || tab.url.startsWith('about:')) continue;
         if (tab.discarded) continue;
+        // Never discard while media is playing (YouTube/Discord audio) or video present (PiP risk)
+        const media = tabMediaRef.current[tab.id];
+        if (media?.playing || media?.hasVideo) continue;
         const last = tab.lastActiveAt ?? 0;
         if (last && now - last >= ms) {
           st.updateTab(tab.id, { discarded: true });
@@ -371,6 +374,7 @@ export function App() {
           return;
         }
         if (Array.isArray(boot?.restoreTabs) && boot.restoreTabs.length) {
+          const lazy = useStore.getState().settings.perfLazyTabs !== false;
           const tabs = boot.restoreTabs.map((t, i) => ({
             id: Math.random().toString(36).slice(2, 10),
             url: t.url,
@@ -379,7 +383,7 @@ export function App() {
             pinned: Boolean(t.pinned),
             navHistory: (t.navHistory as Tab['navHistory']) || null,
             mode: 'normal' as const,
-            discarded: i !== 0,
+            discarded: lazy && i !== 0,
             lastActiveAt: Date.now(),
           }));
           restoreSessionTabs(tabs, tabs[0]?.id || null, []);
@@ -402,6 +406,7 @@ export function App() {
         }
 
         if (mode === 'session' && saved?.tabs?.length) {
+          const lazy = useStore.getState().settings.perfLazyTabs !== false;
           restoreSessionTabs(
             saved.tabs.map((t) => ({
               id: t.id,
@@ -411,7 +416,7 @@ export function App() {
               pinned: Boolean(t.pinned),
               navHistory: t.navHistory || null,
               mode: 'normal' as const,
-              discarded: true,
+              discarded: lazy && t.id !== saved.activeId,
             })),
             saved.activeId,
             saved.closedTabs || [],
@@ -420,13 +425,14 @@ export function App() {
         }
 
         if (mode === 'pages' && pages.length) {
+          const lazy = useStore.getState().settings.perfLazyTabs !== false;
           const tabs = pages.map((url, i) => ({
             id: Math.random().toString(36).slice(2, 10),
             url,
             title: url,
             mode: 'normal' as const,
             pinned: false,
-            discarded: i !== 0,
+            discarded: lazy && i !== 0,
             lastActiveAt: Date.now(),
           }));
           restoreSessionTabs(tabs, tabs[0].id, saved?.closedTabs || []);
@@ -3150,7 +3156,10 @@ export function App() {
               !t.url.startsWith('about:') &&
               !t.url.startsWith('djxxr://') &&
               t.url !== ABOUT_URL &&
-              (t.id === activeId || (!settings.perfLazyTabs && !t.discarded));
+              // Chrome-like: all non-discarded tabs keep a live <webview> (hidden via CSS).
+              // Lazy = session restore marks inactive as discarded; discard timer separately.
+              // Previously perfLazyTabs unmounted every inactive tab → killed YouTube/forms.
+              (t.id === activeId || !t.discarded);
             const pwOn = settings.passwordsEnabled && t.mode !== 'tor';
             return (
               <TabWebview

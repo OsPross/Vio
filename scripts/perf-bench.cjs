@@ -235,7 +235,26 @@ function snapshotListeners() {
       windowFanout = {
         focus: win.listenerCount('focus'),
         resized: win.listenerCount('resized'),
+        closed: win.listenerCount('closed'),
         fanoutRegistry: require('../electron/window-events.cjs').counts(win),
+      };
+    }
+  } catch {
+    /* */
+  }
+  let guestFanout = null;
+  try {
+    const guest = wcs.find((wc) => {
+      try {
+        return wc.getType?.() === 'webview';
+      } catch {
+        return false;
+      }
+    });
+    if (guest) {
+      guestFanout = {
+        didStopLoading: guest.listenerCount('did-stop-loading'),
+        fanoutRegistry: require('../electron/webcontents-events.cjs').counts(guest),
       };
     }
   } catch {
@@ -249,6 +268,7 @@ function snapshotListeners() {
     webContents: perWc,
     webContentsListenersTotal: perWc.reduce((a, x) => a + x.listeners, 0),
     windowFanout,
+    guestFanout,
   };
 }
 
@@ -419,6 +439,24 @@ async function run(getMainWindow) {
   };
   console.log('[perf-bench] startup', result.marks.launchToInteractiveMs, 'ms');
 
+  // Reset any restored session tabs so RAM/guest counts are not polluted
+  const reset = await evalInApp(`(() => {
+    const st = window.__DJXXR_STORE__?.getState?.();
+    if (!st) return { err: 'no-store' };
+    const ids = st.tabs.map(t => t.id);
+    const keep = st.activeId || ids[0];
+    for (const id of ids) {
+      if (id !== keep) {
+        try { st.closeTab(id); } catch {}
+      }
+    }
+    st.updateTab?.(st.activeId, { url: 'about:home', discarded: false });
+    st.setView?.('browser');
+    return { tabs: window.__DJXXR_STORE__.getState().tabs.length, activeId: window.__DJXXR_STORE__.getState().activeId };
+  })()`);
+  console.log('[perf-bench] reset tabs', reset);
+  await sleep(800);
+
   // --- empty home metrics ---
   await evalInApp(`(() => {
     const st = window.__DJXXR_STORE__?.getState?.();
@@ -471,6 +509,19 @@ async function run(getMainWindow) {
       await new Promise(r => setTimeout(r, 400));
     }
     return { tabs: window.__DJXXR_STORE__.getState().tabs.length };
+  })()`);
+  // Activate every tab once so each guest process is created (Chrome-like keep-alive).
+  console.log('[perf-bench] activating each of 10 tabs once…');
+  await evalInApp(`(async () => {
+    const st = window.__DJXXR_STORE__?.getState?.();
+    if (!st) return { err: 'no-store' };
+    const ids = st.tabs.map(t => t.id);
+    for (const id of ids) {
+      st.setActive(id);
+      await new Promise(r => setTimeout(r, 350));
+    }
+    if (ids[0]) st.setActive(ids[0]);
+    return { activated: ids.length };
   })()`);
   // Staggered settle — heavy sites (reddit/google) need more than 18s under load
   const LOAD_WAIT_MS = Math.max(25_000, Number(process.env.PERF_BENCH_LOAD_WAIT_MS) || 45_000);
@@ -557,6 +608,17 @@ async function run(getMainWindow) {
       st.newTab('https://example.com/?n=' + i, { background: true });
     }
     return st.tabs.length;
+  })()`);
+  console.log('[perf-bench] activating each of 30 tabs once…');
+  await evalInApp(`(async () => {
+    const st = window.__DJXXR_STORE__.getState();
+    const ids = st.tabs.map(t => t.id);
+    for (const id of ids) {
+      st.setActive(id);
+      await new Promise(r => setTimeout(r, 200));
+    }
+    if (ids[0]) st.setActive(ids[0]);
+    return { activated: ids.length };
   })()`);
   await sleep(20_000);
   result.scenarios.tabs30 = {

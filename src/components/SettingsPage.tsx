@@ -1685,13 +1685,13 @@ function PerformanceSection({
       <SettingsGroup title="Pamięć i karty">
         <Toggle
           label="Leniwe ładowanie kart"
-          hint="Webview tylko dla aktywnej karty — duża oszczędność RAM"
+          hint="Przy starcie nieaktywne karty sesji śpią do pierwszego kliknięcia. Link otwarty w tle ładuje się od razu; po odwiedzeniu karta zostaje żywa (jak Chrome)."
           on={settings.perfLazyTabs}
           onChange={(v) => patchSettings({ perfLazyTabs: v })}
         />
         <Toggle
           label="Wyrzucaj nieaktywne karty"
-          hint="Odmontowuje kartę po czasie bezczynności"
+          hint="Odmontowuje kartę po czasie bezczynności (nigdy przy audio/PiP/formularzu)"
           on={settings.perfDiscardTabs}
           onChange={(v) => patchSettings({ perfDiscardTabs: v })}
         />
