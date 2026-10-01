@@ -506,6 +506,13 @@ function guestWebContentsById(id) {
 }
 
 app.whenReady().then(async () => {
+  // FIRST: purge legacy Partitions/private before any session.fromPartition
+  try {
+    windowMode.purgeLegacyPrivatePartitionSync();
+  } catch (err) {
+    console.warn('[window-mode] purge boot', err);
+  }
+
   security.init();
   certificate.init();
 
@@ -526,20 +533,6 @@ app.whenReady().then(async () => {
     torDaemon.removeAutostartShortcuts();
   } catch (e) {
     console.warn('[tor] autostart migrate', e);
-  }
-
-  // Purge legacy persist:private if it ever existed on disk
-  try {
-    const legacy = session.fromPartition('persist:private');
-    await legacy.clearStorageData();
-    await legacy.clearCache();
-    const partDir = path.join(app.getPath('userData'), 'Partitions', 'private');
-    if (fs.existsSync(partDir)) {
-      fs.rmSync(partDir, { recursive: true, force: true });
-      console.log('[window-mode] removed legacy Partitions/private');
-    }
-  } catch (err) {
-    console.warn('[window-mode] purge persist:private', err);
   }
 
   const ses = session.fromPartition('persist:main');

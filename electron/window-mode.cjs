@@ -80,6 +80,59 @@ async function wipePrivatePartition(partition) {
   }
 }
 
+/**
+ * Remove legacy on-disk persist:private folder BEFORE any session is created.
+ * On EPERM, leave a flag and retry next boot; log the warning only once per sticky failure.
+ * Does NOT call session.fromPartition('persist:private') — that would recreate the store.
+ */
+function purgeLegacyPrivatePartitionSync() {
+  const { app } = require('electron');
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const userData = app.getPath('userData');
+  const partDir = path.join(userData, 'Partitions', 'private');
+  const flagPath = path.join(userData, 'purge-private-pending');
+  const loggedPath = path.join(userData, 'purge-private-logged');
+
+  const pending = fs.existsSync(flagPath);
+  const exists = fs.existsSync(partDir);
+  if (!exists && !pending) return { ok: true, skipped: true };
+
+  try {
+    if (exists) {
+      fs.rmSync(partDir, { recursive: true, force: true });
+    }
+    if (fs.existsSync(flagPath)) fs.unlinkSync(flagPath);
+    if (fs.existsSync(loggedPath)) fs.unlinkSync(loggedPath);
+    console.log('[window-mode] removed legacy Partitions/private');
+    return { ok: true };
+  } catch (err) {
+    try {
+      fs.writeFileSync(flagPath, String(Date.now()), { encoding: 'utf8' });
+    } catch {
+      /* */
+    }
+    let alreadyLogged = false;
+    try {
+      alreadyLogged = fs.existsSync(loggedPath);
+    } catch {
+      /* */
+    }
+    if (!alreadyLogged) {
+      console.warn(
+        '[window-mode] purge Partitions/private failed (will retry next start):',
+        err && err.message ? err.message : err,
+      );
+      try {
+        fs.writeFileSync(loggedPath, '1', { encoding: 'utf8' });
+      } catch {
+        /* */
+      }
+    }
+    return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
+}
+
 module.exports = {
   PRIVATE_PARTITION_RE,
   isPrivatePartition,
@@ -89,4 +142,5 @@ module.exports = {
   getMetaForWebContents,
   ensurePrivateSession,
   wipePrivatePartition,
+  purgeLegacyPrivatePartitionSync,
 };
