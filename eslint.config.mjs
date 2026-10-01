@@ -41,6 +41,7 @@ export default tseslint.config(
       'no-useless-assignment': 'warn',
       'no-constant-binary-expression': 'warn',
       'no-case-declarations': 'warn',
+      '@typescript-eslint/no-require-imports': 'warn',
     },
   },
   prettier,

@@ -287,7 +287,7 @@ export function getCommands(): CommandDef[] {
           const hostName = new URL(c.activeUrl || '').hostname;
           host?.patchSettings({
             privacySiteExceptions: [
-              ...((useStoreGetExceptions() as string[]) || []),
+              ...((getStoreExceptions() as string[]) || []),
               hostName,
             ].filter((v, i, a) => a.indexOf(v) === i),
           });
@@ -322,7 +322,7 @@ export function getCommands(): CommandDef[] {
   ];
 }
 
-function useStoreGetExceptions(): string[] {
+function getStoreExceptions(): string[] {
   try {
     // lazy to avoid circular import at module top in actions
     const { useStore } = require('../store') as typeof import('../store');
