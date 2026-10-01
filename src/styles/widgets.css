@@ -829,7 +829,8 @@
   --notes-list-hover: color-mix(in srgb, var(--fg) 6%, transparent);
   --notes-list-active: color-mix(in srgb, var(--accent) 18%, transparent);
   --notes-toolbar: color-mix(in srgb, var(--fg) 5%, transparent);
-  --notes-list-w: 260px;
+  --notes-list-w: 240px;
+  --notes-list-min: 200px;
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -928,9 +929,12 @@
   flex-direction: column;
 }
 .hw-notes.is-wide .hw-notes-list-pane {
+  /* Fixed column — never shrink to ~90px under flex pressure from editor */
   flex: 0 0 var(--notes-list-w);
+  flex-shrink: 0;
   width: var(--notes-list-w);
-  min-width: 200px;
+  min-width: var(--notes-list-min, 200px);
+  max-width: var(--notes-list-w);
 }
 .hw-notes-list-pane {
   max-width: 100%;
@@ -942,6 +946,9 @@
   border-radius: 12px;
   background: var(--notes-surface);
   padding: 10px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
   overflow: hidden;
 }
 .hw-notes-resizer {
@@ -1069,16 +1076,21 @@
   min-width: 0;
 }
 .hw-notes-list-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
   font-size: 13px;
   font-weight: 600;
   color: var(--fg);
-  white-space: nowrap;
+}
+.hw-notes-list-title-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  white-space: nowrap;
 }
 .hw-notes-pin {
   flex-shrink: 0;

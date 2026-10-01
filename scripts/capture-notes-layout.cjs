@@ -103,27 +103,55 @@ async function run(getMainWindow) {
         notes.style.width = '100%';
       }
       window.dispatchEvent(new Event('resize'));
-      return notes?.clientWidth || 0;
+      // Force layout read so ResizeObserver / resize listener sync is-wide
+      void notes?.getBoundingClientRect();
+      const list = notes?.querySelector('.hw-notes-list-pane');
+      const editor = notes?.querySelector('.hw-notes-editor-pane');
+      return {
+        notesW: notes?.clientWidth || 0,
+        wide: notes?.classList.contains('is-wide') || false,
+        narrow: notes?.classList.contains('is-narrow') || false,
+        listW: list ? Math.round(list.getBoundingClientRect().width) : 0,
+        editorW: editor ? Math.round(editor.getBoundingClientRect().width) : 0,
+        listVisible: Boolean(list),
+      };
     })()`);
   };
 
   const cases = [
     { name: 'empty', count: 0 },
     { name: 'one', count: 1 },
-    { name: 'twenty', count: 20 },
+    { name: 'fifty', count: 50 },
   ];
 
+  const metrics = [];
   for (const c of cases) {
     console.log('[capture-notes] case', c.name);
     await seedViaIpc(c.count);
     for (const w of [360, 800, 1280]) {
-      const cw = await forceWidth(w);
-      await sleep(350);
-      console.log('[capture-notes] width', w, 'client', cw);
+      const m = await forceWidth(w);
+      await sleep(500);
+      const m2 = await evalInApp(`(() => {
+        const notes = document.querySelector('.hw-notes');
+        const list = notes?.querySelector('.hw-notes-list-pane');
+        const editor = notes?.querySelector('.hw-notes-editor-pane');
+        return {
+          notesW: notes?.clientWidth || 0,
+          wide: notes?.classList.contains('is-wide') || false,
+          narrow: notes?.classList.contains('is-narrow') || false,
+          listW: list ? Math.round(list.getBoundingClientRect().width) : 0,
+          editorW: editor ? Math.round(editor.getBoundingClientRect().width) : 0,
+          listVisible: Boolean(list),
+        };
+      })()`);
+      const row = { case: c.name, target: w, ...(m2 || m) };
+      console.log('[capture-notes] width', w, JSON.stringify(row));
+      metrics.push(row);
       await shot(`notes-${c.name}-w${w}`);
     }
   }
 
+  fs.writeFileSync(path.join(OUT, 'metrics.json'), JSON.stringify(metrics, null, 2));
   console.log('[capture-notes] done', OUT);
   if (process.env.CAPTURE_NOTES_QUIT === '1') {
     await sleep(400);

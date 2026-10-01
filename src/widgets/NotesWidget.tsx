@@ -32,10 +32,10 @@ import {
 
 const SAVE_DEBOUNCE_MS = 420;
 const UNDO_MS = 6000;
-const WIDE_MIN = 440; // L widget ≈460px — two columns on L; ≥560 uses full 240–280 list
-const LIST_MIN = 240;
+const WIDE_MIN = 520; // below this: list behind back button
+const LIST_MIN = 220;
 const LIST_MAX = 280;
-const LIST_DEFAULT = 260;
+const LIST_DEFAULT = 240;
 const LIST_WIDTH_KEY = 'djxxr-notes-list-width';
 
 type NoteRow = NoteRecord & { pinned?: boolean };
@@ -106,7 +106,7 @@ function relativeTime(ts: number): string {
 function loadListWidth(): number {
   try {
     const n = Number(localStorage.getItem(LIST_WIDTH_KEY));
-    if (Number.isFinite(n) && n >= LIST_MIN && n <= LIST_MAX) return n;
+    if (Number.isFinite(n) && n >= LIST_MIN && n <= LIST_MAX) return Math.round(n);
   } catch {
     /* */
   }
@@ -161,14 +161,16 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
 
   useEffect(() => {
     const el = rootRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect?.width ?? 0;
-      setPanelW(w);
-    });
-    ro.observe(el);
-    setPanelW(el.clientWidth);
-    return () => ro.disconnect();
+    if (!el) return;
+    const sync = () => setPanelW(el.clientWidth);
+    sync();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(sync) : null;
+    ro?.observe(el);
+    window.addEventListener('resize', sync);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', sync);
+    };
   }, []);
 
   const refreshList = useCallback(
@@ -538,7 +540,7 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
                           <span className="hw-notes-list-top">
                             <span className="hw-notes-list-title">
                               {n.pinned ? <Pin size={11} className="hw-notes-pin" /> : null}
-                              {n.title || 'Bez tytułu'}
+                              <span className="hw-notes-list-title-text">{n.title || 'Bez tytułu'}</span>
                             </span>
                             <span className="hw-notes-list-date">{relativeTime(n.updatedAt)}</span>
                           </span>
