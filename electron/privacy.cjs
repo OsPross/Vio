@@ -25,7 +25,7 @@ const TRACKING_PARAMS = new Set([
 ]);
 
 const SENSITIVE_HOST_RE =
-  /(^|\.)(accounts\.google|login\.microsoftonline|login\.live|appleid\.apple|id\.apple|discord\.com|stripe\.com|paypal\.com|braintree|adyen|checkout\.|3dsecure|secure\.|bank|pkobp|mbank|ing\.pl|santander|alior|millennium|recaptcha|hcaptcha|challenges\.cloudflare|turnstile)/i;
+  /(^|\.)(consent\.google|accounts\.google|login\.microsoftonline|login\.live|appleid\.apple|id\.apple|discord\.com|stripe\.com|paypal\.com|braintree|adyen|checkout\.|3dsecure|secure\.|bank|pkobp|mbank|ing\.pl|santander|alior|millennium|recaptcha|hcaptcha|challenges\.cloudflare|turnstile)/i;
 
 let cfg = {
   enabled: true,

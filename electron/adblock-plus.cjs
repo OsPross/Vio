@@ -65,6 +65,20 @@ let appliedCustomCosmetic = [];
 /** @type {Set<string>} */
 let customHosts = new Set();
 
+/**
+ * EasyPrivacy blocks `||google.com^…/log…` which also matches consent.google.com/log —
+ * Google's EU consent save beacon. Without this exception the "Sprawdź ustawienia"
+ * dialog loops because the accept/save request never lands.
+ */
+const BUILTIN_ALLOWLIST = [
+  '@@||consent.google.com^',
+  '@@||consent.youtube.com^',
+  '@@||consent.google.pl^',
+];
+
+/** @type {import('@ghostery/adblocker').NetworkFilter[]} */
+let appliedBuiltinNetwork = [];
+
 const COSMETIC_CSS = `
 /* Blokada — warstwa kosmetyczna */
 iframe[id*="google_ads" i],
@@ -325,6 +339,7 @@ function loadCachedEngineSync() {
     wireBlockerEvents();
     appliedCustomNetwork = [];
     appliedCustomCosmetic = [];
+    appliedBuiltinNetwork = [];
     refreshCustom();
     applyCustomRulesToBlocker();
     lastInitError = null;
@@ -476,6 +491,21 @@ function ghosteryBlockingWanted() {
   return Boolean(blocker && config.enabled && config.network);
 }
 
+function applyBuiltinAllowlist() {
+  if (!blocker) return;
+  try {
+    const { parseFilters } = require('@ghostery/adblocker');
+    const { networkFilters } = parseFilters(BUILTIN_ALLOWLIST.join('\n'));
+    blocker.update({
+      newNetworkFilters: networkFilters,
+      removedNetworkFilters: appliedBuiltinNetwork,
+    });
+    appliedBuiltinNetwork = networkFilters;
+  } catch (err) {
+    console.warn('[adblock+] builtin allowlist', err.message || err);
+  }
+}
+
 function applyCustomRulesToBlocker() {
   if (!blocker) return;
   try {
@@ -493,6 +523,7 @@ function applyCustomRulesToBlocker() {
   } catch (err) {
     console.warn('[adblock+] custom rules update', err.message || err);
   }
+  applyBuiltinAllowlist();
 }
 
 function disableGhostery(ses) {
@@ -611,6 +642,7 @@ async function init(opts = {}) {
 
       appliedCustomNetwork = [];
       appliedCustomCosmetic = [];
+      appliedBuiltinNetwork = [];
       refreshCustom();
       applyCustomRulesToBlocker();
 
@@ -630,6 +662,7 @@ async function init(opts = {}) {
       }
       appliedCustomNetwork = [];
       appliedCustomCosmetic = [];
+      appliedBuiltinNetwork = [];
       return { ok: Boolean(blocker), error: lastInitError, engine: blocker ? 'ghostery' : 'fallback-cosmetic' };
     }
   })();
