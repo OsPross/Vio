@@ -36,7 +36,7 @@ check('UA Firefox-like', tor.includes('Firefox/128.0'));
 check('Accept-Language en-US', tor.includes('en-US,en;q=0.5'));
 
 check('main wires tor IPC', main.includes('shell:tor-start') && main.includes("require('./tor.cjs')"));
-check('set-proxy no longer sets SOCKS on persist:main', /shell:set-proxy[\s\S]*mode: 'system'/.test(main));
+check('legacy shell:set-proxy removed', !main.includes('shell:set-proxy') && !preload.includes('setProxy:'));
 check('tor guest harden on attach', main.includes('tor.hardenGuestWebContents') || main.includes('isTorWebContents'));
 
 check('security allows tor partitions', sec.includes('TOR_PARTITION_RE') && sec.includes('isAllowedPartition'));
