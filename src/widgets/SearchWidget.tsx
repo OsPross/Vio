@@ -82,9 +82,11 @@ function EngineIconSelect({
 type SuggestItem = {
   kind: 'history' | 'bang' | 'remote' | 'search';
   title: string;
-  subtitle: string;
+  subtitle?: string;
   fill?: string;
 };
+
+const MAX_HOME_SUGGEST = 6;
 
 function SuggestPortal({
   anchorEl,
@@ -111,8 +113,9 @@ function SuggestPortal({
       const r = anchorEl.getBoundingClientRect();
       const spaceBelow = window.innerHeight - r.bottom - 12;
       const spaceAbove = r.top - 12;
-      const maxH = Math.max(120, Math.min(320, spaceBelow > 160 ? spaceBelow : spaceAbove));
-      const openUp = spaceBelow < 160 && spaceAbove > spaceBelow;
+      const need = Math.min(suggestions.length, MAX_HOME_SUGGEST) * 36 + 8;
+      const maxH = Math.max(need, Math.min(need + 8, spaceBelow > need ? spaceBelow : spaceAbove));
+      const openUp = spaceBelow < need && spaceAbove > spaceBelow;
       setBox({
         left: r.left,
         top: openUp ? Math.max(8, r.top - maxH - 6) : r.bottom + 6,
@@ -145,7 +148,7 @@ function SuggestPortal({
       }}
       role="listbox"
     >
-      {suggestions.map((s, i) => (
+      {suggestions.slice(0, MAX_HOME_SUGGEST).map((s, i) => (
         <button
           key={`${s.kind}-${s.title}-${i}`}
           type="button"
@@ -156,15 +159,17 @@ function SuggestPortal({
         >
           <span className="home-suggest-ico">
             {s.kind === 'bang' ? (
-              <Sparkles size={13} strokeWidth={1.75} />
+              <Sparkles size={16} strokeWidth={1.75} />
             ) : s.kind === 'history' ? (
-              <Clock3 size={13} strokeWidth={1.75} />
+              <Clock3 size={16} strokeWidth={1.75} />
             ) : (
-              <Search size={13} strokeWidth={1.75} />
+              <Search size={16} strokeWidth={1.75} />
             )}
           </span>
-          <span className="grow">{s.title}</span>
-          <span className="home-suggest-meta">{s.subtitle}</span>
+          <span className="grow">
+            <span className="home-suggest-title">{s.title}</span>
+            {s.subtitle ? <span className="home-suggest-sub">{s.subtitle}</span> : null}
+          </span>
           {s.kind === 'history' && (
             <span
               className="home-suggest-x"
@@ -267,15 +272,15 @@ export function SearchWidget({
     if (!t) {
       if (!settings.suggestHistory) return [];
       return queryHistory
-        .slice(0, 5)
-        .map((h) => ({ kind: 'history' as const, title: h.q, subtitle: 'Historia' }));
+        .slice(0, MAX_HOME_SUGGEST)
+        .map((h) => ({ kind: 'history' as const, title: h.q }));
     }
     if (t.startsWith('!')) {
       if (!settings.suggestBangs) return [];
       const key = t.slice(1);
       return bangs
         .filter((b) => b.key.startsWith(key) || b.label.toLowerCase().includes(key))
-        .slice(0, 8)
+        .slice(0, MAX_HOME_SUGGEST)
         .map((b) => ({
           kind: 'bang' as const,
           title: `!${b.key}`,
@@ -286,30 +291,28 @@ export function SearchWidget({
     const hist = settings.suggestHistory
       ? queryHistory
           .filter((h) => h.q.toLowerCase().includes(t))
-          .slice(0, 4)
-          .map((h) => ({ kind: 'history' as const, title: h.q, subtitle: 'Historia' }))
+          .slice(0, 3)
+          .map((h) => ({ kind: 'history' as const, title: h.q }))
       : [];
     const remote =
       settings.privacySearchSuggest && settings.privacyAllowAppNetwork
         ? remoteSuggest
             .filter((s) => s.toLowerCase() !== t)
-            .slice(0, 4)
-            .map((s) => ({ kind: 'remote' as const, title: s, subtitle: 'Sugestia' }))
+            .slice(0, 3)
+            .map((s) => ({ kind: 'remote' as const, title: s }))
         : [];
     return [
       {
         kind: 'search' as const,
         title: q.trim(),
-        subtitle: engineLabel(settings.searchEngine),
       },
       ...hist,
       ...remote,
-    ];
+    ].slice(0, MAX_HOME_SUGGEST);
   }, [
     q,
     queryHistory,
     bangs,
-    settings.searchEngine,
     settings.suggestHistory,
     settings.suggestBangs,
     settings.privacySearchSuggest,

@@ -28,7 +28,10 @@ export function useOmniboxDraft({
   const omniFocusedRef = useRef(false);
 
   useEffect(() => {
+    // Only block sync while the field is focused *and* dirty; otherwise adopt page URL
+    // so idle display (search query / short host) always tracks the real navigation.
     if (omniEditingRef.current && omniFocusedRef.current) return;
+    omniEditingRef.current = false;
     if (isHome || isTorHome || isInternalAbout) setDraft('');
     else setDraft(activeUrl ?? '');
   }, [activeId, activeUrl, isHome, isTorHome, isInternalAbout]);

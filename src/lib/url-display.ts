@@ -299,27 +299,76 @@ export function formatUrlPlain(url: string, opts?: { maxLen?: number }): string 
   return formatUrlForDisplay(url, opts).text;
 }
 
+/** Legacy brand protocol — display only; do not rewrite stored history. */
+export function rewriteLegacyProtocol(url: string): string {
+  if (/^djxxr:\/\//i.test(url)) return `vio://${url.slice(url.indexOf('://') + 3)}`;
+  return url;
+}
+
+export function isSkippableSuggestUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  return /^djxxr:\/\//i.test(url);
+}
+
+/** Host / short origin for suggest subtitles (gray domain). */
+export function suggestDomainLabel(url?: string): string | undefined {
+  if (!url) return undefined;
+  const display = rewriteLegacyProtocol(url);
+  try {
+    const u = new URL(display);
+    if (u.protocol === 'vio:') return display;
+    if (u.protocol === 'about:') return display;
+    const host = u.host || u.hostname;
+    return host.replace(/^www\./i, '') || undefined;
+  } catch {
+    return /^vio:\/\//i.test(display) ? display : undefined;
+  }
+}
+
+/**
+ * Omnibox when not focused: search query or short host/path — never the raw URL.
+ */
+export function formatOmniboxIdleDisplay(url: string, opts?: { maxLen?: number }): string {
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (/^djxxr:\/\//i.test(trimmed)) {
+    const key = trimmed.split(/[?#]/)[0].toLowerCase();
+    const label = INTERNAL_LABELS[key];
+    if (label) return label;
+    return rewriteLegacyProtocol(trimmed);
+  }
+  const parts = formatUrlForDisplay(trimmed, opts);
+  if (parts.kind === 'search' && parts.searchQuery) return parts.searchQuery;
+  return parts.text;
+}
+
 /** Omnibox / suggest: shorten URL subtitles while keeping human labels. */
 export function formatSuggestSubtitle(
   subtitle: string | undefined,
   itemUrl?: string,
 ): string | undefined {
   if (!subtitle) return undefined;
-  const fixed = new Set([
+  const typeOnly = new Set([
     'Zapytanie',
+    'Historia',
+    'Sugestia',
     'Przełącz na kartę',
     'Skrót',
-    'Sugestia',
     'Dopełnienie · Tab',
   ]);
-  if (fixed.has(subtitle)) return subtitle;
+  if (typeOnly.has(subtitle)) {
+    // Type labels are shown via icons — prefer domain when we have a URL.
+    return itemUrl ? suggestDomainLabel(itemUrl) : undefined;
+  }
   const candidate = itemUrl || subtitle;
   if (
     /^https?:\/\//i.test(candidate) ||
     /^about:/i.test(candidate) ||
+    /^djxxr:\/\//i.test(candidate) ||
+    /^vio:\/\//i.test(candidate) ||
     candidate.startsWith('file:')
   ) {
-    return formatUrlPlain(candidate);
+    return suggestDomainLabel(candidate) || formatUrlPlain(rewriteLegacyProtocol(candidate));
   }
   return subtitle;
 }

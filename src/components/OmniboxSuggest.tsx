@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Clock, Globe, LayoutTemplate, Search, Sparkles, Terminal, X } from 'lucide-react';
-import { formatSuggestSubtitle, formatUrlPlain, isHttpNavigableUrl } from '../lib/url-display';
+import { Clock, Globe, LayoutTemplate, Search, Terminal, X } from 'lucide-react';
+import {
+  formatOmniboxIdleDisplay,
+  formatSuggestSubtitle,
+  isHttpNavigableUrl,
+  isSkippableSuggestUrl,
+  suggestDomainLabel,
+} from '../lib/url-display';
+import { letterFavicon } from '../lib/favicon';
 import {
   ghostNavigateUrl,
   matchOmniboxGhost,
@@ -8,6 +15,8 @@ import {
   shouldShowOmniboxGhost,
 } from '../lib/omniboxGhost';
 import { useStore, type Bang, type Shortcut, type Tab } from '../store';
+
+const MAX_SUGGEST = 6;
 
 /** Same topsites as history.cjs — snappy ghost before IPC returns */
 const TOP_SITE_HOSTS = [
@@ -65,18 +74,47 @@ type Props = {
 };
 
 function flattenGroups(groups: { label: string; items: SuggestItem[] }[]) {
-  const rows: { label?: string; item?: SuggestItem; header?: boolean }[] = [];
+  const rows: SuggestItem[] = [];
   for (const g of groups) {
-    if (!g.items?.length) continue;
-    rows.push({ header: true, label: g.label });
-    for (const it of g.items) rows.push({ item: it });
+    for (const it of g.items || []) {
+      if (isSkippableSuggestUrl(it.url)) continue;
+      rows.push(it);
+      if (rows.length >= MAX_SUGGEST) return rows;
+    }
   }
   return rows;
 }
 
 function itemDisplay(item: SuggestItem): string {
   if (item.kind === 'completion') return item.fill || item.title || '';
+  if (item.kind === 'query' || item.kind === 'remote') return item.fill || item.title || '';
   return item.url || item.fill || item.title || '';
+}
+
+function rowCopy(item: SuggestItem): { title: string; sub?: string } {
+  if (item.kind === 'completion') {
+    return { title: item.title };
+  }
+  if (item.kind === 'query' || item.kind === 'remote') {
+    return { title: item.title };
+  }
+  if (item.kind === 'bang') {
+    return { title: item.title, sub: item.subtitle || undefined };
+  }
+  if (item.kind === 'tab') {
+    const domain = suggestDomainLabel(item.url);
+    return { title: item.title || domain || item.url || '', sub: domain };
+  }
+  const domain = suggestDomainLabel(item.url);
+  const rawTitle = (item.title || '').trim();
+  const titleLooksUrl =
+    !rawTitle ||
+    /^https?:\/\//i.test(rawTitle) ||
+    (domain != null && rawTitle === item.url) ||
+    (domain != null && rawTitle === domain);
+  const title = titleLooksUrl ? domain || rawTitle || item.url || '' : rawTitle;
+  const sub = domain && domain !== title ? domain : formatSuggestSubtitle(item.subtitle, item.url);
+  return { title, sub: sub && sub !== title ? sub : undefined };
 }
 
 export function OmniboxSuggest({
@@ -142,6 +180,12 @@ export function OmniboxSuggest({
     return pageUrl;
   }, [pageUrl]);
 
+  useEffect(() => {
+    if (!focused && pageCanonical) {
+      dirtyRef.current = false;
+    }
+  }, [pageCanonical, focused]);
+
   const bookmarks = useStore((s) => s.bookmarks);
 
   const openTabsPayload = useMemo(
@@ -173,7 +217,7 @@ export function OmniboxSuggest({
           bookmarks: bookmarksPayload,
           suggestHistory: settings.suggestHistory,
           suggestBangs: settings.suggestBangs,
-          limit: 8,
+          limit: MAX_SUGGEST,
           tor: false,
         })
         .then((res) => {
@@ -217,7 +261,6 @@ export function OmniboxSuggest({
           list.slice(0, 3).map((s) => ({
             kind: 'remote',
             title: s,
-            subtitle: 'Sugestia',
             fill: s,
           })),
         );
@@ -233,7 +276,7 @@ export function OmniboxSuggest({
     const g = [...groups];
     if (remote.length) {
       let n = g.reduce((a, x) => a + x.items.length, 0);
-      const room = Math.max(0, 8 - n);
+      const room = Math.max(0, MAX_SUGGEST - n);
       if (room > 0) g.push({ label: 'Wyszukiwarka', items: remote.slice(0, room) });
     }
     return g;
@@ -271,24 +314,25 @@ export function OmniboxSuggest({
       : null;
 
   const listRows = useMemo(() => {
-    const rows: { header?: boolean; label?: string; item?: SuggestItem; selIdx: number }[] = [];
+    const rows: { item: SuggestItem; selIdx: number }[] = [];
     let sel = 0;
     if (completionItem && ghostSuffix) {
       rows.push({ item: completionItem, selIdx: sel++ });
     }
-    for (const r of flat) {
-      if (r.header) {
-        rows.push({ header: true, label: r.label, selIdx: -1 });
-      } else if (r.item) {
-        rows.push({ item: r.item, selIdx: sel++ });
-      }
+    for (const item of flat) {
+      if (rows.length >= MAX_SUGGEST) break;
+      rows.push({ item, selIdx: sel++ });
     }
     return rows;
   }, [flat, completionItem, ghostSuffix]);
 
-  const selectable = useMemo(() => listRows.filter((r) => r.item), [listRows]);
+  const selectable = listRows;
 
-  const show = open && !tor && (Boolean(ghostSuffix) || allGroups.some((g) => g.items.length));
+  const show = open && !tor && (Boolean(ghostSuffix) || flat.length > 0);
+
+  const blurOmnibox = useCallback(() => {
+    requestAnimationFrame(() => inputRef.current?.blur());
+  }, []);
 
   /** Accept ghost into the field (Tab / →) — value becomes completed host */
   const acceptGhost = useCallback(() => {
@@ -314,26 +358,35 @@ export function OmniboxSuggest({
     setGhostDismissed(true);
     if (item.kind === 'tab' && item.tabId && onSwitchTab) {
       onSwitchTab(item.tabId);
+      clearDirty();
+      blurOmnibox();
       return;
     }
     if (item.kind === 'completion' && item.url) {
       clearDirty();
       onChange(item.fill || item.title);
       onSubmit(item.url, { typed: true, fromSuggest: true });
+      blurOmnibox();
       return;
     }
     if (item.fill && !item.url) {
       onChange(item.fill);
       if (item.kind === 'bang') return;
+      clearDirty();
       onSubmit(item.fill, { typed: true, fromSuggest: true });
+      blurOmnibox();
       return;
     }
     if (item.url) {
       onChange(item.url);
+      clearDirty();
       onSubmit(item.url, { typed: item.kind === 'history', fromSuggest: true });
+      blurOmnibox();
       return;
     }
+    clearDirty();
     onSubmit(item.title, { typed: true, fromSuggest: true });
+    blurOmnibox();
   };
 
   const removeItem = async (item: SuggestItem) => {
@@ -497,13 +550,13 @@ export function OmniboxSuggest({
       } else {
         onSubmit(value, { typed: true });
       }
+      blurOmnibox();
       return;
     }
     if (e.key === 'Enter' && active >= 0 && selectable[active]?.item) {
       e.preventDefault();
       e.stopPropagation();
-      runItem(selectable[active].item!);
-      clearDirty();
+      runItem(selectable[active].item);
       return;
     }
     if (e.key === 'Delete' && e.shiftKey) {
@@ -527,8 +580,9 @@ export function OmniboxSuggest({
     ghost.style.paddingBottom = cs.paddingBottom;
   }, [ghostVisible, value, ghostSuffix]);
 
-  // Shortened display ONLY when blurred
-  const inputDisplayValue = !focused && isHttpNavigableUrl(value) ? formatUrlPlain(value) : value;
+  // Readable query / host when blurred; full URL only while the field is focused.
+  const inputDisplayValue =
+    !focused && isHttpNavigableUrl(value) ? formatOmniboxIdleDisplay(value) : value;
 
   return (
     <div className={`omnibox-suggest-wrap ${className || ''}`}>
@@ -565,7 +619,8 @@ export function OmniboxSuggest({
             onFocusChange?.(true);
             escArmedRef.current = false;
             setGhostDismissed(false);
-            if (pageCanonical && !dirtyRef.current && value !== pageCanonical) {
+            // Always expand to the real page URL when focusing a clean (non-dirty) field.
+            if (pageCanonical && !dirtyRef.current) {
               onChange(pageCanonical);
             }
             requestAnimationFrame(() => {
@@ -604,18 +659,15 @@ export function OmniboxSuggest({
       {show ? (
         <div className="omnibox-suggest" role="listbox">
           {listRows.map((row, idx) => {
-            if (row.header) {
-              return (
-                <div key={`h-${row.label}-${idx}`} className="omnibox-suggest-head">
-                  {row.label}
-                </div>
-              );
-            }
-            const item = row.item!;
+            const item = row.item;
             const selIdx = row.selIdx;
             const isActive =
               selIdx === active ||
               (selIdx === 0 && active < 0 && item.kind === 'completion' && ghostVisible);
+            const copy = rowCopy(item);
+            const showFav =
+              (item.kind === 'history' || item.kind === 'bookmark' || item.kind === 'shortcut') &&
+              !!item.url;
             const Ico =
               item.kind === 'completion'
                 ? Globe
@@ -623,11 +675,9 @@ export function OmniboxSuggest({
                   ? LayoutTemplate
                   : item.kind === 'bang'
                     ? Terminal
-                    : item.kind === 'remote'
-                      ? Sparkles
-                      : item.kind === 'query'
-                        ? Search
-                        : Clock;
+                    : item.kind === 'remote' || item.kind === 'query'
+                      ? Search
+                      : Clock;
             return (
               <button
                 type="button"
@@ -643,7 +693,11 @@ export function OmniboxSuggest({
                 onClick={() => runItem(item)}
               >
                 <span className="omnibox-suggest-ico">
-                  <Ico size={14} strokeWidth={1.75} />
+                  {showFav ? (
+                    <img src={letterFavicon(item.url!)} alt="" width={16} height={16} />
+                  ) : (
+                    <Ico size={16} strokeWidth={1.75} />
+                  )}
                 </span>
                 <span className="grow">
                   <span className="omnibox-suggest-title">
@@ -653,17 +707,15 @@ export function OmniboxSuggest({
                         <mark>{ghostSuffix}</mark>
                       </>
                     ) : (
-                      item.title
+                      copy.title
                     )}
                   </span>
                   {item.kind === 'completion' ? (
                     <span className="omnibox-suggest-sub omnibox-suggest-enter">
-                      <kbd>↵</kbd> Enter
+                      <kbd>↵</kbd>
                     </span>
-                  ) : item.subtitle ? (
-                    <span className="omnibox-suggest-sub">
-                      {formatSuggestSubtitle(item.subtitle, item.url)}
-                    </span>
+                  ) : copy.sub ? (
+                    <span className="omnibox-suggest-sub">{copy.sub}</span>
                   ) : null}
                 </span>
                 {(item.kind === 'history' || item.kind === 'query') && (
