@@ -53,7 +53,7 @@ function isGoogleCookieDomain(domain) {
 }
 
 /**
- * Apply Chrome UA + Client Hints on the clean login session only (no CDP).
+ * Chrome UA + Client Hints on the clean login session (no adblock / Ghostery).
  * @param {import('electron').Session} ses
  */
 function wireCleanLoginSession(ses) {
@@ -71,7 +71,6 @@ function wireCleanLoginSession(ses) {
       const headers = { ...details.requestHeaders };
       headers['User-Agent'] = uaChrome.buildChromeUa();
       Object.assign(headers, uaChrome.clientHintHeaders());
-      // No Sec-GPC / DNT — stock Chrome default for Google login
       delete headers['Sec-GPC'];
       delete headers['sec-gpc'];
       delete headers.DNT;
@@ -81,6 +80,113 @@ function wireCleanLoginSession(ses) {
   } catch (err) {
     console.warn('[google-login] clean session CH', err);
   }
+}
+
+/**
+ * Apply Chrome UA metadata once via CDP, register a persistent new-document
+ * brands shim, then DETACH. Do not leave the debugger attached.
+ * @param {import('electron').WebContents} wc
+ */
+async function applyStealthBrands(wc) {
+  if (!wc || wc.isDestroyed()) return;
+  const uaChrome = require('./ua-chrome.cjs');
+  const ua = uaChrome.buildChromeUa();
+  const meta = uaChrome.userAgentMetadata();
+  try {
+    wc.setUserAgent(ua);
+  } catch {
+    /* */
+  }
+  let attachedHere = false;
+  try {
+    if (!wc.debugger.isAttached()) {
+      wc.debugger.attach('1.3');
+      attachedHere = true;
+    }
+    await wc.debugger.sendCommand('Emulation.setUserAgentOverride', {
+      userAgent: ua,
+      acceptLanguage: 'pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7',
+      platform: 'Win32',
+      userAgentMetadata: meta,
+    });
+    // Survives debugger detach — patches page JS brands before any script runs
+    await wc.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
+      source: buildBrandsShimSource(meta, ua),
+    });
+  } catch (err) {
+    console.warn('[google-login] stealth brands', err && err.message);
+  } finally {
+    if (attachedHere) {
+      try {
+        if (wc.debugger.isAttached()) wc.debugger.detach();
+      } catch {
+        /* */
+      }
+    }
+  }
+}
+
+/**
+ * @param {ReturnType<typeof import('./ua-chrome.cjs').userAgentMetadata>} meta
+ * @param {string} ua
+ */
+function buildBrandsShimSource(meta, ua) {
+  const brands = JSON.stringify(meta.brands);
+  const fullVersionList = JSON.stringify(meta.fullVersionList);
+  const full = JSON.stringify(meta.fullVersion);
+  const uaLit = JSON.stringify(ua);
+  return `(() => {
+  try {
+    const brands = ${brands};
+    const fullVersionList = ${fullVersionList};
+    const full = ${full};
+    const ua = ${uaLit};
+    try {
+      Object.defineProperty(Navigator.prototype, 'webdriver', {
+        get: () => undefined,
+        configurable: true,
+      });
+    } catch (e) {}
+    try {
+      Object.defineProperty(Navigator.prototype, 'userAgent', {
+        get: () => ua,
+        configurable: true,
+      });
+    } catch (e) {}
+    const fake = {
+      brands,
+      mobile: false,
+      platform: 'Windows',
+      getHighEntropyValues: async (hints) => {
+        const out = { brands, mobile: false, platform: 'Windows' };
+        for (const h of hints || []) {
+          if (h === 'fullVersionList') out.fullVersionList = fullVersionList;
+          if (h === 'uaFullVersion' || h === 'fullVersion') out.uaFullVersion = full;
+          if (h === 'platformVersion') out.platformVersion = '15.0.0';
+          if (h === 'architecture') out.architecture = 'x86';
+          if (h === 'bitness') out.bitness = '64';
+          if (h === 'model') out.model = '';
+          if (h === 'wow64') out.wow64 = false;
+          if (h === 'platform') out.platform = 'Windows';
+        }
+        return out;
+      },
+      toJSON() {
+        return { brands, mobile: false, platform: 'Windows' };
+      },
+    };
+    try {
+      Object.defineProperty(Navigator.prototype, 'userAgentData', {
+        get: () => fake,
+        configurable: true,
+      });
+    } catch (e) {}
+    try {
+      if (!window.chrome) window.chrome = {};
+      if (!window.chrome.runtime) window.chrome.runtime = {};
+    } catch (e) {}
+  } catch (e) {}
+})();`;
 }
 
 /**
@@ -223,7 +329,6 @@ function openGoogleLoginWindow(opts) {
       /* */
     }
   }
-  // Intentionally NO uaChrome.applyToWebContents — CDP attach/detach is detectable.
 
   let finishing = false;
   const finish = async (reason) => {
@@ -269,7 +374,11 @@ function openGoogleLoginWindow(opts) {
     }
   });
 
-  void win.loadURL(url, loadOpts);
+  // Stealth BEFORE first navigation so brands shim is registered early
+  void applyStealthBrands(pageWc).then(() => {
+    if (win.isDestroyed()) return;
+    void win.loadURL(url, loadOpts);
+  });
   console.log('[google-login] open clean-session', url.slice(0, 120));
   return win;
 }

@@ -435,6 +435,23 @@ function handleWindowOpen(openerWc, ctx) {
     disposition === 'background-tab' ||
     disposition === 'default';
 
+  // Google accounts → dedicated clean-session login window (never persist:main popup)
+  if (!torMode && !blank) {
+    try {
+      const googleLogin = require('./google-login.cjs');
+      if (googleLogin.isGoogleAccountsUrl(url)) {
+        googleLogin.openGoogleLoginWindow({
+          url,
+          openerWc,
+          hostWindow: ctx.hostWindow || null,
+        });
+        return { action: 'deny' };
+      }
+    } catch (err) {
+      console.warn('[popup] google-login route', err);
+    }
+  }
+
   if (tabDisposition && !popupFeatures) {
     if (r.ok === true && (/^https?:/i.test(url) || /^file:\/\//i.test(url))) {
       if (ctx.onOpenUrl) ctx.onOpenUrl(url, { background });
