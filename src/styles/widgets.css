@@ -295,7 +295,9 @@
   max-width: 100%;
 }
 .hw-chrome-search,
-.hw-chrome-search .hw-bare {
+.hw-chrome-search .hw-bare,
+.hw-chrome-shortcuts,
+.hw-chrome-shortcuts .hw-bare {
   overflow: visible !important;
 }
 .hw-chrome-search .home-search {

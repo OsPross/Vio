@@ -557,22 +557,9 @@
   position: relative;
 }
 
-.home-dock-popover-anchor {
-  position: relative;
-  width: 100%;
-  max-width: 640px;
-  margin: 8px auto 0;
-  display: flex;
-  justify-content: center;
-}
-
-.home-align-left .home-dock-popover-anchor {
-  margin-left: 12%;
-  justify-content: flex-start;
-}
-
+/* Floating shortcut form — portal + position:fixed (see ShortcutsWidget) */
 .home-dock-popover {
-  width: min(280px, 100%);
+  width: min(280px, calc(100vw - 16px));
   padding: 12px;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
@@ -581,7 +568,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  z-index: 20;
+  box-sizing: border-box;
+  pointer-events: auto;
 }
 .home-dock-popover strong {
   font-size: 13px;
