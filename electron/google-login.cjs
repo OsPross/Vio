@@ -1,16 +1,18 @@
 /**
  * Google account login in a dedicated BrowserWindow.
  *
- * Uses an isolated clean session (no Ghostery preload, no adblock, no extensions,
- * no CDP). After leaving accounts.google.com, copies Google cookies into the
- * opener's session (persist:main) and reloads the tab.
+ * Isolated clean session (no Ghostery/adblock/extensions/CDP). After leaving
+ * accounts.google.com, copies Google cookies into the opener session and reloads.
+ *
+ * CDP stealth was removed — on this machine debugger attach hung / Google still
+ * blocked; the working smoke path was clean session + Chrome UA only.
  */
 'use strict';
 
 const path = require('node:path');
 const { BrowserWindow, session } = require('electron');
 
-const LOGIN_PARTITION = 'persist:google-login-v2';
+const LOGIN_PARTITION = 'persist:google-login-v3';
 
 /** @type {WeakMap<import('electron').WebContents, import('electron').BrowserWindow>} */
 const openByOpener = new WeakMap();
@@ -53,16 +55,14 @@ function isGoogleCookieDomain(domain) {
 }
 
 /**
- * Chrome UA + Client Hints on the clean login session (no adblock / Ghostery).
  * @param {import('electron').Session} ses
  */
 function wireCleanLoginSession(ses) {
   if (!ses || uaWiredSessions.has(ses)) return;
   uaWiredSessions.add(ses);
   const uaChrome = require('./ua-chrome.cjs');
-  const ua = uaChrome.buildChromeUa();
   try {
-    ses.setUserAgent(ua);
+    ses.setUserAgent(uaChrome.buildChromeUa());
   } catch {
     /* */
   }
@@ -80,129 +80,6 @@ function wireCleanLoginSession(ses) {
   } catch (err) {
     console.warn('[google-login] clean session CH', err);
   }
-}
-
-/**
- * Brief CDP for UA metadata + new-document brands shim, then DETACH.
- * Hard-capped — hanging debugger must never block loadURL (white window).
- * @param {import('electron').WebContents} wc
- * @param {number} [ms]
- */
-async function applyStealthBrands(wc, ms = 600) {
-  if (!wc || wc.isDestroyed()) return;
-  const run = async () => {
-    const uaChrome = require('./ua-chrome.cjs');
-    const ua = uaChrome.buildChromeUa();
-    const meta = uaChrome.userAgentMetadata();
-    try {
-      wc.setUserAgent(ua);
-    } catch {
-      /* */
-    }
-    let attachedHere = false;
-    try {
-      if (!wc.debugger.isAttached()) {
-        wc.debugger.attach('1.3');
-        attachedHere = true;
-      }
-      await wc.debugger.sendCommand('Emulation.setUserAgentOverride', {
-        userAgent: ua,
-        acceptLanguage: 'pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7',
-        platform: 'Win32',
-        userAgentMetadata: meta,
-      });
-      await wc.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
-        source: buildBrandsShimSource(meta, ua),
-      });
-    } catch (err) {
-      console.warn('[google-login] stealth brands', err && err.message);
-    } finally {
-      if (attachedHere) {
-        try {
-          if (!wc.isDestroyed() && wc.debugger.isAttached()) wc.debugger.detach();
-        } catch {
-          /* */
-        }
-      }
-    }
-  };
-  try {
-    await Promise.race([
-      run(),
-      new Promise((resolve) => setTimeout(resolve, ms)),
-    ]);
-  } catch (err) {
-    console.warn('[google-login] stealth race', err && err.message);
-  }
-  // Always try to detach if something left the debugger attached
-  try {
-    if (!wc.isDestroyed() && wc.debugger.isAttached()) wc.debugger.detach();
-  } catch {
-    /* */
-  }
-}
-
-/**
- * @param {ReturnType<typeof import('./ua-chrome.cjs').userAgentMetadata>} meta
- * @param {string} ua
- */
-function buildBrandsShimSource(meta, ua) {
-  const brands = JSON.stringify(meta.brands);
-  const fullVersionList = JSON.stringify(meta.fullVersionList);
-  const full = JSON.stringify(meta.fullVersion);
-  const uaLit = JSON.stringify(ua);
-  return `(() => {
-  try {
-    const brands = ${brands};
-    const fullVersionList = ${fullVersionList};
-    const full = ${full};
-    const ua = ${uaLit};
-    try {
-      Object.defineProperty(Navigator.prototype, 'webdriver', {
-        get: () => undefined,
-        configurable: true,
-      });
-    } catch (e) {}
-    try {
-      Object.defineProperty(Navigator.prototype, 'userAgent', {
-        get: () => ua,
-        configurable: true,
-      });
-    } catch (e) {}
-    const fake = {
-      brands,
-      mobile: false,
-      platform: 'Windows',
-      getHighEntropyValues: async (hints) => {
-        const out = { brands, mobile: false, platform: 'Windows' };
-        for (const h of hints || []) {
-          if (h === 'fullVersionList') out.fullVersionList = fullVersionList;
-          if (h === 'uaFullVersion' || h === 'fullVersion') out.uaFullVersion = full;
-          if (h === 'platformVersion') out.platformVersion = '15.0.0';
-          if (h === 'architecture') out.architecture = 'x86';
-          if (h === 'bitness') out.bitness = '64';
-          if (h === 'model') out.model = '';
-          if (h === 'wow64') out.wow64 = false;
-          if (h === 'platform') out.platform = 'Windows';
-        }
-        return out;
-      },
-      toJSON() {
-        return { brands, mobile: false, platform: 'Windows' };
-      },
-    };
-    try {
-      Object.defineProperty(Navigator.prototype, 'userAgentData', {
-        get: () => fake,
-        configurable: true,
-      });
-    } catch (e) {}
-    try {
-      if (!window.chrome) window.chrome = {};
-      if (!window.chrome.runtime) window.chrome.runtime = {};
-    } catch (e) {}
-  } catch (e) {}
-})();`;
 }
 
 /**
@@ -259,6 +136,20 @@ function chromeUa() {
   }
 }
 
+function destroyLoginWin(win) {
+  if (!win || win.isDestroyed()) return;
+  try {
+    win.removeAllListeners('closed');
+  } catch {
+    /* */
+  }
+  try {
+    win.destroy();
+  } catch {
+    /* */
+  }
+}
+
 /**
  * @param {{
  *   url: string,
@@ -276,25 +167,16 @@ function openGoogleLoginWindow(opts) {
   const ua = chromeUa();
   const loadOpts = ua ? { userAgent: ua } : {};
 
+  // Never reuse a previous login window (may already be on Google's block page)
   try {
     const existing = openByOpener.get(openerWc);
-    if (existing && !existing.isDestroyed()) {
-      existing.focus();
-      void existing.loadURL(url, loadOpts);
-      return existing;
-    }
+    if (existing && !existing.isDestroyed()) destroyLoginWin(existing);
   } catch {
     /* */
   }
-
   if (activeLoginWin && !activeLoginWin.isDestroyed()) {
-    try {
-      activeLoginWin.focus();
-      void activeLoginWin.loadURL(url, loadOpts);
-      return activeLoginWin;
-    } catch {
-      /* */
-    }
+    destroyLoginWin(activeLoginWin);
+    activeLoginWin = null;
   }
 
   const parent = opts.hostWindow && !opts.hostWindow.isDestroyed() ? opts.hostWindow : null;
@@ -320,7 +202,6 @@ function openGoogleLoginWindow(opts) {
       sandbox: true,
       webviewTag: false,
       spellcheck: true,
-      // no preload — clean session, no Ghostery / passwords / extensions
     },
   });
 
@@ -380,6 +261,10 @@ function openGoogleLoginWindow(opts) {
   pageWc.on('did-navigate', onNav);
   pageWc.on('did-redirect-navigation', onNav);
   pageWc.on('did-navigate-in-page', onNav);
+  pageWc.on('did-fail-load', (_e, code, desc, validatedURL, isMainFrame) => {
+    if (!isMainFrame || code === -3) return;
+    console.warn('[google-login] did-fail-load', code, desc, String(validatedURL || '').slice(0, 120));
+  });
 
   win.on('closed', () => {
     if (activeLoginWin === win) activeLoginWin = null;
@@ -390,26 +275,11 @@ function openGoogleLoginWindow(opts) {
     }
   });
 
-  // Stealth with timeout, then ALWAYS load (never leave a blank window)
-  void (async () => {
-    try {
-      await applyStealthBrands(pageWc, 600);
-    } catch (err) {
-      console.warn('[google-login] stealth', err && err.message);
-    }
-    if (win.isDestroyed()) return;
-    try {
-      await win.loadURL(url, loadOpts);
-    } catch (err) {
-      console.warn('[google-login] loadURL', err && err.message);
-      try {
-        await win.loadURL(url);
-      } catch (err2) {
-        console.warn('[google-login] loadURL retry', err2 && err2.message);
-      }
-    }
-  })();
-  console.log('[google-login] open clean-session', url.slice(0, 120));
+  // No CDP — load immediately (CDP stealth caused blank window / still blocked)
+  void win.loadURL(url, loadOpts).catch((err) => {
+    console.warn('[google-login] loadURL', err && err.message);
+  });
+  console.log('[google-login] open clean-session', LOGIN_PARTITION, url.slice(0, 100));
   return win;
 }
 
@@ -429,6 +299,11 @@ function attachGoogleLoginIntercept(guestWc, opts = {}) {
     } catch {
       /* */
     }
+    try {
+      if (typeof guestWc.stop === 'function') guestWc.stop();
+    } catch {
+      /* */
+    }
     openGoogleLoginWindow({
       url,
       openerWc: guestWc,
@@ -444,15 +319,26 @@ function attachGoogleLoginIntercept(guestWc, opts = {}) {
   guestWc.on('will-redirect', (event, url) => {
     intercept(url, event);
   });
+
+  // First paint via <webview src> sometimes skips will-navigate — catch main-frame start
+  guestWc.on('did-start-navigation', (event, url, _isInPlace, isMainFrame) => {
+    if (isMainFrame === false) return;
+    if (!isGoogleAccountsUrl(url)) return;
+    try {
+      if (typeof guestWc.stop === 'function') guestWc.stop();
+    } catch {
+      /* */
+    }
+    openGoogleLoginWindow({
+      url,
+      openerWc: guestWc,
+      hostWindow: typeof opts.getHostWindow === 'function' ? opts.getHostWindow() : null,
+    });
+  });
 }
 
-// Keep exports used by popups (no-ops / soft wrappers for API compat)
-function pauseSessionPreloads() {
-  /* clean-session path — nothing to pause on persist:main */
-}
-function resumeSessionPreloads() {
-  /* */
-}
+function pauseSessionPreloads() {}
+function resumeSessionPreloads() {}
 
 module.exports = {
   isGoogleAccountsUrl,

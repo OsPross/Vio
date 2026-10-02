@@ -12,6 +12,7 @@ const ALLOWED_PARTITIONS = new Set([
   'persist:side',
   'persist:google-login',
   'persist:google-login-v2',
+  'persist:google-login-v3',
 ]);
 /** Ephemeral Tor sessions: tor-<uuid> (no persist: prefix) */
 const TOR_PARTITION_RE = /^tor-[0-9a-f-]{8,}$/i;
