@@ -66,6 +66,7 @@
       "electron/**/*",
       "build/icon.ico",
       "build/vio-256.png",
+      "build/vio-512.png",
       "scripts/perf-bench.cjs",
       "package.json"
     ],
@@ -83,6 +84,15 @@
         "nsis"
       ],
       "signAndEditExecutable": false
+    },
+    "linux": {
+      "icon": "build/vio-512.png",
+      "category": "Network;WebBrowser",
+      "executableName": "vio",
+      "target": [
+        "rpm",
+        "AppImage"
+      ]
     },
     "nsis": {
       "oneClick": false,

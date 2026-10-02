@@ -1,8 +1,8 @@
 'use strict';
 
 /**
- * Embedded Tor Expert Bundle (Windows x86_64).
- * Downloads once into userData, spawns tor.exe on SocksPort 19050.
+ * Embedded Tor Expert Bundle (Windows x86_64) or system `tor` on Linux.
+ * Downloads once into userData on Windows, spawns on SocksPort 19050.
  * Prefer external Tor (9050/9150) when available — this is the fallback.
  */
 
@@ -145,6 +145,23 @@ function findTorExe() {
     findFile(base, ['tor.exe', 'tor']) ||
     (fs.existsSync(path.join(base, 'tor', 'tor.exe')) ? path.join(base, 'tor', 'tor.exe') : null)
   );
+}
+
+/** System `tor` from PATH (Linux / non-Windows). */
+function findSystemTor() {
+  try {
+    const which = process.platform === 'win32' ? 'where' : 'which';
+    const out = require('node:child_process')
+      .execFileSync(which, ['tor'], { encoding: 'utf8', windowsHide: true })
+      .trim()
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean)[0];
+    if (out && fs.existsSync(out)) return out;
+  } catch {
+    /* not on PATH */
+  }
+  return null;
 }
 
 function findTransport(names) {
@@ -540,10 +557,24 @@ function extractArchive(archive, dest) {
 }
 
 async function ensureBundle() {
+  if (process.platform === 'linux') {
+    const exe = findSystemTor();
+    if (!exe) {
+      throw Object.assign(
+        new Error(
+          'Brak systemowego tor w PATH. Zainstaluj pakiet tor (np. apt install tor) albo użyj zewnętrznego Tora — Tryb Tor jest wyłączony.',
+        ),
+        { code: 'TOR_SYSTEM_MISSING' },
+      );
+    }
+    return { exe, reused: true, system: true };
+  }
+
   if (process.platform !== 'win32') {
-    throw Object.assign(new Error('Wbudowany Tor jest na razie tylko na Windows.'), {
-      code: 'TOR_PLATFORM',
-    });
+    throw Object.assign(
+      new Error('Wbudowany Tor jest dostępny na Windows; na tej platformie zainstaluj systemowy tor lub użyj zewnętrznego proxy.'),
+      { code: 'TOR_PLATFORM' },
+    );
   }
 
   const exe = findTorExe();
@@ -822,7 +853,7 @@ async function ensureRunning(opts = {}) {
 
     const { torrc } = await writeTorrc(exe);
 
-    emit('bootstrap', 'Uruchamianie tor.exe i łączenie z siecią…', 0);
+    emit('bootstrap', 'Uruchamianie Tora i łączenie z siecią…', 0);
     bootProgress = 0;
 
     child = spawn(exe, ['-f', torrc], {
@@ -921,8 +952,9 @@ async function stop() {
 
 function status() {
   loadBridgeConfig();
+  const systemTor = process.platform === 'linux' ? findSystemTor() : null;
   return {
-    embeddedAvailable: process.platform === 'win32',
+    embeddedAvailable: process.platform === 'win32' || Boolean(systemTor),
     embeddedRunning: isRunning(),
     startedByUs,
     version: BUNDLE.version,
@@ -931,10 +963,11 @@ function status() {
     proxyUrl: socksUrl(),
     bundleDir: rootDir(),
     signingFingerprint: BUNDLE.signingFingerprint,
-    autostartShortcut: startupShortcutPath(),
-    autostartEnabled: fs.existsSync(startupShortcutPath()),
+    autostartShortcut: process.platform === 'win32' ? startupShortcutPath() : '',
+    autostartEnabled: process.platform === 'win32' && fs.existsSync(startupShortcutPath()),
     bridges: { ...bridgeConfig, builtinUpdated: builtinBridges.updated },
     bootProgress,
+    systemTor: systemTor || null,
   };
 }
 

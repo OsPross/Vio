@@ -307,7 +307,9 @@ function status() {
     embeddedRunning: d.embeddedRunning,
     embeddedVersion: d.version,
     embeddedTorNote:
-      'Przy braku zewnętrznego Tora aplikacja pobiera Tor Expert Bundle (~21 MB) i uruchamia tor.exe lokalnie (port 19050).',
+      process.platform === 'linux'
+        ? 'Przy braku zewnętrznego Tora używany jest systemowy tor z PATH (np. apt install tor), SocksPort 19050.'
+        : 'Przy braku zewnętrznego Tora aplikacja pobiera Tor Expert Bundle (~21 MB) i uruchamia tor.exe lokalnie (port 19050).',
     daemon: d,
   };
 }
