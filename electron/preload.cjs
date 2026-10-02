@@ -113,6 +113,8 @@ contextBridge.exposeInMainWorld('shell', {
   adblockStatus: () => ipcRenderer.invoke('shell:adblock-status'),
   adblockCosmetic: () => ipcRenderer.invoke('shell:adblock-cosmetic'),
   adblockPageScript: (pageUrl) => ipcRenderer.invoke('shell:adblock-page-script', pageUrl),
+  adblockClearStats: () => ipcRenderer.invoke('shell:adblock-clear-stats'),
+  adblockUpdateLists: () => ipcRenderer.invoke('shell:adblock-update-lists'),
   perfBoot: (next) => ipcRenderer.invoke('shell:perf-boot', next),
   perfApplySession: (opts) => ipcRenderer.invoke('shell:perf-apply-session', opts),
   perfClearCache: () => ipcRenderer.invoke('shell:perf-clear-cache'),

@@ -10,13 +10,71 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { app, net } = require('electron');
 
-/** @typedef {{ enabled: boolean, network: boolean, cosmetic: boolean, trackers: boolean, customRules: string[] }} AdblockConfig */
+/**
+ * @typedef {{
+ *   enabled: boolean,
+ *   network: boolean,
+ *   cosmetic: boolean,
+ *   trackers: boolean,
+ *   customRules: string[],
+ *   level: 'standard' | 'strict',
+ *   exceptions: string[],
+ *   builtinDisabled: string[],
+ *   listsEnabled: Record<string, boolean>,
+ * }} AdblockConfig
+ */
 
-const LIST_URLS = [
-  'https://easylist.to/easylist/easylist.txt',
-  'https://easylist.to/easylist/easyprivacy.txt',
-  'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt',
-  'https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext',
+const FILTER_LISTS = [
+  {
+    id: 'easylist',
+    name: 'EasyList',
+    url: 'https://easylist.to/easylist/easylist.txt',
+  },
+  {
+    id: 'easyprivacy',
+    name: 'EasyPrivacy',
+    url: 'https://easylist.to/easylist/easyprivacy.txt',
+  },
+  {
+    id: 'ublock',
+    name: 'uBlock filters',
+    url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt',
+  },
+  {
+    id: 'peterlowe',
+    name: "Peter Lowe's list",
+    url: 'https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=0&mimetype=plaintext',
+  },
+];
+
+const LIST_URLS = FILTER_LISTS.map((l) => l.url);
+
+/**
+ * Built-in allowlist: adblock skips network blocks to these hosts.
+ * Privacy (cookies/strip/HTTPS…) still applies. Toggleable, not removable.
+ *
+ * EasyPrivacy `||google.com^/gen_204?` and `||google.com…/log…` match first-party
+ * on google.com (consent loop). Standard level skips same-eTLD+1; builtins cover
+ * SSO / captcha / payments across sites.
+ */
+const BUILTIN_EXCEPTIONS = [
+  { id: 'consent.google.com', pattern: 'consent.google.com' },
+  { id: 'accounts.google.com', pattern: 'accounts.google.com' },
+  { id: '*.gstatic.com', pattern: '*.gstatic.com' },
+  { id: '*.googleapis.com', pattern: '*.googleapis.com' },
+  { id: 'login.microsoftonline.com', pattern: 'login.microsoftonline.com' },
+  { id: 'login.live.com', pattern: 'login.live.com' },
+  { id: 'appleid.apple.com', pattern: 'appleid.apple.com' },
+  { id: 'github.com/login', pattern: 'github.com', pathPrefix: '/login' },
+  { id: 'challenges.cloudflare.com', pattern: 'challenges.cloudflare.com' },
+  { id: 'hcaptcha.com', pattern: '*.hcaptcha.com' },
+  { id: '*.recaptcha.net', pattern: '*.recaptcha.net' },
+  { id: 'google.com/recaptcha', pattern: '*.google.com', pathPrefix: '/recaptcha' },
+  { id: '*.paypal.com', pattern: '*.paypal.com' },
+  { id: '*.stripe.com', pattern: '*.stripe.com' },
+  { id: '*.przelewy24.pl', pattern: '*.przelewy24.pl' },
+  { id: '*.payu.com', pattern: '*.payu.com' },
+  { id: '*.blik.com', pattern: '*.blik.com' },
 ];
 
 /** @type {AdblockConfig} */
@@ -26,6 +84,10 @@ let config = {
   cosmetic: true,
   trackers: true,
   customRules: [],
+  level: 'standard',
+  exceptions: [],
+  builtinDisabled: [],
+  listsEnabled: Object.fromEntries(FILTER_LISTS.map((l) => [l.id, true])),
 };
 
 let blockedCount = 0;
@@ -65,19 +127,258 @@ let appliedCustomCosmetic = [];
 /** @type {Set<string>} */
 let customHosts = new Set();
 
-/**
- * EasyPrivacy blocks `||google.com^…/log…` which also matches consent.google.com/log —
- * Google's EU consent save beacon. Without this exception the "Sprawdź ustawienia"
- * dialog loops because the accept/save request never lands.
- */
-const BUILTIN_ALLOWLIST = [
-  '@@||consent.google.com^',
-  '@@||consent.youtube.com^',
-  '@@||consent.google.pl^',
-];
-
 /** @type {import('@ghostery/adblocker').NetworkFilter[]} */
 let appliedBuiltinNetwork = [];
+
+/**
+ * Normalize host / wildcard pattern to comparable form.
+ * @param {string} host
+ */
+function normalizeHost(host) {
+  return String(host || '')
+    .toLowerCase()
+    .replace(/^\*\./, '')
+    .replace(/^www\./, '')
+    .trim();
+}
+
+/**
+ * Cheap eTLD+1 hint (2 labels). Good enough for google.com / youtube.com / co.uk edge cases
+ * are rare for our allowlist / first-party gate.
+ * @param {string} host
+ */
+function etld1(host) {
+  const h = normalizeHost(host);
+  if (!h) return '';
+  const parts = h.split('.').filter(Boolean);
+  if (parts.length <= 2) return h;
+  return parts.slice(-2).join('.');
+}
+
+/**
+ * @param {string} host
+ * @param {string} pattern  e.g. `*.gstatic.com`, `accounts.google.com`
+ */
+function hostMatchesPattern(host, pattern) {
+  const h = normalizeHost(host);
+  const raw = String(pattern || '').toLowerCase().trim();
+  if (!h || !raw) return false;
+  if (raw.startsWith('*.')) {
+    const base = normalizeHost(raw.slice(2));
+    return h === base || h.endsWith('.' + base);
+  }
+  const p = normalizeHost(raw);
+  return h === p || h.endsWith('.' + p);
+}
+
+/**
+ * @param {string} url
+ */
+function isAllowlistedUrl(url) {
+  let host = '';
+  let pathname = '/';
+  try {
+    const u = new URL(url);
+    host = u.hostname;
+    pathname = u.pathname || '/';
+  } catch {
+    return false;
+  }
+  const disabled = new Set((config.builtinDisabled || []).map(String));
+  for (const row of BUILTIN_EXCEPTIONS) {
+    if (disabled.has(row.id)) continue;
+    if (!hostMatchesPattern(host, row.pattern)) continue;
+    if (row.pathPrefix && !pathname.startsWith(row.pathPrefix)) continue;
+    return true;
+  }
+  for (const ex of config.exceptions || []) {
+    const e = String(ex || '').trim().toLowerCase();
+    if (!e) continue;
+    if (e.includes('/')) {
+      try {
+        const u = new URL(e.includes('://') ? e : 'https://' + e);
+        if (hostMatchesPattern(host, u.hostname) && pathname.startsWith(u.pathname || '/')) {
+          return true;
+        }
+      } catch {
+        /* */
+      }
+      continue;
+    }
+    if (hostMatchesPattern(host, e)) return true;
+  }
+  return false;
+}
+
+/**
+ * Build @@ network exception rules for active builtins + user exceptions.
+ */
+function buildAllowlistRules() {
+  /** @type {string[]} */
+  const rules = [];
+  const disabled = new Set((config.builtinDisabled || []).map(String));
+  for (const row of BUILTIN_EXCEPTIONS) {
+    if (disabled.has(row.id)) continue;
+    const pat = row.pattern.startsWith('*.') ? row.pattern.slice(2) : row.pattern;
+    if (row.pathPrefix) {
+      rules.push(`@@||${pat}${row.pathPrefix}^`);
+    } else if (row.pattern.startsWith('*.')) {
+      rules.push(`@@||${pat}^`);
+    } else {
+      rules.push(`@@||${pat}^`);
+    }
+  }
+  // Always keep consent hosts (consent loop) even if somehow missing above
+  rules.push('@@||consent.google.com^', '@@||consent.youtube.com^', '@@||consent.google.pl^');
+  for (const ex of config.exceptions || []) {
+    const e = String(ex || '').trim().toLowerCase();
+    if (!e) continue;
+    if (e.includes('/')) {
+      try {
+        const u = new URL(e.includes('://') ? e : 'https://' + e);
+        rules.push(`@@||${u.hostname}${u.pathname}^`);
+      } catch {
+        /* */
+      }
+    } else {
+      const host = e.replace(/^\*\./, '');
+      rules.push(`@@||${host}^`);
+    }
+  }
+  return [...new Set(rules)];
+}
+
+/**
+ * True when request shares eTLD+1 with the document (first-party / same-site).
+ * @param {import('@ghostery/adblocker').Request} request
+ */
+function isSameSiteRequest(request) {
+  if (request.isThirdParty === false) return true;
+  if (request.isThirdParty === true) return false;
+  const reqDomain = String(request.domain || '').toLowerCase();
+  const srcDomain = String(request.sourceDomain || '').toLowerCase();
+  if (reqDomain && srcDomain && reqDomain === srcDomain) return true;
+  const reqHost = String(request.hostname || '').toLowerCase();
+  const srcHost = String(request.sourceHostname || '').toLowerCase();
+  if (reqHost && srcHost && etld1(reqHost) === etld1(srcHost)) return true;
+  return false;
+}
+
+/**
+ * Generic list rule: no hostname anchor, or broad regex — must not kill first-party.
+ * Explicit hostname filters from lists may still apply in Strict.
+ * @param {import('@ghostery/adblocker').NetworkFilter | undefined} filter
+ */
+function isGenericNetworkFilter(filter) {
+  if (!filter) return true;
+  try {
+    if (typeof filter.isHostnameAnchor === 'function' && !filter.isHostnameAnchor()) return true;
+    if (typeof filter.isFullRegex === 'function' && filter.isFullRegex()) return true;
+    // EasyPrivacy `||google.com^^\/log…` — hostname-anchored regex on the site's own eTLD+1
+    if (typeof filter.isRegex === 'function' && filter.isRegex()) return true;
+  } catch {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Decide whether a Ghostery match should actually cancel the request.
+ * @param {import('@ghostery/adblocker').Request} request
+ * @param {{ match: boolean, filter?: import('@ghostery/adblocker').NetworkFilter, exception?: import('@ghostery/adblocker').NetworkFilter }} result
+ */
+function shouldCancelMatch(request, result) {
+  if (!result || !result.match || result.exception) return false;
+  if (isAllowlistedUrl(request.url)) return false;
+  const sameSite = isSameSiteRequest(request);
+  if (sameSite) {
+    // Never apply generic / regex rules to same-domain requests (Google consent loop).
+    if (isGenericNetworkFilter(result.filter)) return false;
+    // Standard: same eTLD+1 only blocked by nothing here — explicit 1p ads need Strict.
+    if (config.level !== 'strict') return false;
+  }
+  return true;
+}
+
+/**
+ * Resolve document URL for partyness when Electron `referrer` is empty.
+ * @param {Electron.OnBeforeRequestListenerDetails} details
+ */
+function resolveSourceUrl(details) {
+  if (details && details.referrer) return String(details.referrer);
+  try {
+    const { webContents } = require('electron');
+    const id = details && details.webContentsId;
+    if (typeof id === 'number') {
+      const wc = webContents.fromId(id);
+      const u = wc && typeof wc.getURL === 'function' ? wc.getURL() : '';
+      if (u) return u;
+    }
+  } catch {
+    /* */
+  }
+  return '';
+}
+
+/**
+ * Patch Ghostery's onBeforeRequest so first-party / allowlist gates apply.
+ * Root cause (Google loop): EasyPrivacy `||google.com^/gen_204?` and
+ * `||google.com…/log…` match first-party www/play.google.com with no same-site check
+ * (see enableBlockingInSession → ElectronBlocker.onBeforeRequest).
+ * @param {import('@ghostery/adblocker-electron').ElectronBlocker} b
+ */
+function installRequestGate(b) {
+  if (!b || b.__djxxrGate) return;
+  b.__djxxrGate = true;
+  const { Request } = require('@ghostery/adblocker');
+  b.onBeforeRequest = (details, callback) => {
+    try {
+      if (!config.enabled || !config.network) {
+        callback({});
+        return;
+      }
+      const sourceUrl = resolveSourceUrl(details);
+      const request = Request.fromRawDetails({
+        _originalRequestDetails: details,
+        requestId: `${details.id}`,
+        sourceUrl,
+        tabId: details.webContentsId,
+        type: details.resourceType || 'other',
+        url: details.url,
+      });
+      if (b.config && b.config.guessRequestTypeFromUrl === true && request.type === 'other') {
+        request.guessTypeOfRequest();
+      }
+      if (typeof request.isMainFrame === 'function' && request.isMainFrame()) {
+        callback({});
+        return;
+      }
+      if (isAllowlistedUrl(details.url)) {
+        callback({});
+        return;
+      }
+      const result = b.match(request);
+      if (result.redirect) {
+        callback({ redirectURL: result.redirect.dataUrl });
+        return;
+      }
+      if (shouldCancelMatch(request, result)) {
+        noteFirstGuestRequest(details.url);
+        pushBlocked(String(details.webContentsId ?? 'global'), details.url);
+        callback({ cancel: true });
+        return;
+      }
+      callback({});
+    } catch (err) {
+      console.warn('[adblock+] request gate', err && err.message ? err.message : err);
+      try {
+        callback({});
+      } catch {
+        /* */
+      }
+    }
+  };
+}
 
 const COSMETIC_CSS = `
 /* Blokada — warstwa kosmetyczna */
@@ -371,15 +672,8 @@ function saveEngineCache() {
 function wireBlockerEvents() {
   if (!blocker || blocker.__djxxrWired) return;
   blocker.__djxxrWired = true;
-  blocker.on('request-blocked', (request) => {
-    try {
-      const url = request.url;
-      noteFirstGuestRequest(url);
-      pushBlocked(String(request.tabId ?? 'global'), url);
-    } catch {
-      /* */
-    }
-  });
+  installRequestGate(blocker);
+  // Stats recorded in request gate (Ghostery emits request-blocked even when we allow).
 }
 
 /**
@@ -495,7 +789,7 @@ function applyBuiltinAllowlist() {
   if (!blocker) return;
   try {
     const { parseFilters } = require('@ghostery/adblocker');
-    const { networkFilters } = parseFilters(BUILTIN_ALLOWLIST.join('\n'));
+    const { networkFilters } = parseFilters(buildAllowlistRules().join('\n'));
     blocker.update({
       newNetworkFilters: networkFilters,
       removedNetworkFilters: appliedBuiltinNetwork,
@@ -550,6 +844,7 @@ function enableGhostery(ses) {
   }
   if (ghosteryOn.has(ses)) return;
   try {
+    installRequestGate(blocker);
     if (typeof blocker.disableBlockingInSession === 'function') {
       try {
         blocker.disableBlockingInSession(ses);
@@ -599,7 +894,7 @@ async function init(opts = {}) {
   if (typeof opts.updateLists === 'boolean') updateLists = opts.updateLists;
   // Warm engine.bin already resident — do not re-parse lists unless forced or stale.
   if (blocker && !opts.force && !listsNeedRefresh()) {
-    return { ok: true, engine: 'ghostery', lists: LIST_URLS.length, fromCache: true, skipped: true };
+    return { ok: true, engine: 'ghostery', lists: activeListUrls().length, fromCache: true, skipped: true };
   }
   if (initPromise && !opts.force) {
     return initPromise;
@@ -632,10 +927,13 @@ async function init(opts = {}) {
         return new Response(text, { headers: { 'content-type': 'text/plain' } });
       };
 
-      const next = await ElectronBlocker.fromLists(cachedFetch, LIST_URLS, {
+      const next = await ElectronBlocker.fromLists(cachedFetch, activeListUrls(), {
         enableCompression: true,
       });
       blocker = next;
+      // Fresh instance — re-wire gate
+      blocker.__djxxrWired = false;
+      blocker.__djxxrGate = false;
       wireBlockerEvents();
       fs.writeFileSync(cacheMetaPath(), JSON.stringify({ at: Date.now() }), 'utf8');
       saveEngineCache();
@@ -649,7 +947,7 @@ async function init(opts = {}) {
       lastInitError = null;
       markReady(false);
       syncBlockingOnSessions();
-      return { ok: true, engine: 'ghostery', lists: LIST_URLS.length, fromCache: false };
+      return { ok: true, engine: 'ghostery', lists: activeListUrls().length, fromCache: false };
     } catch (err) {
       lastInitError = String(err.message || err);
       console.warn('[adblock+] ghostery init failed (cosmetic fallback only)', lastInitError);
@@ -680,17 +978,36 @@ function attachToSession(ses) {
 }
 
 /**
- * @param {Partial<AdblockConfig> & { updateLists?: boolean }} next
+ * @param {Partial<AdblockConfig> & { updateLists?: boolean, forceLists?: boolean }} next
  */
 function setConfig(next) {
   if (next && typeof next.updateLists === 'boolean') updateLists = next.updateLists;
+  let listsChanged = false;
   if (next && typeof next === 'object') {
-    config = { ...config, ...next };
+    if (next.listsEnabled && typeof next.listsEnabled === 'object') {
+      const prev = JSON.stringify(config.listsEnabled || {});
+      config.listsEnabled = { ...config.listsEnabled, ...next.listsEnabled };
+      listsChanged = prev !== JSON.stringify(config.listsEnabled);
+    }
+    const { listsEnabled: _le, updateLists: _ul, forceLists: _fl, ...rest } = next;
+    config = { ...config, ...rest };
     if (Array.isArray(next.customRules)) refreshCustom();
+    if (Array.isArray(next.exceptions) || Array.isArray(next.builtinDisabled) || next.level) {
+      /* allowlist / level applied below */
+    }
   }
   if (blocker) {
-    if (Array.isArray(next?.customRules)) applyCustomRulesToBlocker();
+    if (
+      Array.isArray(next?.customRules) ||
+      Array.isArray(next?.exceptions) ||
+      Array.isArray(next?.builtinDisabled)
+    ) {
+      applyCustomRulesToBlocker();
+    }
     syncBlockingOnSessions();
+  }
+  if (listsChanged || next?.forceLists) {
+    void init({ force: true, updateLists: true });
   }
   return getStatus();
 }
@@ -728,10 +1045,12 @@ function getPageScript(pageUrl) {
 
 /**
  * @param {string} url
+ * @param {string} [sourceUrl]
  */
-function shouldBlock(url) {
+function shouldBlock(url, sourceUrl) {
   if (!config.enabled || !config.network) return false;
   if (!blocker) return false;
+  if (isAllowlistedUrl(url)) return false;
   try {
     const { Request } = require('@ghostery/adblocker');
     let hostname = '';
@@ -740,18 +1059,76 @@ function shouldBlock(url) {
     } catch {
       return false;
     }
-    const { match } = blocker.match(
-      Request.fromRawDetails({
-        url,
-        type: 'other',
-        sourceUrl: url,
-        sourceHostname: hostname,
-      }),
-    );
-    return Boolean(match);
+    const src = sourceUrl || url;
+    const request = Request.fromRawDetails({
+      url,
+      type: 'other',
+      sourceUrl: src,
+      sourceHostname: (() => {
+        try {
+          return new URL(src).hostname;
+        } catch {
+          return hostname;
+        }
+      })(),
+    });
+    const result = blocker.match(request);
+    return shouldCancelMatch(request, result);
   } catch {
     return false;
   }
+}
+
+function getListsStatus() {
+  let metaAt = 0;
+  try {
+    metaAt = Number(JSON.parse(fs.readFileSync(cacheMetaPath(), 'utf8')).at) || 0;
+  } catch {
+    /* */
+  }
+  const enabledMap = config.listsEnabled || {};
+  return FILTER_LISTS.map((l) => {
+    const key = cryptoHash(l.url);
+    const file = path.join(cacheDir(), `${key}.txt`);
+    let fileAt = 0;
+    try {
+      fileAt = fs.statSync(file).mtimeMs;
+    } catch {
+      /* */
+    }
+    return {
+      id: l.id,
+      name: l.name,
+      url: l.url,
+      enabled: enabledMap[l.id] !== false,
+      updatedAt: fileAt || metaAt || null,
+    };
+  });
+}
+
+function getBuiltinExceptions() {
+  const disabled = new Set((config.builtinDisabled || []).map(String));
+  return BUILTIN_EXCEPTIONS.map((row) => ({
+    id: row.id,
+    pattern: row.pattern,
+    pathPrefix: row.pathPrefix || null,
+    enabled: !disabled.has(row.id),
+    builtin: true,
+  }));
+}
+
+function clearStats() {
+  blockedCount = 0;
+  blockedToday = 0;
+  dayKey = new Date().toISOString().slice(0, 10);
+  recentBlocked.clear();
+  if (onBlocked) onBlocked(0);
+  return getStatus();
+}
+
+function activeListUrls() {
+  const enabledMap = config.listsEnabled || {};
+  return FILTER_LISTS.filter((l) => enabledMap[l.id] !== false).map((l) => l.url);
 }
 
 function getStatus() {
@@ -760,12 +1137,14 @@ function getStatus() {
     ...config,
     blockedCount,
     blockedToday,
-    ruleHosts: customHosts.size + (blocker ? LIST_URLS.length : 0),
+    ruleHosts: customHosts.size + (blocker ? activeListUrls().length : 0),
     engine: blocker ? 'ghostery' : 'fallback-cosmetic',
     updateLists,
     lastInitError,
     ready: Boolean(blocker),
     boot: getBootTiming(),
+    lists: getListsStatus(),
+    builtinExceptions: getBuiltinExceptions(),
   };
 }
 
@@ -792,8 +1171,13 @@ module.exports = {
   bump,
   getRecentBlocked,
   clearRecentBlocked,
+  clearStats,
+  getListsStatus,
+  getBuiltinExceptions,
   getBootTiming,
   LIST_URLS,
+  FILTER_LISTS,
+  BUILTIN_EXCEPTIONS,
   COSMETIC_CSS,
 };
 

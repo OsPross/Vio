@@ -19,6 +19,17 @@ function register(deps) {
     C.ADBLOCK_PAGE_SCRIPT,
     wrapAppOrGuest((_e, pageUrl) => adblock.getPageScript(typeof pageUrl === 'string' ? pageUrl : '')),
   );
+  ipcMain.handle(
+    'shell:adblock-clear-stats',
+    wrapApp(() => adblock.clearStats()),
+  );
+  ipcMain.handle(
+    'shell:adblock-update-lists',
+    wrapApp(async () => {
+      const r = await adblock.init({ force: true, updateLists: true });
+      return { ...adblock.getStatus(), init: r };
+    }),
+  );
 }
 
 module.exports = { register };
