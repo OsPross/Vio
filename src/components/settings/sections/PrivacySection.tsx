@@ -147,47 +147,8 @@ export function PrivacySection() {
         <p className="muted" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.45 }}>
           Standardowa chroni przed reklamami i trackerami, ale zostawia SSO, YouTube,
           płatności i captchę. Ścisła jest mocniejsza i może psuć logowanie / banki —
-          wtedy użyj tarczy: „Wyłącz ochronę dla tej strony”.
+          wtedy użyj tarczy lub wyjątków w ustawieniach Adblock.
         </p>
-      </SettingsGroup>
-
-      <SettingsGroup title="Blokada reklam i trackerów">
-        <Toggle
-          label="Włącz blokadę"
-          hint="Listy EasyList, EasyPrivacy, uBlock i Peter Lowe — w trybie Standardowa i Ścisła"
-          on={settings.adblockEnabled}
-          onChange={(v) => patchSettings({ adblockEnabled: v })}
-        />
-        <Toggle
-          label="Aktualizuj listy filtrów raz dziennie"
-          hint="Pobiera listy z internetu — jedyne zapytanie sieciowe ochrony"
-          on={settings.adblockUpdateLists}
-          onChange={(v) => patchSettings({ adblockUpdateLists: v })}
-        />
-        <Toggle
-          label="Blokuj żądania reklam"
-          on={settings.adblockNetwork}
-          onChange={(v) => patchSettings({ adblockNetwork: v })}
-        />
-        <Toggle
-          label="Blokuj trackery"
-          on={settings.adblockTrackers}
-          onChange={(v) => patchSettings({ adblockTrackers: v })}
-        />
-        <Toggle
-          label="Filtry kosmetyczne (ukrywaj elementy na stronie)"
-          on={settings.adblockCosmetic}
-          onChange={(v) => patchSettings({ adblockCosmetic: v })}
-        />
-        <FieldRow label="Własne reguły" desc="Jedna reguła na linię">
-          <textarea
-            className="stextarea"
-            rows={4}
-            value={settings.adblockCustomRules}
-            onChange={(e) => patchSettings({ adblockCustomRules: e.target.value })}
-            spellCheck={false}
-          />
-        </FieldRow>
       </SettingsGroup>
 
       <SettingsGroup title="Ciasteczka i śledzenie">

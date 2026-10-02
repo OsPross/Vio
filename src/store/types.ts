@@ -179,6 +179,14 @@ export type Settings = {
   adblockCosmetic: boolean;
   adblockTrackers: boolean;
   adblockCustomRules: string;
+  /** Standard: skip same-eTLD+1 network blocks; Strict: allow explicit list filters on 1p */
+  adblockLevel: 'standard' | 'strict';
+  /** User-added adblock allowlist hosts (privacy still applies) */
+  adblockExceptions: string[];
+  /** Builtin allowlist ids the user disabled */
+  adblockBuiltinDisabled: string[];
+  /** Per filter-list enable flags */
+  adblockListsEnabled: Record<string, boolean>;
   openSearchInNewTab: boolean;
   suggestHistory: boolean;
   suggestBangs: boolean;
@@ -285,6 +293,7 @@ export type SettingsTab =
   | 'sidebar'
   | 'shortcuts'
   | 'privacy'
+  | 'adblock'
   | 'passwords'
   | 'performance'
   | 'resources'

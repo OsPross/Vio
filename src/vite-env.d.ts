@@ -169,24 +169,55 @@ declare global {
         cosmetic?: boolean;
         trackers?: boolean;
         customRules?: string[];
+        level?: 'standard' | 'strict';
+        exceptions?: string[];
+        builtinDisabled?: string[];
+        listsEnabled?: Record<string, boolean>;
+        updateLists?: boolean;
+        forceLists?: boolean;
       }) => Promise<{
         enabled: boolean;
         network: boolean;
         cosmetic: boolean;
         trackers: boolean;
         customRules: string[];
+        level?: 'standard' | 'strict';
+        exceptions?: string[];
+        builtinDisabled?: string[];
         blockedCount: number;
         blockedToday: number;
         ruleHosts: number;
+        lists?: {
+          id: string;
+          name: string;
+          url: string;
+          enabled: boolean;
+          updatedAt: number | null;
+        }[];
+        builtinExceptions?: {
+          id: string;
+          pattern: string;
+          pathPrefix: string | null;
+          enabled: boolean;
+          builtin: boolean;
+        }[];
       }>;
       adblockStatus: () => Promise<{
         enabled: boolean;
         blockedCount: number;
         blockedToday: number;
         ruleHosts: number;
+        lists?: {
+          id: string;
+          name: string;
+          enabled: boolean;
+          updatedAt: number | null;
+        }[];
       }>;
       adblockCosmetic: () => Promise<string>;
       adblockPageScript: (pageUrl: string) => Promise<string>;
+      adblockClearStats: () => Promise<{ blockedCount: number; blockedToday: number }>;
+      adblockUpdateLists: () => Promise<Record<string, unknown>>;
       perfBoot: (
         next?: Record<string, unknown>,
       ) => Promise<Record<string, unknown> & { needsRestart?: boolean }>;

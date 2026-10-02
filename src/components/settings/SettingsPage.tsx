@@ -10,6 +10,7 @@ import {
   PanelLeft,
   Search,
   Shield,
+  ShieldBan,
   SlidersHorizontal,
   Sparkles,
   Wrench,
@@ -18,6 +19,7 @@ import { useStore, type SettingsTab } from '../../store';
 import { isMotionOff, sectionTransition } from '../../lib/motionPresets';
 import { PasswordsPanel } from '../PasswordsPanel';
 import { ResourcesPanel } from '../metrics/ResourcesPanel';
+import { AdblockSection } from './sections/AdblockSection';
 import { AdvancedSection } from './sections/AdvancedSection';
 import { AppearanceSection } from './sections/AppearanceSection';
 import { GeneralSection } from './sections/GeneralSection';
@@ -53,7 +55,8 @@ const NAV: {
   {
     title: 'System',
     items: [
-      { id: 'privacy', label: 'Prywatność', icon: Shield, hint: 'Adblock i historia' },
+      { id: 'privacy', label: 'Prywatność', icon: Shield, hint: 'Ciasteczka i historia' },
+      { id: 'adblock', label: 'Adblock', icon: ShieldBan, hint: 'Listy, wyjątki, statystyki' },
       { id: 'passwords', label: 'Hasła', icon: KeyRound, hint: 'Sejf i autouzupełnianie' },
       { id: 'performance', label: 'Wydajność', icon: Gauge, hint: 'RAM, CPU, karty' },
       { id: 'resources', label: 'Zasoby', icon: Activity, hint: 'Menedżer zadań' },
@@ -69,7 +72,8 @@ const TITLES: Record<TabId, { title: string; desc: string }> = {
   look: { title: 'Wygląd', desc: 'Motywy, akcent, glass i gęstość interfejsu.' },
   sidebar: { title: 'Sidebar', desc: 'Rail aplikacji bocznych i szerokość panelu.' },
   shortcuts: { title: 'Skróty', desc: 'Ikony na stronie startowej i w railu.' },
-  privacy: { title: 'Prywatność', desc: 'Blokada reklam, trackerów i lokalna historia.' },
+  privacy: { title: 'Prywatność', desc: 'Ciasteczka, fingerprint i lokalna historia.' },
+  adblock: { title: 'Adblock', desc: 'Blokada reklam, listy filtrów, wyjątki i statystyki.' },
   passwords: { title: 'Hasła', desc: 'Zaszyfrowany sejf, generator, audyt i autouzupełnianie.' },
   performance: { title: 'Wydajność', desc: 'RAM, CPU, cache i zachowanie kart.' },
   resources: { title: 'Zasoby', desc: 'Zużycie systemu i przeglądarki (Shift+Esc).' },
@@ -163,6 +167,7 @@ export function SettingsPage() {
             {settingsTab === 'sidebar' && <SidebarSection />}
             {settingsTab === 'shortcuts' && <ShortcutsSection />}
             {settingsTab === 'privacy' && <PrivacySection />}
+            {settingsTab === 'adblock' && <AdblockSection />}
             {settingsTab === 'passwords' && (
               <div className="settings-stack">
                 <PasswordsPanel />

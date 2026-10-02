@@ -126,6 +126,17 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
   if (typeof s.showBookmarksBar !== 'boolean') s.showBookmarksBar = false;
   if (typeof s.darkPageScrollbars !== 'boolean') s.darkPageScrollbars = true;
   if (typeof s.autoPipOnTabSwitch !== 'boolean') s.autoPipOnTabSwitch = false;
+  if (s.adblockLevel !== 'standard' && s.adblockLevel !== 'strict') s.adblockLevel = 'standard';
+  if (!Array.isArray(s.adblockExceptions)) s.adblockExceptions = [];
+  if (!Array.isArray(s.adblockBuiltinDisabled)) s.adblockBuiltinDisabled = [];
+  if (!s.adblockListsEnabled || typeof s.adblockListsEnabled !== 'object') {
+    s.adblockListsEnabled = {
+      easylist: true,
+      easyprivacy: true,
+      ublock: true,
+      peterlowe: true,
+    };
+  }
   // Drop removed legacy keys from older persists
   delete s.torProxyEnabled;
   return s;
