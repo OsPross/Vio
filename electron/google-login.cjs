@@ -1,25 +1,23 @@
 /**
- * Google account login in a dedicated BrowserWindow (not <webview>).
- * Same partition/session as the opener tab so cookies are shared.
+ * Google account login in a dedicated BrowserWindow.
  *
- * Critical anti-detection (Google “browser may not be secure”):
- * - No session preloads (Ghostery cosmetics inject scripts → blocked)
- * - No CDP debugger left attached (persistDebugger was detectable)
- * - Clean Chrome UA via setUserAgent + loadURL
+ * Uses an isolated clean session (no Ghostery preload, no adblock, no extensions,
+ * no CDP). After leaving accounts.google.com, copies Google cookies into the
+ * opener's session (persist:main) and reloads the tab.
  */
 'use strict';
 
 const path = require('node:path');
-const { BrowserWindow } = require('electron');
+const { BrowserWindow, session } = require('electron');
+
+const LOGIN_PARTITION = 'persist:google-login';
 
 /** @type {WeakMap<import('electron').WebContents, import('electron').BrowserWindow>} */
 const openByOpener = new WeakMap();
 /** @type {import('electron').BrowserWindow | null} */
 let activeLoginWin = null;
-/** @type {number} */
-let preloadPauseDepth = 0;
-/** @type {{ type: string, filePath: string, id?: string }[]} */
-let pausedPreloads = [];
+/** @type {WeakSet<import('electron').Session>} */
+const uaWiredSessions = new WeakSet();
 
 function isGoogleAccountsUrl(url) {
   try {
@@ -32,59 +30,111 @@ function isGoogleAccountsUrl(url) {
   }
 }
 
+function isGoogleCookieDomain(domain) {
+  const d = String(domain || '')
+    .toLowerCase()
+    .replace(/^\./, '');
+  return (
+    d === 'google.com' ||
+    d.endsWith('.google.com') ||
+    d === 'youtube.com' ||
+    d.endsWith('.youtube.com') ||
+    d === 'gmail.com' ||
+    d.endsWith('.gmail.com') ||
+    d === 'googlemail.com' ||
+    d.endsWith('.googlemail.com') ||
+    d === 'gstatic.com' ||
+    d.endsWith('.gstatic.com') ||
+    d === 'googleapis.com' ||
+    d.endsWith('.googleapis.com') ||
+    d === 'googleusercontent.com' ||
+    d.endsWith('.googleusercontent.com')
+  );
+}
+
 /**
- * Temporarily remove session preload scripts (Ghostery cosmetics etc.).
- * Nested login windows share one pause stack.
+ * Apply Chrome UA + Client Hints on the clean login session only (no CDP).
  * @param {import('electron').Session} ses
  */
-function pauseSessionPreloads(ses) {
-  if (!ses) return;
-  preloadPauseDepth += 1;
-  if (preloadPauseDepth > 1) return;
-  pausedPreloads = [];
+function wireCleanLoginSession(ses) {
+  if (!ses || uaWiredSessions.has(ses)) return;
+  uaWiredSessions.add(ses);
+  const uaChrome = require('./ua-chrome.cjs');
+  const ua = uaChrome.buildChromeUa();
   try {
-    const list = typeof ses.getPreloadScripts === 'function' ? ses.getPreloadScripts() : [];
-    for (const p of list || []) {
-      if (!p || !p.id) continue;
-      pausedPreloads.push({
-        id: p.id,
-        type: p.type || 'frame',
-        filePath: p.filePath,
-      });
-      try {
-        ses.unregisterPreloadScript(p.id);
-      } catch (err) {
-        console.warn('[google-login] unregister preload', err);
-      }
-    }
-    console.log('[google-login] paused session preloads', pausedPreloads.length);
+    ses.setUserAgent(ua);
+  } catch {
+    /* */
+  }
+  try {
+    ses.webRequest.onBeforeSendHeaders({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
+      const headers = { ...details.requestHeaders };
+      headers['User-Agent'] = uaChrome.buildChromeUa();
+      Object.assign(headers, uaChrome.clientHintHeaders());
+      // No Sec-GPC / DNT — stock Chrome default for Google login
+      delete headers['Sec-GPC'];
+      delete headers['sec-gpc'];
+      delete headers.DNT;
+      delete headers.dnt;
+      callback({ requestHeaders: headers });
+    });
   } catch (err) {
-    console.warn('[google-login] pause preloads', err);
+    console.warn('[google-login] clean session CH', err);
   }
 }
 
 /**
- * @param {import('electron').Session} ses
+ * @param {import('electron').Session} fromSes
+ * @param {import('electron').Session} toSes
  */
-function resumeSessionPreloads(ses) {
-  if (!ses) return;
-  preloadPauseDepth = Math.max(0, preloadPauseDepth - 1);
-  if (preloadPauseDepth > 0) return;
-  const toRestore = pausedPreloads;
-  pausedPreloads = [];
-  for (const p of toRestore) {
-    if (!p.filePath) continue;
+async function copyGoogleCookies(fromSes, toSes) {
+  if (!fromSes || !toSes) return 0;
+  let cookies = [];
+  try {
+    cookies = await fromSes.cookies.get({});
+  } catch (err) {
+    console.warn('[google-login] cookies.get', err);
+    return 0;
+  }
+  let n = 0;
+  for (const c of cookies) {
+    if (!isGoogleCookieDomain(c.domain)) continue;
+    const host = String(c.domain || '').replace(/^\./, '');
+    if (!host) continue;
+    const url = `${c.secure ? 'https' : 'http'}://${host}${c.path || '/'}`;
     try {
-      ses.registerPreloadScript({
-        type: /** @type {'frame'|'service-worker'} */ (p.type || 'frame'),
-        filePath: p.filePath,
-        id: p.id,
-      });
+      /** @type {Electron.CookiesSetDetails} */
+      const details = {
+        url,
+        name: c.name,
+        value: c.value,
+        path: c.path || '/',
+        secure: Boolean(c.secure),
+        httpOnly: Boolean(c.httpOnly),
+        sameSite: c.sameSite || 'unspecified',
+      };
+      if (c.domain) details.domain = c.domain;
+      if (typeof c.expirationDate === 'number') details.expirationDate = c.expirationDate;
+      await toSes.cookies.set(details);
+      n += 1;
     } catch (err) {
-      console.warn('[google-login] restore preload', err);
+      console.warn('[google-login] cookies.set', c.name, err && err.message);
     }
   }
-  console.log('[google-login] restored session preloads', toRestore.length);
+  try {
+    await toSes.cookies.flushStore();
+  } catch {
+    /* */
+  }
+  return n;
+}
+
+function chromeUa() {
+  try {
+    return require('./ua-chrome.cjs').buildChromeUa();
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -101,11 +151,14 @@ function openGoogleLoginWindow(opts) {
     return null;
   }
 
+  const ua = chromeUa();
+  const loadOpts = ua ? { userAgent: ua } : {};
+
   try {
     const existing = openByOpener.get(openerWc);
     if (existing && !existing.isDestroyed()) {
       existing.focus();
-      void existing.loadURL(url, loadOpts());
+      void existing.loadURL(url, loadOpts);
       return existing;
     }
   } catch {
@@ -115,7 +168,7 @@ function openGoogleLoginWindow(opts) {
   if (activeLoginWin && !activeLoginWin.isDestroyed()) {
     try {
       activeLoginWin.focus();
-      void activeLoginWin.loadURL(url, loadOpts());
+      void activeLoginWin.loadURL(url, loadOpts);
       return activeLoginWin;
     } catch {
       /* */
@@ -123,8 +176,9 @@ function openGoogleLoginWindow(opts) {
   }
 
   const parent = opts.hostWindow && !opts.hostWindow.isDestroyed() ? opts.hostWindow : null;
-  const ses = openerWc.session;
-  pauseSessionPreloads(ses);
+  const openerSes = openerWc.session;
+  const loginSes = session.fromPartition(LOGIN_PARTITION);
+  wireCleanLoginSession(loginSes);
 
   const iconPath = path.join(__dirname, '..', 'build', 'icon.ico');
   const win = new BrowserWindow({
@@ -138,13 +192,13 @@ function openGoogleLoginWindow(opts) {
     modal: false,
     show: true,
     webPreferences: {
-      session: ses,
+      session: loginSes,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
       webviewTag: false,
       spellcheck: true,
-      // Explicitly no preload — Ghostery session preloads are paused above
+      // no preload — clean session, no Ghostery / passwords / extensions
     },
   });
 
@@ -162,22 +216,26 @@ function openGoogleLoginWindow(opts) {
   }
 
   const pageWc = win.webContents;
-  const uaChrome = require('./ua-chrome.cjs');
-  const ua = uaChrome.buildChromeUa();
-  try {
-    pageWc.setUserAgent(ua);
-  } catch {
-    /* */
+  if (ua) {
+    try {
+      pageWc.setUserAgent(ua);
+    } catch {
+      /* */
+    }
   }
-  // Apply reduced Chrome UA + Client Hints metadata once, then DETACH.
-  // Do NOT leave debugger attached — Google treats that as automation.
-  void uaChrome.applyToWebContents(pageWc, { tor: false, persistDebugger: false });
+  // Intentionally NO uaChrome.applyToWebContents — CDP attach/detach is detectable.
 
   let finishing = false;
-  const finish = (reason) => {
+  const finish = async (reason) => {
     if (finishing) return;
     finishing = true;
     console.log('[google-login] finish', reason);
+    try {
+      const copied = await copyGoogleCookies(loginSes, openerSes);
+      console.log('[google-login] cookies copied', copied);
+    } catch (err) {
+      console.warn('[google-login] cookie sync', err);
+    }
     try {
       if (!openerWc.isDestroyed() && typeof openerWc.reload === 'function') openerWc.reload();
     } catch (err) {
@@ -194,7 +252,7 @@ function openGoogleLoginWindow(opts) {
     const u = String(navUrl || '');
     if (!u || u === 'about:blank' || /^chrome-error:/i.test(u) || /^devtools:/i.test(u)) return;
     if (!isGoogleAccountsUrl(u)) {
-      finish('left-accounts:' + u.slice(0, 80));
+      void finish('left-accounts:' + u.slice(0, 80));
     }
   };
 
@@ -209,25 +267,14 @@ function openGoogleLoginWindow(opts) {
     } catch {
       /* */
     }
-    resumeSessionPreloads(ses);
   });
 
-  void win.loadURL(url, { userAgent: ua });
-  console.log('[google-login] open', url.slice(0, 120));
+  void win.loadURL(url, loadOpts);
+  console.log('[google-login] open clean-session', url.slice(0, 120));
   return win;
 }
 
-function loadOpts() {
-  try {
-    const uaChrome = require('./ua-chrome.cjs');
-    return { userAgent: uaChrome.buildChromeUa() };
-  } catch {
-    return {};
-  }
-}
-
 /**
- * Intercept main-frame navigations to accounts.google.com from a guest webview.
  * @param {import('electron').WebContents} guestWc
  * @param {{ getHostWindow?: () => import('electron').BrowserWindow | null, torMode?: boolean }} [opts]
  */
@@ -260,10 +307,20 @@ function attachGoogleLoginIntercept(guestWc, opts = {}) {
   });
 }
 
+// Keep exports used by popups (no-ops / soft wrappers for API compat)
+function pauseSessionPreloads() {
+  /* clean-session path — nothing to pause on persist:main */
+}
+function resumeSessionPreloads() {
+  /* */
+}
+
 module.exports = {
   isGoogleAccountsUrl,
   openGoogleLoginWindow,
   attachGoogleLoginIntercept,
   pauseSessionPreloads,
   resumeSessionPreloads,
+  copyGoogleCookies,
+  LOGIN_PARTITION,
 };
