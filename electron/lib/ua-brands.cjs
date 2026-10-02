@@ -12,21 +12,25 @@ function reducedChromeVersion(full) {
   return `${chromeMajor(full)}.0.0.0`;
 }
 
+/**
+ * Grease + brands aligned with Chromium 131+ desktop Chrome
+ * (Electron without override only exposes Chromium — Google login checks for Google Chrome).
+ */
 function brandList(full) {
   const major = chromeMajor(full);
   return [
-    { brand: 'Not=A?Brand', version: '99' },
-    { brand: 'Google Chrome', version: major },
+    { brand: 'Not?A_Brand', version: '24' },
     { brand: 'Chromium', version: major },
+    { brand: 'Google Chrome', version: major },
   ];
 }
 
 function fullVersionList(full) {
   const v = String(full || '134.0.0.0');
   return [
-    { brand: 'Not=A?Brand', version: '10.0.0.0' },
-    { brand: 'Google Chrome', version: v },
+    { brand: 'Not?A_Brand', version: '24.0.0.0' },
     { brand: 'Chromium', version: v },
+    { brand: 'Google Chrome', version: v },
   ];
 }
 

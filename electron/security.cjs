@@ -261,6 +261,13 @@ function attachWebviewGuard(ses, preloadPath) {
         webPreferences.allowRunningInsecureContent = false;
         webPreferences.preload = preloadPath;
         delete webPreferences.preloadURL;
+        // webview has its own UA — set before first navigation (session alone is not enough)
+        try {
+          const uaChrome = require('./ua-chrome.cjs');
+          params.useragent = uaChrome.buildChromeUa();
+        } catch {
+          /* */
+        }
       } catch (err) {
         console.warn('[security] will-attach-webview', err);
         event.preventDefault();

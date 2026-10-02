@@ -57,7 +57,17 @@ function register(deps) {
         });
         try {
           const uaChrome = require('../ua-chrome.cjs');
-          void uaChrome.applyToWebContents(child.webContents, { tor: false });
+          const host = (() => {
+            try {
+              return new URL(u).hostname;
+            } catch {
+              return '';
+            }
+          })();
+          const persist =
+            /(?:^|\.)accounts\.google\.com$/i.test(host) ||
+            Boolean(require('../lib/popup-policy.cjs').looksLikeOauthUrl(u));
+          void uaChrome.applyToWebContents(child.webContents, { tor: false, persistDebugger: persist });
         } catch (e) {
           console.warn('[popup] ua-chrome', e);
         }

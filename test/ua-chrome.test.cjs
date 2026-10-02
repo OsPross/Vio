@@ -14,16 +14,17 @@ const {
 const full = '152.0.7977.130';
 const brands = brandList(full);
 assert.equal(brands.length, 3);
-assert.equal(brands[0].brand, 'Not=A?Brand');
-assert.equal(brands[0].version, '99');
-assert.equal(brands[1].brand, 'Google Chrome');
+assert.equal(brands[0].brand, 'Not?A_Brand');
+assert.equal(brands[0].version, '24');
+assert.equal(brands[1].brand, 'Chromium');
 assert.equal(brands[1].version, '152');
-assert.equal(brands[2].brand, 'Chromium');
+assert.equal(brands[2].brand, 'Google Chrome');
 assert.equal(brands[2].version, '152');
 
 const fvl = fullVersionList(full);
 assert.equal(fvl[1].version, full);
 assert.equal(fvl[2].version, full);
+assert.equal(fvl[2].brand, 'Google Chrome');
 
 assert.equal(reducedChromeVersion(full), '152.0.0.0');
 

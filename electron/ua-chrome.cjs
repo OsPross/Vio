@@ -35,7 +35,8 @@ function userAgentMetadata() {
 function clientHintHeaders() {
   const full = chromeFull();
   const major = chromeMajor();
-  const list = `"Not=A?Brand";v="99", "Google Chrome";v="${major}", "Chromium";v="${major}"`;
+  const list = `"Not?A_Brand";v="24", "Chromium";v="${major}", "Google Chrome";v="${major}"`;
+  const fullList = `"Not?A_Brand";v="24.0.0.0", "Chromium";v="${full}", "Google Chrome";v="${full}"`;
   return {
     'sec-ch-ua': list,
     'Sec-CH-UA': list,
@@ -49,8 +50,8 @@ function clientHintHeaders() {
     'Sec-CH-UA-Arch': '"x86"',
     'sec-ch-ua-bitness': '"64"',
     'Sec-CH-UA-Bitness': '"64"',
-    'sec-ch-ua-full-version-list': `"Not=A?Brand";v="10.0.0.0", "Google Chrome";v="${full}", "Chromium";v="${full}"`,
-    'Sec-CH-UA-Full-Version-List': `"Not=A?Brand";v="10.0.0.0", "Google Chrome";v="${full}", "Chromium";v="${full}"`,
+    'sec-ch-ua-full-version-list': fullList,
+    'Sec-CH-UA-Full-Version-List': fullList,
   };
 }
 
@@ -80,11 +81,12 @@ const wired = new WeakSet();
 
 /**
  * @param {import('electron').WebContents} wc
- * @param {{ tor?: boolean }} [opts]
+ * @param {{ tor?: boolean, persistDebugger?: boolean }} [opts]
  */
 async function applyToWebContents(wc, opts = {}) {
   if (!wc || wc.isDestroyed() || opts.tor) return;
   const ua = buildChromeUa();
+  const persistDebugger = Boolean(opts.persistDebugger);
   try {
     wc.setUserAgent(ua);
   } catch {
@@ -111,13 +113,16 @@ async function applyToWebContents(wc, opts = {}) {
         platform: 'Win32',
         userAgentMetadata: userAgentMetadata(),
       });
+      // Keeping debugger attached is the only way brands include Google Chrome
+      // after Emulation.setUserAgentOverride (detach reverts to Chromium-only).
+      // Used for the dedicated Google login BrowserWindow.
+      if (persistDebugger) return true;
       return true;
     } catch {
       // DevTools owns the debugger — HTTP UA still applied; retry on close
       return false;
     } finally {
-      // Do not leave debugger attached — detectable by Google / anti-bot
-      if (attachedHere) {
+      if (attachedHere && !persistDebugger) {
         try {
           if (wc.debugger.isAttached()) wc.debugger.detach();
         } catch {
@@ -133,6 +138,11 @@ async function applyToWebContents(wc, opts = {}) {
   wired.add(wc);
 
   wc.on('devtools-closed', () => {
+    void tryCdp();
+  });
+  // Apply before page scripts when possible
+  wc.on('did-start-navigation', (_e, _url, _inPlace, isMainFrame) => {
+    if (isMainFrame === false) return;
     void tryCdp();
   });
   wc.on('dom-ready', () => {

@@ -549,7 +549,16 @@ function attachDidCreateWindow(openerWc, onChild) {
     attachPopupUrlChrome(childWin);
     try {
       const uaChrome = require('./ua-chrome.cjs');
-      void uaChrome.applyToWebContents(childWin.webContents, { tor: false });
+      const u = String(details?.url || '');
+      const persist =
+        /(?:^|\.)accounts\.google\.com$/i.test((() => {
+          try {
+            return new URL(u).hostname;
+          } catch {
+            return '';
+          }
+        })()) || Boolean(require('./lib/popup-policy.cjs').looksLikeOauthUrl(u));
+      void uaChrome.applyToWebContents(childWin.webContents, { tor: false, persistDebugger: persist });
     } catch (err) {
       console.warn('[popup] ua-chrome', err);
     }

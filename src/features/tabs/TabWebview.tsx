@@ -115,6 +115,15 @@ export type SaveOffer = {
   id?: string;
 };
 
+function isGoogleAccountsPage(url: string) {
+  try {
+    const h = new URL(url).hostname.toLowerCase();
+    return h === 'accounts.google.com' || h.endsWith('.accounts.google.com');
+  } catch {
+    return false;
+  }
+}
+
 /** Page scripts only — cosmetic CSS is injected in webview-preload (legacy) or Ghostery session preload. */
 async function injectPageScripts(el: WebviewEl, passwordsOn: boolean) {
   try {
@@ -124,6 +133,8 @@ async function injectPageScripts(el: WebviewEl, passwordsOn: boolean) {
     } catch {
       /* */
     }
+    // Zero script injection on Google login pages (detection / policy)
+    if (isGoogleAccountsPage(pageUrl)) return;
     const js = (await window.shell?.adblockPageScript?.(pageUrl)) ?? '';
     if (js) await el.executeJavaScript(js);
     if (passwordsOn) {

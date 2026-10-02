@@ -112,6 +112,30 @@ function createWireGuest(deps) {
     }
     if (!torMode) {
       void uaChrome.applyToWebContents(guestWc, { tor: false });
+      // Dedicated login window only for <webview> tabs — not for OAuth BrowserWindow popups
+      let isWebview = false;
+      try {
+        isWebview = typeof guestWc.getType === 'function' && guestWc.getType() === 'webview';
+      } catch {
+        isWebview = false;
+      }
+      if (isWebview) {
+        try {
+          const googleLogin = require('../google-login.cjs');
+          googleLogin.attachGoogleLoginIntercept(guestWc, {
+            torMode: false,
+            getHostWindow: () => {
+              try {
+                return contextMenu.hostWindowForGuest(guestWc) || getMainWindow();
+              } catch {
+                return getMainWindow();
+              }
+            },
+          });
+        } catch (err) {
+          console.warn('[google-login] attach', err);
+        }
+      }
     }
     security.attachNavigationGuards(guestWc, {
       askExternal: torMode ? null : askExternalProtocol,
