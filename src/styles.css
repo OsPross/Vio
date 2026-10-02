@@ -1581,18 +1581,18 @@ button {
 .home-ios .home-search-inner {
   height: 54px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)),
-    rgba(20, 20, 22, 0.4);
+  border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+  background: color-mix(in srgb, var(--bg-elev) 88%, var(--fg) 4%);
+  color: var(--fg);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.1) inset,
-    0 12px 40px rgba(0, 0, 0, 0.22);
+    0 1px 0 color-mix(in srgb, var(--fg) 8%, transparent) inset,
+    0 12px 40px color-mix(in srgb, #000 16%, transparent);
 }
 
 .home-ios.home-glass .home-search-inner {
-  backdrop-filter: blur(28px) saturate(1.7);
-  -webkit-backdrop-filter: blur(28px) saturate(1.7);
+  background: color-mix(in srgb, var(--bg-elev) 78%, transparent);
+  backdrop-filter: blur(28px) saturate(1.45);
+  -webkit-backdrop-filter: blur(28px) saturate(1.45);
 }
 
 .home-ios .home-title {
@@ -1633,7 +1633,8 @@ button {
   justify-content: center;
   gap: 18px 14px;
   margin-top: 28px;
-  max-width: 420px;
+  max-width: var(--home-chrome-w, 580px);
+  width: 100%;
   margin-left: auto;
   margin-right: auto;
 }
@@ -1908,7 +1909,7 @@ button {
 
   width: 100%;
 
-  max-width: 640px;
+  max-width: var(--home-chrome-w, 580px);
 }
 
 .home-align-center .home-search {
@@ -1928,13 +1929,15 @@ button {
 
   border-radius: 16px;
 
-  background: color-mix(in srgb, var(--bg-elev) 72%, transparent);
+  background: color-mix(in srgb, var(--bg-elev) 88%, var(--fg) 3%);
 
-  border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+
+  color: var(--fg);
 
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent) inset,
-    0 12px 40px rgba(0, 0, 0, 0.18);
+    0 12px 40px color-mix(in srgb, #000 14%, transparent);
 
   transition:
     border-color 0.18s ease,
@@ -1979,6 +1982,8 @@ button {
 
   background: transparent;
 
+  color: var(--fg);
+
   font-size: 16px;
 
   letter-spacing: -0.015em;
@@ -1986,6 +1991,7 @@ button {
 
 .home-search-inner input::placeholder {
   color: var(--fg-3);
+  opacity: 1;
 }
 
 .home-search-hint {
@@ -3249,6 +3255,45 @@ button {
 
 [data-theme='paper'] {
   --chrome-input: color-mix(in srgb, var(--bg) 70%, #000 6%);
+}
+
+/* Home search — Paper / light themes: opaque elev, dark text, clear placeholder */
+[data-theme='paper'] .home-search-inner,
+[data-theme='paper'] .home-ios .home-search-inner,
+[data-theme='paper'] .home-ios.home-glass .home-search-inner {
+  background: var(--bg-elev);
+  border-color: var(--line);
+  color: var(--fg);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 70%, transparent) inset,
+    0 8px 28px color-mix(in srgb, #000 8%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+[data-theme='paper'] .home-search-inner input,
+[data-theme='paper'] .home-search-inner input::placeholder,
+[data-theme='paper'] .home-engine-btn,
+[data-theme='paper'] .home-search-ico,
+[data-theme='paper'] .home-engine,
+[data-theme='paper'] .home-dock-item,
+[data-theme='paper'] .home-dock-label {
+  color: var(--fg);
+}
+[data-theme='paper'] .home-search-inner input::placeholder,
+[data-theme='paper'] .home-engine-btn,
+[data-theme='paper'] .home-search-ico,
+[data-theme='paper'] .home-engine,
+[data-theme='paper'] .home-dock-label {
+  color: var(--fg-2);
+}
+[data-theme='paper'] .home-search-inner input::placeholder {
+  color: var(--fg-3);
+}
+[data-theme='paper'] .home-suggest,
+[data-theme='paper'] .home-suggest-portal {
+  background: var(--bg-elev);
+  border-color: var(--line);
+  color: var(--fg);
 }
 
 /* ?? Chrome glass lock ?? */
