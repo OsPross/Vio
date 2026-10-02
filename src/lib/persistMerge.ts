@@ -94,8 +94,8 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
     s.homeBgImage = null;
     if (s.bgStyle === 'custom') s.bgStyle = 'soft';
   }
-  if (typeof s.homeBgBlur !== 'number') s.homeBgBlur = 12;
-  if (typeof s.homeBgDim !== 'number') s.homeBgDim = 35;
+  if (typeof s.homeBgBlur !== 'number') s.homeBgBlur = 0;
+  if (typeof s.homeBgDim !== 'number') s.homeBgDim = 20;
   if (
     s.homeClockStyle !== 'thin' &&
     s.homeClockStyle !== 'classic' &&

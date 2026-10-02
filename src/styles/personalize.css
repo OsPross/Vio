@@ -805,38 +805,41 @@
   color: var(--fg);
 }
 
-/* Custom home background */
+/* Custom home background — separate layers under content (never force children to position:relative) */
 .home.home-bg-custom {
   background-color: var(--bg);
-  background-image:
-    linear-gradient(
-      color-mix(in srgb, #000 var(--home-bg-dim, 35%), transparent),
-      color-mix(in srgb, #000 var(--home-bg-dim, 35%), transparent)
-    ),
-    var(--home-bg-image);
+  background-image: none;
+  isolation: isolate;
+}
+.home.home-bg-custom .home-bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--home-bg-image);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  /* Scale slightly so blur does not show transparent edges */
+  transform: scale(1.04);
+  filter: blur(var(--home-bg-blur, 0px));
 }
-.home.home-bg-custom::before {
-  content: '';
+.home.home-bg-custom .home-bg-dim {
   position: absolute;
   inset: 0;
-  backdrop-filter: blur(var(--home-bg-blur, 12px));
-  -webkit-backdrop-filter: blur(var(--home-bg-blur, 12px));
-  pointer-events: none;
   z-index: 0;
+  pointer-events: none;
+  background: color-mix(in srgb, #000 var(--home-bg-dim, 20%), transparent);
 }
-.home.home-bg-custom > * {
-  position: relative;
+.home.home-bg-custom .home-widgets-band {
+  position: absolute;
+  inset: 0;
   z-index: 1;
 }
-/* Personalize sheet must stay above home chrome/widgets even when custom bg forces z-index */
-.home.home-bg-custom > .pz-sheet-scrim {
-  position: fixed;
-  z-index: 200;
+.home.home-bg-custom .home-fab {
+  z-index: 6;
 }
-.home.home-bg-custom > .pz-sheet,
+/* Personalize sheet is portaled to body — keep above home */
 .pz-sheet-scrim {
   z-index: 200;
 }

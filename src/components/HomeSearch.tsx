@@ -83,6 +83,13 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
       }
       data-hw-style={settings.homeWidgetStyle}
     >
+      {settings.bgStyle === 'custom' && bgFile ? (
+        <>
+          <div className="home-bg-layer" aria-hidden />
+          <div className="home-bg-dim" aria-hidden />
+        </>
+      ) : null}
+
       <button
         type="button"
         className={`home-fab ${customize || editMode ? 'on' : ''}`}

@@ -76,6 +76,12 @@ export function HomeLivePreview() {
                 } as CSSProperties
               }
             >
+              {settings.bgStyle === 'custom' && bgFile ? (
+                <>
+                  <div className="home-bg-layer" aria-hidden />
+                  <div className="home-bg-dim" aria-hidden />
+                </>
+              ) : null}
               <div className="home-widgets-band">
                 <WidgetStrip
                   widgets={widgets}

@@ -20,7 +20,12 @@ export function LookTab() {
   const pickCustomBg = async () => {
     const res = await window.shell?.homeBgPick?.();
     if (!res?.ok || !res.path) return;
-    patchSettings({ bgStyle: 'custom', homeBgImage: res.path });
+    patchSettings({
+      bgStyle: 'custom',
+      homeBgImage: res.path,
+      homeBgBlur: 0,
+      homeBgDim: 20,
+    });
   };
 
   return (
