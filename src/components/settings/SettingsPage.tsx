@@ -72,7 +72,7 @@ const TITLES: Record<TabId, { title: string; desc: string }> = {
   privacy: { title: 'Prywatność', desc: 'Blokada reklam, trackerów i lokalna historia.' },
   passwords: { title: 'Hasła', desc: 'Zaszyfrowany sejf, generator, audyt i autouzupełnianie.' },
   performance: { title: 'Wydajność', desc: 'RAM, CPU, cache i zachowanie kart.' },
-  resources: { title: 'Zasoby', desc: 'Zużycie systemu i przeglądarki · Shift+Esc.' },
+  resources: { title: 'Zasoby', desc: 'Zużycie systemu i przeglądarki (Shift+Esc).' },
   advanced: { title: 'Zaawansowane', desc: 'Status techniczny, skróty klawiszowe i reset.' },
 };
 

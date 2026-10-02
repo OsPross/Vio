@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Input } from '../../ui/Input';
+import { Select } from '../../ui/Select';
 import { useStore } from '../../../store';
 import { FieldRow, Row, SettingsGroup, Toggle } from '../SettingsControls';
 
@@ -153,12 +154,12 @@ export function PrivacySection() {
       <SettingsGroup title="Blokada reklam i trackerów">
         <Toggle
           label="Włącz blokadę"
-          hint="EasyList, EasyPrivacy, uBlock, Peter Lowe (Ghostery) · Standardowa + Ścisła"
+          hint="Listy EasyList, EasyPrivacy, uBlock i Peter Lowe — w trybie Standardowa i Ścisła"
           on={settings.adblockEnabled}
           onChange={(v) => patchSettings({ adblockEnabled: v })}
         />
         <Toggle
-          label="Aktualizuj listy filtrów (1×/dzień)"
+          label="Aktualizuj listy filtrów raz dziennie"
           hint="Pobiera listy z internetu — jedyne zapytanie sieciowe ochrony"
           on={settings.adblockUpdateLists}
           onChange={(v) => patchSettings({ adblockUpdateLists: v })}
@@ -174,11 +175,11 @@ export function PrivacySection() {
           onChange={(v) => patchSettings({ adblockTrackers: v })}
         />
         <Toggle
-          label="Filtry kosmetyczne (CSS)"
+          label="Filtry kosmetyczne (ukrywaj elementy na stronie)"
           on={settings.adblockCosmetic}
           onChange={(v) => patchSettings({ adblockCosmetic: v })}
         />
-        <FieldRow label="Własne reguły" desc="Jedna na linię">
+        <FieldRow label="Własne reguły" desc="Jedna reguła na linię">
           <textarea
             className="stextarea"
             rows={4}
@@ -192,40 +193,42 @@ export function PrivacySection() {
       <SettingsGroup title="Ciasteczka i śledzenie">
         <FieldRow
           label="Ciasteczka stron trzecich"
-          desc="trackers = Standardowa · all = Ścisła (może psuć SSO)"
+          desc="Ścisła blokuje wszystkie — może psuć logowanie na niektórych stronach"
         >
-          <select
+          <Select
+            aria-label="Ciasteczka stron trzecich"
             value={settings.privacyThirdPartyCookies}
-            onChange={(e) =>
+            onChange={(v) =>
               patchSettings({
-                privacyThirdPartyCookies: e.target.value as 'trackers' | 'all' | 'allow',
+                privacyThirdPartyCookies: v as 'trackers' | 'all' | 'allow',
               })
             }
-          >
-            <option value="trackers">Tylko trackery</option>
-            <option value="all">Wszystkie 3P</option>
-            <option value="allow">Zezwalaj</option>
-          </select>
+            options={[
+              { value: 'trackers', label: 'Blokuj śledzące' },
+              { value: 'all', label: 'Blokuj wszystkie (może psuć logowanie)' },
+              { value: 'allow', label: 'Zezwalaj' },
+            ]}
+          />
         </FieldRow>
         <Toggle
-          label="Czyść parametry śledzące z URL"
-          hint="utm_*, fbclid, gclid… · omija banki/logowanie"
+          label="Czyść parametry śledzące z adresu"
+          hint="Usuwa oznaczenia kampanii z linków; pomija banki i logowanie"
           on={settings.privacyStripTracking}
           onChange={(v) => patchSettings({ privacyStripTracking: v })}
         />
         <Toggle
-          label="Sec-GPC: 1"
+          label="Wysyłaj sygnał Global Privacy Control"
           on={settings.privacySecGpc}
           onChange={(v) => patchSettings({ privacySecGpc: v })}
         />
         <Toggle
-          label="DNT: 1"
-          hint="Tylko Ścisła — większość serwisów i tak ignoruje"
+          label="Wysyłaj sygnał Do Not Track"
+          hint="W trybie Ścisła — większość serwisów i tak go ignoruje"
           on={settings.privacyDnt}
           onChange={(v) => patchSettings({ privacyDnt: v })}
         />
         <Toggle
-          label="Referer: strict-origin-when-cross-origin"
+          label="Ograniczaj nagłówek Referer między stronami"
           on={settings.privacyReferrerPolicy}
           onChange={(v) => patchSettings({ privacyReferrerPolicy: v })}
         />
@@ -261,45 +264,49 @@ export function PrivacySection() {
 
       <SettingsGroup title="Szyfrowanie i DNS">
         <FieldRow
-          label="HTTPS-Only"
-          desc="upgrade = Standardowa · block = Ścisła (ostrzeżenie)"
+          label="Tylko HTTPS"
+          desc="W trybie Ścisła wymusza bezpieczne połączenie i ostrzega przy HTTP"
         >
-          <select
+          <Select
+            aria-label="Tylko HTTPS"
             value={settings.privacyHttpsOnly}
-            onChange={(e) =>
+            onChange={(v) =>
               patchSettings({
-                privacyHttpsOnly: e.target.value as 'upgrade' | 'block' | 'off',
+                privacyHttpsOnly: v as 'upgrade' | 'block' | 'off',
               })
             }
-          >
-            <option value="upgrade">Podnoś do HTTPS (cichy fallback)</option>
-            <option value="block">Wymagaj HTTPS (ostrzejsze)</option>
-            <option value="off">Wyłączone</option>
-          </select>
+            options={[
+              { value: 'upgrade', label: 'Podnoś do HTTPS (cichy fallback)' },
+              { value: 'block', label: 'Wymagaj HTTPS (ostrzejsze)' },
+              { value: 'off', label: 'Wyłączone' },
+            ]}
+          />
         </FieldRow>
         <FieldRow
-          label="DNS over HTTPS"
-          desc="automatic = Standardowa (fallback firmowy/hotel)"
+          label="DNS przez HTTPS"
+          desc="W trybie Standardowa używa bezpiecznego DNS z zapasowym serwerem"
         >
-          <select
+          <Select
+            aria-label="DNS przez HTTPS"
             value={settings.privacyDoh}
-            onChange={(e) =>
+            onChange={(v) =>
               patchSettings({
-                privacyDoh: e.target.value as typeof settings.privacyDoh,
+                privacyDoh: v as typeof settings.privacyDoh,
               })
             }
-          >
-            <option value="automatic">Automatic (Quad9 + Cloudflare)</option>
-            <option value="quad9">Quad9 (secure)</option>
-            <option value="cloudflare">Cloudflare</option>
-            <option value="mullvad">Mullvad</option>
-            <option value="nextdns">NextDNS</option>
-            <option value="custom">Własny</option>
-            <option value="off">Wyłączone</option>
-          </select>
+            options={[
+              { value: 'automatic', label: 'Automatycznie (Quad9 i Cloudflare)' },
+              { value: 'quad9', label: 'Quad9' },
+              { value: 'cloudflare', label: 'Cloudflare' },
+              { value: 'mullvad', label: 'Mullvad' },
+              { value: 'nextdns', label: 'NextDNS' },
+              { value: 'custom', label: 'Własny' },
+              { value: 'off', label: 'Wyłączone' },
+            ]}
+          />
         </FieldRow>
         {settings.privacyDoh === 'custom' && (
-          <FieldRow label="Własny DoH URL">
+          <FieldRow label="Własny adres DNS przez HTTPS">
             <Input
               value={settings.privacyDohCustom}
               onChange={(e) => patchSettings({ privacyDohCustom: e.target.value })}
@@ -315,34 +322,39 @@ export function PrivacySection() {
           on={settings.privacyChromeUa}
           onChange={(v) => patchSettings({ privacyChromeUa: v })}
         />
-        <FieldRow label="WebRTC IP handling">
-          <select
+        <FieldRow
+          label="Obsługa adresu IP w WebRTC"
+          desc="Ogranicza wyciek lokalnego adresu przy połączeniach wideo"
+        >
+          <Select
+            aria-label="Obsługa adresu IP w WebRTC"
             value={settings.privacyWebRtc}
-            onChange={(e) =>
+            onChange={(v) =>
               patchSettings({
-                privacyWebRtc: e.target.value as typeof settings.privacyWebRtc,
+                privacyWebRtc: v as typeof settings.privacyWebRtc,
               })
             }
-          >
-            <option value="public_only">Tylko publiczny interfejs (Standardowa)</option>
-            <option value="disable_udp">Wyłącz non-proxied UDP (Ścisła)</option>
-            <option value="default">Domyślny Chromium</option>
-          </select>
+            options={[
+              { value: 'public_only', label: 'Tylko publiczny interfejs (Standardowa)' },
+              { value: 'disable_udp', label: 'Wyłącz UDP poza proxy (Ścisła)' },
+              { value: 'default', label: 'Domyślny Chromium' },
+            ]}
+          />
         </FieldRow>
         <Toggle
-          label="Ochrona fingerprint (canvas/WebGL/CPU)"
-          hint="Ścisła / ręcznie — może psuć captchę i banki"
+          label="Ochrona fingerprint (canvas, WebGL, CPU)"
+          hint="W trybie Ścisła — może psuć captchę i banki"
           on={settings.privacyFingerprint}
           onChange={(v) => patchSettings({ privacyFingerprint: v })}
         />
         <Toggle
           label="Sugestie wyszukiwania (silnik)"
-          hint="Ścisła: wyłączone — tylko lokalna historia"
+          hint="W trybie Ścisła wyłączone — tylko lokalna historia"
           on={settings.privacySearchSuggest}
           onChange={(v) => patchSettings({ privacySearchSuggest: v })}
         />
         <Toggle
-          label="Zezwalaj na aktualizacje list / DoH sieci aplikacji"
+          label="Zezwalaj na aktualizacje list i sieć aplikacji"
           on={settings.privacyAllowAppNetwork}
           onChange={(v) => patchSettings({ privacyAllowAppNetwork: v })}
         />
@@ -382,20 +394,22 @@ export function PrivacySection() {
 
       <SettingsGroup title="Historia przeglądania">
         <Row label="Retencja historii">
-          <select
+          <Select
+            aria-label="Retencja historii"
             value={settings.historyRetention || '90'}
-            onChange={(e) =>
+            onChange={(v) =>
               patchSettings({
-                historyRetention: e.target.value as '7' | '30' | '90' | 'always' | 'off',
+                historyRetention: v as '7' | '30' | '90' | 'always' | 'off',
               })
             }
-          >
-            <option value="7">7 dni</option>
-            <option value="30">30 dni</option>
-            <option value="90">90 dni</option>
-            <option value="always">Zawsze</option>
-            <option value="off">Nie zapisuj</option>
-          </select>
+            options={[
+              { value: '7', label: '7 dni' },
+              { value: '30', label: '30 dni' },
+              { value: '90', label: '90 dni' },
+              { value: 'always', label: 'Zawsze' },
+              { value: 'off', label: 'Nie zapisuj' },
+            ]}
+          />
         </Row>
         <Row label="Zapisane zapytania (omnibox)">
           <span className="sr-value">{queryCount}</span>

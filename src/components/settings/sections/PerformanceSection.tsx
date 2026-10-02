@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { applyPerfPreset, useStore, type PerfMode } from '../../../store';
+import { Select } from '../../ui/Select';
 import { Row, SettingsGroup, SliderRow, Toggle } from '../SettingsControls';
 
 export function PerformanceSection() {
@@ -30,23 +31,25 @@ export function PerformanceSection() {
         {mem && (
           <Row label="Pamięć robocza">
             <span className="sr-value">
-              {mem.workingSetMb} MB · {mem.processes} proc.
+              {mem.workingSetMb} MB, {mem.processes} procesów
             </span>
           </Row>
         )}
         <Row label="Profil">
-          <select
+          <Select
+            aria-label="Profil wydajności"
             value={settings.perfMode}
-            onChange={(e) => {
-              const mode = e.target.value as PerfMode;
+            onChange={(v) => {
+              const mode = v as PerfMode;
               patchSettings(applyPerfPreset(mode));
               setRestartHint(true);
             }}
-          >
-            <option value="saver">Oszczędzanie</option>
-            <option value="balanced">Zrównoważony</option>
-            <option value="performance">Wydajność</option>
-          </select>
+            options={[
+              { value: 'saver', label: 'Oszczędzanie' },
+              { value: 'balanced', label: 'Zrównoważony' },
+              { value: 'performance', label: 'Wydajność' },
+            ]}
+          />
         </Row>
       </SettingsGroup>
 

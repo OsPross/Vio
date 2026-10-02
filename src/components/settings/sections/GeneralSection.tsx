@@ -1,4 +1,5 @@
 import { Input } from '../../ui/Input';
+import { Select } from '../../ui/Select';
 import { useStore } from '../../../store';
 import { FieldRow, SettingsGroup, Toggle } from '../SettingsControls';
 
@@ -15,7 +16,7 @@ export function GeneralSection() {
             onChange={(e) => patchSettings({ appName: e.target.value })}
           />
         </FieldRow>
-        <FieldRow label="Strona startowa" desc="about:home = wbudowana strona startowa">
+        <FieldRow label="Strona startowa" desc="Zostaw about:home, żeby używać wbudowanej strony startowej">
           <Input
             value={settings.homepage}
             onChange={(e) => patchSettings({ homepage: e.target.value })}
@@ -48,18 +49,20 @@ export function GeneralSection() {
 
       <SettingsGroup title="Zachowanie">
         <FieldRow label="Przy starcie">
-          <select
+          <Select
+            aria-label="Przy starcie"
             value={settings.startupMode || 'session'}
-            onChange={(e) =>
+            onChange={(v) =>
               patchSettings({
-                startupMode: e.target.value as 'session' | 'newtab' | 'pages',
+                startupMode: v as 'session' | 'newtab' | 'pages',
               })
             }
-          >
-            <option value="session">Otwórz poprzednie karty</option>
-            <option value="newtab">Otwórz nową kartę</option>
-            <option value="pages">Otwórz konkretne strony</option>
-          </select>
+            options={[
+              { value: 'session', label: 'Otwórz poprzednie karty' },
+              { value: 'newtab', label: 'Otwórz nową kartę' },
+              { value: 'pages', label: 'Otwórz konkretne strony' },
+            ]}
+          />
         </FieldRow>
         {(settings.startupMode || 'session') === 'pages' && (
           <FieldRow label="Strony startowe" desc="Jedna URL na linię">

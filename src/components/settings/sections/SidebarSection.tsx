@@ -19,7 +19,7 @@ export function SidebarSection() {
       <SettingsGroup title="Rail">
         <Toggle
           label="Pokaż sidebar"
-          hint="Ctrl+B · Ctrl+Shift+M · Ctrl+Shift+G"
+          hint="Ctrl+B, Ctrl+Shift+M, Ctrl+Shift+G"
           on={settings.showSidebar}
           onChange={(v) =>
             patchSettings({ showSidebar: v, ...(v ? {} : { sidePanelOpen: false }) })

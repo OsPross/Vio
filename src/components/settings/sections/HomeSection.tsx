@@ -1,5 +1,6 @@
 import { Segmented } from '../../ui';
 import { Input } from '../../ui/Input';
+import { Select } from '../../ui/Select';
 import {
   migrateHomeWidgets,
   normalizeHomeWidgets,
@@ -43,15 +44,17 @@ export function HomeSection() {
 
       <SettingsGroup title="Układ">
         <Row label="Układ">
-          <select
+          <Select
+            aria-label="Układ strony startowej"
             value={settings.homeLayout}
-            onChange={(e) => patchSettings({ homeLayout: e.target.value as HomeLayout })}
-          >
-            <option value="dashboard">Wyśrodkowany</option>
-            <option value="minimal">Tylko szukaj</option>
-            <option value="stack">Do lewej</option>
-            <option value="split">Dwie kolumny</option>
-          </select>
+            onChange={(v) => patchSettings({ homeLayout: v as HomeLayout })}
+            options={[
+              { value: 'dashboard', label: 'Wyśrodkowany' },
+              { value: 'minimal', label: 'Tylko szukaj' },
+              { value: 'stack', label: 'Do lewej' },
+              { value: 'split', label: 'Dwie kolumny' },
+            ]}
+          />
         </Row>
         <Row label="Wyrównanie">
           <Segmented
@@ -85,16 +88,18 @@ export function HomeSection() {
           />
         </Row>
         <Row label="Tło home">
-          <select
+          <Select
+            aria-label="Tło strony startowej"
             value={settings.bgStyle}
-            onChange={(e) => patchSettings({ bgStyle: e.target.value as BgStyle })}
-          >
-            <option value="solid">Jednolite</option>
-            <option value="soft">Delikatny gradient</option>
-            <option value="panel">Panel</option>
-            <option value="mesh">Mesh (głębia)</option>
-            <option value="vignette">Winieta</option>
-          </select>
+            onChange={(v) => patchSettings({ bgStyle: v as BgStyle })}
+            options={[
+              { value: 'solid', label: 'Jednolite' },
+              { value: 'soft', label: 'Delikatny gradient' },
+              { value: 'panel', label: 'Panel' },
+              { value: 'mesh', label: 'Mesh (głębia)' },
+              { value: 'vignette', label: 'Winieta' },
+            ]}
+          />
         </Row>
       </SettingsGroup>
 

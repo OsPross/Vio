@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Input } from '../../ui/Input';
+import { Select } from '../../ui/Select';
 import { SEARCH_ENGINES, useStore, type SearchEngine } from '../../../store';
 import { FieldRow, Row, SettingsGroup, Toggle } from '../SettingsControls';
 
@@ -22,43 +23,43 @@ export function SearchSection() {
     <div className="settings-stack">
       <SettingsGroup title="Silnik domyślny">
         <Row label="Silnik">
-          <select
+          <Select
+            aria-label="Silnik wyszukiwania"
             value={settings.searchEngine}
-            onChange={(e) =>
-              patchSettings({ searchEngine: e.target.value as SearchEngine })
-            }
-          >
-            <optgroup label="Web">
-              {SEARCH_ENGINES.filter((e) => e.group === 'web').map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.label}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Prywatność">
-              {SEARCH_ENGINES.filter((e) => e.group === 'privacy').map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.label}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Onion / darknet (clearnet)">
-              {SEARCH_ENGINES.filter((e) => e.group === 'onion').map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.label}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Lokalne / własne">
-              {SEARCH_ENGINES.filter(
-                (e) => e.group === 'local' || e.group === 'custom',
-              ).map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.label}
-                </option>
-              ))}
-            </optgroup>
-          </select>
+            onChange={(v) => patchSettings({ searchEngine: v as SearchEngine })}
+            groups={[
+              {
+                label: 'Web',
+                options: SEARCH_ENGINES.filter((e) => e.group === 'web').map((e) => ({
+                  value: e.id,
+                  label: e.label,
+                })),
+              },
+              {
+                label: 'Prywatność',
+                options: SEARCH_ENGINES.filter((e) => e.group === 'privacy').map((e) => ({
+                  value: e.id,
+                  label: e.label,
+                })),
+              },
+              {
+                label: 'Onion / darknet (clearnet)',
+                options: SEARCH_ENGINES.filter((e) => e.group === 'onion').map((e) => ({
+                  value: e.id,
+                  label: e.label,
+                })),
+              },
+              {
+                label: 'Lokalne / własne',
+                options: SEARCH_ENGINES.filter(
+                  (e) => e.group === 'local' || e.group === 'custom',
+                ).map((e) => ({
+                  value: e.id,
+                  label: e.label,
+                })),
+              },
+            ]}
+          />
         </Row>
         {engineMeta?.hint && <p className="snote">{engineMeta.hint}</p>}
         {settings.searchEngine === 'searx' && (
@@ -100,7 +101,7 @@ export function SearchSection() {
         </p>
         <FieldRow
           label="Preferowany SOCKS"
-          desc="9050 = daemon / system · 9150 = Tor Browser · 19050 = wbudowany Expert Bundle"
+          desc="Port 9050 to daemon systemowy, 9150 Tor Browser, 19050 wbudowany Expert Bundle"
         >
           <Input
             value={settings.torProxyUrl}
@@ -140,13 +141,14 @@ export function SearchSection() {
           </button>
         </Row>
         <FieldRow
-          label="Mosty (embedded Tor)"
-          desc="Bez Moat — wbudowana lista z Tor Browser (2026-03-30) lub własne linie. Zmiana restartuje daemona."
+          label="Mosty (wbudowany Tor)"
+          desc="Bez Moat — wbudowana lista z Tor Browser albo własne linie. Zmiana restartuje daemona."
         >
-          <select
+          <Select
+            aria-label="Mosty Tor"
             value={settings.torBridgeMode}
-            onChange={(e) => {
-              const mode = e.target.value as typeof settings.torBridgeMode;
+            onChange={(v) => {
+              const mode = v as typeof settings.torBridgeMode;
               patchSettings({ torBridgeMode: mode });
               void window.shell?.torBridges?.({
                 mode,
@@ -159,13 +161,14 @@ export function SearchSection() {
                     : undefined,
               });
             }}
-          >
-            <option value="none">Bez mostów (domyślnie)</option>
-            <option value="obfs4">obfs4 (wbudowane)</option>
-            <option value="snowflake">Snowflake</option>
-            <option value="meek">meek</option>
-            <option value="custom">Własne mosty</option>
-          </select>
+            options={[
+              { value: 'none', label: 'Bez mostów (domyślnie)' },
+              { value: 'obfs4', label: 'obfs4 (wbudowane)' },
+              { value: 'snowflake', label: 'Snowflake' },
+              { value: 'meek', label: 'meek' },
+              { value: 'custom', label: 'Własne mosty' },
+            ]}
+          />
         </FieldRow>
         {settings.torBridgeMode === 'custom' && (
           <FieldRow

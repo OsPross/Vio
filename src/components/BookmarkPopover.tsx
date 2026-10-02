@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { BOOKMARKS_BAR_FOLDER_ID, useStore } from '../store';
+import { Select } from './ui/Select';
 
 type Props = {
   open: boolean;
@@ -82,13 +83,12 @@ export function BookmarkPopover({ open, onClose, url, title, anchorRef }: Props)
       </label>
       <label className="bookmark-field">
         <span>Folder</span>
-        <select value={folderId ?? ''} onChange={(e) => setFolderId(e.target.value || undefined)}>
-          {folders.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.title}
-            </option>
-          ))}
-        </select>
+        <Select
+          aria-label="Folder zakładki"
+          value={folderId ?? ''}
+          onChange={(v) => setFolderId(v || undefined)}
+          options={folders.map((f) => ({ value: f.id, label: f.title }))}
+        />
       </label>
       <p className="bookmark-pop-url muted" title={url}>
         {url}
