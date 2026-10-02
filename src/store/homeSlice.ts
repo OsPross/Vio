@@ -154,13 +154,15 @@ export function normalizeHomeChrome(raw: unknown): HomeChromeItem[] {
 }
 
 export function chromeSizeToPx(id: HomeChromeId): { w: number; h: number } {
+  /* One axis width for clock / search / shortcuts (content column, not viewport). */
+  const w = 580;
   switch (id) {
     case 'clock':
-      return { w: 560, h: 168 };
+      return { w, h: 168 };
     case 'search':
-      return { w: 640, h: 72 };
+      return { w, h: 72 };
     case 'shortcuts':
-      return { w: 640, h: 104 };
+      return { w, h: 104 };
     default:
       return { w: 400, h: 120 };
   }

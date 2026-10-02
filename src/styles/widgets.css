@@ -3,6 +3,8 @@
 .home-widgets-root {
   --hw-radius: 14px;
   --hw-gap: 16px;
+  /* Shared column for clock / search / shortcuts — center of .hw-canvas (content area), not the window */
+  --home-chrome-w: 580px;
 }
 
 .home-widgets-band {
@@ -59,7 +61,7 @@
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 640px;
+  max-width: var(--home-chrome-w, 580px);
   margin-inline: auto;
   gap: 14px;
   text-align: center;
@@ -70,7 +72,7 @@
   text-align: left;
   margin-inline: 0;
   margin-left: 12%;
-  max-width: 640px;
+  max-width: var(--home-chrome-w, 580px);
 }
 
 .home-align-left .home-header-stack .hw-clock,
@@ -86,7 +88,7 @@
 .home-align-left .home-header-stack .home-search,
 .home-align-left .home-header-stack .home-dock {
   width: 100%;
-  max-width: 640px;
+  max-width: var(--home-chrome-w, 580px);
   margin-left: 0;
   margin-right: 0;
   justify-content: flex-start;
@@ -126,7 +128,7 @@
 .home-header-stack .home-search,
 .home-header-stack .home-dock {
   width: 100%;
-  max-width: 640px;
+  max-width: var(--home-chrome-w, 580px);
   margin-left: auto;
   margin-right: auto;
   justify-content: center;
@@ -305,7 +307,7 @@
   z-index: 1;
 }
 
-/* CSS anchor placement — clamped to content canvas so resize never h-scrolls */
+/* CSS anchor placement — 50%/10%/90% of .hw-canvas (stage content), never the full window */
 .hw-canvas > .hw-card.hw-place {
   position: absolute;
   width: min(var(--hw-w), calc(100% - 16px));
@@ -314,6 +316,9 @@
   top: var(--hw-y);
   margin: 0;
   box-sizing: border-box;
+}
+.hw-canvas > .hw-chrome.hw-place {
+  width: min(var(--hw-w, var(--home-chrome-w, 580px)), calc(100% - 16px));
 }
 .hw-canvas > .hw-card.hw-place-center {
   left: clamp(

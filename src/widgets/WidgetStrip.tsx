@@ -221,7 +221,7 @@ export function WidgetStrip({
       const width = el.offsetWidth || el.clientWidth;
       const height = el.offsetHeight || el.clientHeight;
       if (width < 2 || height < 2) return;
-      const headerWidth = Math.min(640, width);
+      const headerWidth = Math.min(580, width);
       const headerLeft = (width - headerWidth) / 2;
       const next: CanvasMetrics = {
         width,
@@ -599,7 +599,7 @@ export function WidgetStrip({
           const Icon = meta.icon;
           const key = `chrome:${c.id}`;
           const dim = chromeSizeToPx(c.id);
-          let style: CSSProperties = { width: '100%', maxWidth: 640 };
+          let style: CSSProperties = { width: '100%', maxWidth: 'var(--home-chrome-w, 580px)' };
           let box: PlaceBox = { left: 0, top: 0, width: dim.w, height: dim.h };
           if (!flexFallback) {
             box = restingBox(key, c, 'chrome');
