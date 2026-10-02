@@ -10,7 +10,7 @@
 const path = require('node:path');
 const { BrowserWindow, session } = require('electron');
 
-const LOGIN_PARTITION = 'persist:google-login';
+const LOGIN_PARTITION = 'persist:google-login-v2';
 
 /** @type {WeakMap<import('electron').WebContents, import('electron').BrowserWindow>} */
 const openByOpener = new WeakMap();

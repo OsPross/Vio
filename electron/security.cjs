@@ -7,7 +7,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { session, app } = require('electron');
 
-const ALLOWED_PARTITIONS = new Set(['persist:main', 'persist:side', 'persist:google-login']);
+const ALLOWED_PARTITIONS = new Set([
+  'persist:main',
+  'persist:side',
+  'persist:google-login',
+  'persist:google-login-v2',
+]);
 /** Ephemeral Tor sessions: tor-<uuid> (no persist: prefix) */
 const TOR_PARTITION_RE = /^tor-[0-9a-f-]{8,}$/i;
 /** Ephemeral private windows: private-<uuid> — never persist:private */
