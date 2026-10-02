@@ -61,6 +61,12 @@ function applyBootFallback() {
   } catch (err) {
     console.warn('[ua-chrome] userAgentFallback', err);
   }
+  // Hide Chromium automation flag (must run before app ready / first guest)
+  try {
+    app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
+  } catch (err) {
+    console.warn('[ua-chrome] AutomationControlled', err);
+  }
 }
 
 /**

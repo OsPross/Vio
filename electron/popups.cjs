@@ -550,15 +550,32 @@ function attachDidCreateWindow(openerWc, onChild) {
     try {
       const uaChrome = require('./ua-chrome.cjs');
       const u = String(details?.url || '');
-      const persist =
-        /(?:^|\.)accounts\.google\.com$/i.test((() => {
-          try {
-            return new URL(u).hostname;
-          } catch {
-            return '';
-          }
-        })()) || Boolean(require('./lib/popup-policy.cjs').looksLikeOauthUrl(u));
-      void uaChrome.applyToWebContents(childWin.webContents, { tor: false, persistDebugger: persist });
+      let isGoogleAccounts = false;
+      try {
+        const h = new URL(u).hostname.toLowerCase();
+        isGoogleAccounts = h === 'accounts.google.com' || h.endsWith('.accounts.google.com');
+      } catch {
+        /* */
+      }
+      if (isGoogleAccounts) {
+        // Route OAuth popups that land on accounts.google.com through the same
+        // preload-free login path (Ghostery session preload breaks Google).
+        try {
+          const googleLogin = require('./google-login.cjs');
+          googleLogin.pauseSessionPreloads(childWin.webContents.session);
+          childWin.on('closed', () => {
+            try {
+              googleLogin.resumeSessionPreloads(childWin.webContents.session);
+            } catch {
+              /* */
+            }
+          });
+        } catch (e) {
+          console.warn('[popup] google-login pause', e);
+        }
+      }
+      // Never leave CDP attached — Google treats it as automation
+      void uaChrome.applyToWebContents(childWin.webContents, { tor: false, persistDebugger: false });
     } catch (err) {
       console.warn('[popup] ua-chrome', err);
     }

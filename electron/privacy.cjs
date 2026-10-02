@@ -191,14 +191,16 @@ function attachToSession(ses, opts) {
   ses.webRequest.onBeforeSendHeaders({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
     const headers = { ...details.requestHeaders };
     if (cfg.enabled && !isException(details.url)) {
+      const sensitive = isSensitive(details.url);
       if (cfg.chromeUa) {
         CHROME_UA = buildChromeUa();
         headers['User-Agent'] = CHROME_UA;
         Object.assign(headers, clientHintHeaders());
       }
-      if (cfg.secGpc) headers['Sec-GPC'] = '1';
-      if (cfg.dnt) headers['DNT'] = '1';
-      if (cfg.referrerPolicy) {
+      // Sec-GPC/DNT on accounts.google.com looks non-stock Chrome and trips login checks
+      if (cfg.secGpc && !sensitive) headers['Sec-GPC'] = '1';
+      if (cfg.dnt && !sensitive) headers['DNT'] = '1';
+      if (cfg.referrerPolicy && !sensitive) {
         try {
           const page = details.referrer || headers.Referer || headers.referer;
           if (page) {

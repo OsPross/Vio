@@ -59,15 +59,27 @@ function register(deps) {
           const uaChrome = require('../ua-chrome.cjs');
           const host = (() => {
             try {
-              return new URL(u).hostname;
+              return new URL(u).hostname.toLowerCase();
             } catch {
               return '';
             }
           })();
-          const persist =
-            /(?:^|\.)accounts\.google\.com$/i.test(host) ||
-            Boolean(require('../lib/popup-policy.cjs').looksLikeOauthUrl(u));
-          void uaChrome.applyToWebContents(child.webContents, { tor: false, persistDebugger: persist });
+          if (host === 'accounts.google.com' || host.endsWith('.accounts.google.com')) {
+            try {
+              const googleLogin = require('../google-login.cjs');
+              googleLogin.pauseSessionPreloads(child.webContents.session);
+              child.on('closed', () => {
+                try {
+                  googleLogin.resumeSessionPreloads(child.webContents.session);
+                } catch {
+                  /* */
+                }
+              });
+            } catch (e2) {
+              console.warn('[popup] google-login pause', e2);
+            }
+          }
+          void uaChrome.applyToWebContents(child.webContents, { tor: false, persistDebugger: false });
         } catch (e) {
           console.warn('[popup] ua-chrome', e);
         }
