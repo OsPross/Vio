@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Shield, ShieldOff, Trash2, X } from 'lucide-react';
 import { Switch } from './ui/Switch';
@@ -28,6 +28,7 @@ export function ShieldPanel({
 }: Props) {
   const [blocked, setBlocked] = useState<{ host: string; url: string }[]>([]);
   const settings = useStore((s) => s.settings);
+  const setSettingsTab = useStore((s) => s.setSettingsTab);
   const motionOff = isMotionOff(settings);
   const popMotion = popupTransition(motionOff);
   let host = '';
@@ -40,9 +41,23 @@ export function ShieldPanel({
   useEffect(() => {
     if (!open) return;
     void window.shell?.privacyBlocked?.('global').then((list) => {
-      if (Array.isArray(list)) setBlocked(list.slice(0, 40));
+      if (Array.isArray(list)) setBlocked(list.slice(0, 80));
     });
   }, [open, blockedToday]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const b of blocked) {
+      const h = b.host || '?';
+      map.set(h, (map.get(h) || 0) + 1);
+    }
+    return [...map.entries()]
+      .map(([h, count]) => ({ host: h, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [blocked]);
+
+  const visible = grouped.slice(0, 5);
+  const hasMore = grouped.length > 5;
 
   return (
     <AnimatePresence>
@@ -77,8 +92,8 @@ export function ShieldPanel({
               <strong>{blockedToday}</strong>
             </div>
             <div>
-              <em>Na tej sesji (próbka)</em>
-              <strong>{blocked.length}</strong>
+              <em>Unikalne domeny</em>
+              <strong>{grouped.length}</strong>
             </div>
           </div>
 
@@ -110,16 +125,29 @@ export function ShieldPanel({
             <Trash2 size={14} strokeWidth={1.75} /> Zapomnij tę stronę
           </button>
 
-          {blocked.length > 0 && (
+          {visible.length > 0 && (
             <div className="shield-blocked-list">
-              <span className="shield-blocked-label">Ostatnio zablokowane domeny</span>
+              <span className="shield-blocked-label">Ostatnio zablokowane</span>
               <ul>
-                {blocked.slice(0, 12).map((b, i) => (
-                  <li key={`${b.host}-${i}`} title={b.url}>
-                    {b.host}
+                {visible.map((b) => (
+                  <li key={b.host} title={b.host}>
+                    {b.count > 1 ? `${b.host} ×${b.count}` : b.host}
                   </li>
                 ))}
               </ul>
+              {hasMore && (
+                <button
+                  type="button"
+                  className="sbtn ghost"
+                  style={{ width: '100%', marginTop: 6 }}
+                  onClick={() => {
+                    onClose();
+                    setSettingsTab('adblock');
+                  }}
+                >
+                  Pokaż wszystkie
+                </button>
+              )}
             </div>
           )}
         </motion.div>
