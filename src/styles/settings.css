@@ -370,10 +370,8 @@
 .settings-page .sr-control input[type='text'],
 .settings-page .sr-control input:not([type]),
 .settings-page .sr-control input[type='url'],
-.settings-page .sr-control select,
 .settings-page .sg-block input[type='text'],
-.settings-page .sg-block input:not([type]),
-.settings-page .sg-block select {
+.settings-page .sg-block input:not([type]) {
   width: 100%;
   min-width: 160px;
   height: 32px;
@@ -387,10 +385,16 @@
 }
 
 .settings-page .sg-block input:focus,
-.settings-page .sg-block select:focus,
 .settings-page .sr-input:focus {
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
   background: color-mix(in srgb, var(--bg) 85%, transparent);
+}
+
+.settings-page .sr-control .ui-select,
+.settings-page .sg-block .ui-select,
+.settings-page .field .ui-select {
+  width: 100%;
+  min-width: 160px;
 }
 
 .settings-page .sg-block input:disabled {
