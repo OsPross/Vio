@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Moon, X } from 'lucide-react';
 import { metricsRetry, useMetrics } from '../../lib/useMetrics';
 import type { MetricsRow } from '../../lib/metricsTypes';
 import { resolveFavicon, faviconImgFallback } from '../../lib/favicon';
+import { isMotionOff, popupTransition } from '../../lib/motionPresets';
 import { AnimatedNumber, Sparkline } from './Sparkline';
 import { useStore } from '../../store';
 
@@ -288,30 +290,52 @@ function formatUptime(sec: number) {
 }
 
 export function TaskManagerOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open) return null;
+  const settings = useStore((s) => s.settings);
+  const motionOff = isMotionOff(settings);
+  const popMotion = popupTransition(motionOff);
+
   return (
-    <div className="mx-overlay" role="dialog" aria-label="Menedżer zadań">
-      <button
-        type="button"
-        className="mx-overlay-backdrop"
-        aria-label="Zamknij"
-        onClick={onClose}
-      />
-      <div className="mx-overlay-panel">
-        <header className="mx-overlay-head">
-          <div>
-            <strong>Menedżer zadań</strong>
-            <span>Shift+Esc · zużycie kart i procesów</span>
-          </div>
-          <button type="button" className="icon-btn" onClick={onClose} title="Zamknij">
-            <X size={16} strokeWidth={1.75} />
-          </button>
-        </header>
-        <div className="mx-overlay-body">
-          <ResourcesPanel active={open} />
-        </div>
-      </div>
-    </div>
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="mx-overlay"
+          role="dialog"
+          aria-label="Menedżer zadań"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, transition: { duration: motionOff ? 0.06 : 0.12 } }}
+          transition={{ duration: motionOff ? 0.08 : 0.14 }}
+        >
+          <button
+            type="button"
+            className="mx-overlay-backdrop"
+            aria-label="Zamknij"
+            onClick={onClose}
+          />
+          <motion.div
+            className="mx-overlay-panel motion-popup"
+            initial={popMotion.initial}
+            animate={popMotion.animate}
+            exit={popMotion.exit}
+            transition={popMotion.transition}
+            style={{ transformOrigin: 'center center' }}
+          >
+            <header className="mx-overlay-head">
+              <div>
+                <strong>Menedżer zadań</strong>
+                <span>Shift+Esc · zużycie kart i procesów</span>
+              </div>
+              <button type="button" className="icon-btn" onClick={onClose} title="Zamknij">
+                <X size={16} strokeWidth={1.75} />
+              </button>
+            </header>
+            <div className="mx-overlay-body">
+              <ResourcesPanel active={open} />
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

@@ -2,11 +2,60 @@
 
 :root {
   --dur-fast: 120ms;
+  --dur-popup: 140ms;
+  --dur-popup-out: 120ms;
+  --dur-section: 160ms;
+  --dur-view-in: 200ms;
+  --dur-view-out: 150ms;
   --dur-base: 200ms;
   --dur-slow: 320ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --popup-scale-from: 0.97;
+}
+
+/* View stack — settings ↔ browser (opacity/transform only) */
+.app-view-stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-view-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  will-change: opacity, transform;
+}
+
+.app-view-layer > .app {
+  height: 100%;
+}
+
+.stage > .about-view-fade {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  will-change: opacity, transform;
+}
+
+.stage > .about-view-fade > .internal-page {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg);
+}
+
+[data-reduce-motion='on'] .app-view-layer,
+[data-reduce-motion='on'] .about-view-fade,
+[data-reduce-motion='on'] .motion-popup {
+  transform: none !important;
 }
 
 /* Prefer CSS transitions only on transform / opacity / filter */
@@ -350,6 +399,11 @@ html.theme-fading #root {
 @media (prefers-reduced-motion: reduce) {
   :root {
     --dur-fast: 80ms;
+    --dur-popup: 100ms;
+    --dur-popup-out: 80ms;
+    --dur-section: 100ms;
+    --dur-view-in: 100ms;
+    --dur-view-out: 80ms;
     --dur-base: 100ms;
     --dur-slow: 120ms;
   }

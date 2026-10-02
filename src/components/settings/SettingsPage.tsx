@@ -15,6 +15,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useStore, type SettingsTab } from '../../store';
+import { isMotionOff, sectionTransition } from '../../lib/motionPresets';
 import { PasswordsPanel } from '../PasswordsPanel';
 import { ResourcesPanel } from '../metrics/ResourcesPanel';
 import { AdvancedSection } from './sections/AdvancedSection';
@@ -82,11 +83,8 @@ export function SettingsPage() {
   const setSettingsTab = useStore((s) => s.setSettingsTab);
 
   const head = TITLES[settingsTab] ?? TITLES.general;
-  const motionOff =
-    settings.perfReduceMotion ||
-    !settings.uiMotion ||
-    (typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const motionOff = isMotionOff(settings);
+  const sectionMotion = sectionTransition(motionOff);
 
   return (
     <div className="settings-page">
@@ -153,10 +151,10 @@ export function SettingsPage() {
           <motion.div
             key={settingsTab}
             className="settings-section-fade"
-            initial={motionOff ? { opacity: 0 } : { opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={motionOff ? { opacity: 0 } : { opacity: 0, y: -4 }}
-            transition={{ duration: motionOff ? 0.1 : 0.18, ease: [0.16, 1, 0.3, 1] }}
+            initial={sectionMotion.initial}
+            animate={sectionMotion.animate}
+            exit={sectionMotion.exit}
+            transition={sectionMotion.transition}
           >
             {settingsTab === 'general' && <GeneralSection />}
             {settingsTab === 'home' && <HomeSection />}

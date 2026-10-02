@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Shield, ShieldOff, Trash2, X } from 'lucide-react';
 import { Switch } from './ui/Switch';
+import { isMotionOff, popupTransition } from '../lib/motionPresets';
+import { useStore } from '../store';
 
 type Props = {
   open: boolean;
@@ -24,6 +27,9 @@ export function ShieldPanel({
   onForget,
 }: Props) {
   const [blocked, setBlocked] = useState<{ host: string; url: string }[]>([]);
+  const settings = useStore((s) => s.settings);
+  const motionOff = isMotionOff(settings);
+  const popMotion = popupTransition(motionOff);
   let host = '';
   try {
     host = new URL(pageUrl).hostname;
@@ -38,75 +44,86 @@ export function ShieldPanel({
     });
   }, [open, blockedToday]);
 
-  if (!open) return null;
-
   return (
-    <div className="shield-panel" role="dialog" aria-label="Ochrona prywatności">
-      <header className="shield-panel-head">
-        <div className="shield-panel-title">
-          {protectionOn ? (
-            <Shield size={16} strokeWidth={1.75} />
-          ) : (
-            <ShieldOff size={16} strokeWidth={1.75} />
-          )}
-          <strong>{host || 'Strona'}</strong>
-        </div>
-        <button type="button" className="icon-btn sm" onClick={onClose} title="Zamknij">
-          <X size={14} />
-        </button>
-      </header>
-
-      <div className="shield-panel-stats">
-        <div>
-          <em>Zablokowane dziś</em>
-          <strong>{blockedToday}</strong>
-        </div>
-        <div>
-          <em>Na tej sesji (próbka)</em>
-          <strong>{blocked.length}</strong>
-        </div>
-      </div>
-
-      <label className="shield-toggle">
-        <Switch
-          on={protectionOn}
-          onChange={onToggleProtection}
-          aria-label="Ochrona dla tej strony"
-        />
-        <span>Ochrona dla tej strony</span>
-      </label>
-      <p className="shield-hint muted">
-        {protectionOn
-          ? 'Coś nie działa? Wyłącz ochronę dla tej strony — zapamiętamy wyjątek per domena.'
-          : 'Ochrona wyłączona dla tej domeny (wyjątek zapisany).'}
-      </p>
-
-      {protectionOn && (
-        <button
-          type="button"
-          className="sbtn primary shield-disable-site"
-          onClick={onDisableOnThisPage}
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="shield-panel motion-popup"
+          role="dialog"
+          aria-label="Ochrona prywatności"
+          initial={popMotion.initial}
+          animate={popMotion.animate}
+          exit={popMotion.exit}
+          transition={popMotion.transition}
+          style={{ transformOrigin: 'top right' }}
         >
-          Wyłącz na tej stronie
-        </button>
-      )}
+          <header className="shield-panel-head">
+            <div className="shield-panel-title">
+              {protectionOn ? (
+                <Shield size={16} strokeWidth={1.75} />
+              ) : (
+                <ShieldOff size={16} strokeWidth={1.75} />
+              )}
+              <strong>{host || 'Strona'}</strong>
+            </div>
+            <button type="button" className="icon-btn sm" onClick={onClose} title="Zamknij">
+              <X size={14} />
+            </button>
+          </header>
 
-      <button type="button" className="sbtn ghost shield-forget" onClick={onForget}>
-        <Trash2 size={14} strokeWidth={1.75} /> Zapomnij tę stronę
-      </button>
+          <div className="shield-panel-stats">
+            <div>
+              <em>Zablokowane dziś</em>
+              <strong>{blockedToday}</strong>
+            </div>
+            <div>
+              <em>Na tej sesji (próbka)</em>
+              <strong>{blocked.length}</strong>
+            </div>
+          </div>
 
-      {blocked.length > 0 && (
-        <div className="shield-blocked-list">
-          <span className="shield-blocked-label">Ostatnio zablokowane domeny</span>
-          <ul>
-            {blocked.slice(0, 12).map((b, i) => (
-              <li key={`${b.host}-${i}`} title={b.url}>
-                {b.host}
-              </li>
-            ))}
-          </ul>
-        </div>
+          <label className="shield-toggle">
+            <Switch
+              on={protectionOn}
+              onChange={onToggleProtection}
+              aria-label="Ochrona dla tej strony"
+            />
+            <span>Ochrona dla tej strony</span>
+          </label>
+          <p className="shield-hint muted">
+            {protectionOn
+              ? 'Coś nie działa? Wyłącz ochronę dla tej strony — zapamiętamy wyjątek per domena.'
+              : 'Ochrona wyłączona dla tej domeny (wyjątek zapisany).'}
+          </p>
+
+          {protectionOn && (
+            <button
+              type="button"
+              className="sbtn primary shield-disable-site"
+              onClick={onDisableOnThisPage}
+            >
+              Wyłącz na tej stronie
+            </button>
+          )}
+
+          <button type="button" className="sbtn ghost shield-forget" onClick={onForget}>
+            <Trash2 size={14} strokeWidth={1.75} /> Zapomnij tę stronę
+          </button>
+
+          {blocked.length > 0 && (
+            <div className="shield-blocked-list">
+              <span className="shield-blocked-label">Ostatnio zablokowane domeny</span>
+              <ul>
+                {blocked.slice(0, 12).map((b, i) => (
+                  <li key={`${b.host}-${i}`} title={b.url}>
+                    {b.host}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </motion.div>
       )}
-    </div>
+    </AnimatePresence>
   );
 }

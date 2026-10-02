@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Archive,
   Download,
@@ -19,6 +20,8 @@ import {
   X,
 } from 'lucide-react';
 import { formatUrlPlain } from '../lib/url-display';
+import { isMotionOff, popupTransition } from '../lib/motionPresets';
+import { useStore } from '../store';
 import { Input } from './ui/Input';
 import { InternalPage } from './InternalPage';
 
@@ -298,6 +301,9 @@ export function DownloadsButton({ onOpenAll }: ButtonProps) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<DownloadRow[]>([]);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const settings = useStore((s) => s.settings);
+  const motionOff = isMotionOff(settings);
+  const popMotion = popupTransition(motionOff);
 
   useEffect(() => {
     void window.shell?.downloadsList?.().then((list) => {
@@ -344,8 +350,16 @@ export function DownloadsButton({ onOpenAll }: ButtonProps) {
         )}
         {active.length > 0 && <span className="dl-badge">{active.length > 9 ? '9+' : active.length}</span>}
       </button>
-      {open && (
-        <div className="dl-panel">
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="dl-panel motion-popup"
+            initial={popMotion.initial}
+            animate={popMotion.animate}
+            exit={popMotion.exit}
+            transition={popMotion.transition}
+            style={{ transformOrigin: 'top right' }}
+          >
           <div className="dl-panel-head">
             <strong>Pobrania</strong>
             <button type="button" className="sbtn" onClick={onOpenAll}>
@@ -385,8 +399,9 @@ export function DownloadsButton({ onOpenAll }: ButtonProps) {
               );
             })}
           </ul>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

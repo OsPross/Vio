@@ -5,6 +5,7 @@ import {
   type MutableRefObject,
   type SetStateAction,
 } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { HomeSearch } from '../../components/HomeSearch';
 import { ErrorPage } from '../../components/ErrorPage';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
@@ -16,6 +17,7 @@ import {
   useStore,
   type Tab,
 } from '../../store';
+import { isMotionOff, viewTransition } from '../../lib/motionPresets';
 import { TabWebview, type SaveOffer, type WebviewEl } from './TabWebview';
 
 const AboutPage = lazy(() =>
@@ -121,52 +123,68 @@ export function TabContent({
   const updateTab = useStore((s) => s.updateTab);
   const pushHistory = useStore((s) => s.pushHistory);
   const patchSettings = useStore((s) => s.patchSettings);
+  const motionOff = isMotionOff(settings);
+  const aboutMotion = viewTransition(motionOff);
+  const aboutKey = active?.url || 'about';
 
   return (
     <>
-      {isHistoryPage && active && (
-        <ErrorBoundary name="about:history">
-          <Suspense fallback={<LazyFallback />}>
-            <HistoryPage
-              onOpen={(url) => {
-                navigateActive(url);
-              }}
-              onOpenNewTab={(url) => newTab(url)}
-            />
-          </Suspense>
-        </ErrorBoundary>
-      )}
-      {isDownloadsPage && active && (
-        <ErrorBoundary name="about:downloads">
-          <Suspense fallback={<LazyFallback />}>
-            <DownloadsPage />
-          </Suspense>
-        </ErrorBoundary>
-      )}
-      {isBookmarksPage && active && (
-        <ErrorBoundary name="about:bookmarks">
-          <Suspense fallback={<LazyFallback />}>
-            <BookmarksPage
-              onOpen={openBookmarkUrl}
-              onEditBookmark={(b) => openBookmarkDialog(b.url, b.title)}
-            />
-          </Suspense>
-        </ErrorBoundary>
-      )}
-      {isExtensionsPage && active && (
-        <ErrorBoundary name="about:extensions">
-          <Suspense fallback={<LazyFallback />}>
-            <ExtensionsPage />
-          </Suspense>
-        </ErrorBoundary>
-      )}
-      {isAboutPage && (
-        <ErrorBoundary name="about:about">
-          <Suspense fallback={<LazyFallback />}>
-            <AboutPage />
-          </Suspense>
-        </ErrorBoundary>
-      )}
+      <AnimatePresence initial={false}>
+        {isInternalAbout && active && (
+          <motion.div
+            key={aboutKey}
+            className="about-view-fade"
+            initial={aboutMotion.initial}
+            animate={aboutMotion.animate}
+            exit={aboutMotion.exit}
+            transition={aboutMotion.transition}
+          >
+            {isHistoryPage && (
+              <ErrorBoundary name="about:history">
+                <Suspense fallback={<LazyFallback />}>
+                  <HistoryPage
+                    onOpen={(url) => {
+                      navigateActive(url);
+                    }}
+                    onOpenNewTab={(url) => newTab(url)}
+                  />
+                </Suspense>
+              </ErrorBoundary>
+            )}
+            {isDownloadsPage && (
+              <ErrorBoundary name="about:downloads">
+                <Suspense fallback={<LazyFallback />}>
+                  <DownloadsPage />
+                </Suspense>
+              </ErrorBoundary>
+            )}
+            {isBookmarksPage && (
+              <ErrorBoundary name="about:bookmarks">
+                <Suspense fallback={<LazyFallback />}>
+                  <BookmarksPage
+                    onOpen={openBookmarkUrl}
+                    onEditBookmark={(b) => openBookmarkDialog(b.url, b.title)}
+                  />
+                </Suspense>
+              </ErrorBoundary>
+            )}
+            {isExtensionsPage && (
+              <ErrorBoundary name="about:extensions">
+                <Suspense fallback={<LazyFallback />}>
+                  <ExtensionsPage />
+                </Suspense>
+              </ErrorBoundary>
+            )}
+            {isAboutPage && (
+              <ErrorBoundary name="about:about">
+                <Suspense fallback={<LazyFallback />}>
+                  <AboutPage />
+                </Suspense>
+              </ErrorBoundary>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
       {isTorHome && active && (
         <Suspense fallback={<LazyFallback />}>
           <TorLanding

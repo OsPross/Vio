@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check } from 'lucide-react';
 import { Segmented } from '../ui';
+import { DURATION, EASE_OUT, popupTransition, sectionTransition } from '../../lib/motionPresets';
 import { HomeLivePreview } from './HomeLivePreview';
 import { LookTab } from './tabs/LookTab';
 import { LayoutTab } from './tabs/LayoutTab';
@@ -29,8 +30,10 @@ export function PersonalizeSheet({
   onEditOnPage: () => void;
   reduced: boolean;
 }) {
-  const [tab, setTab] = useState<TabId>('look');
-  const dur = reduced ? 0 : 0.18;
+  const [tab, setTab] = useState('look' as TabId);
+  const popMotion = popupTransition(reduced);
+  const sectionMotion = sectionTransition(reduced);
+  const scrimDur = reduced ? 0.08 : DURATION.popup;
 
   return createPortal(
     <AnimatePresence>
@@ -42,19 +45,20 @@ export function PersonalizeSheet({
             aria-label="Zamknij personalizację"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: dur }}
+            exit={{ opacity: 0, transition: { duration: reduced ? 0.06 : DURATION.popupOut } }}
+            transition={{ duration: scrimDur, ease: EASE_OUT }}
             onClick={onClose}
           />
           <motion.div
-            className="pz-sheet"
+            className="pz-sheet motion-popup"
             role="dialog"
             aria-modal="true"
             aria-labelledby="pz-sheet-title"
-            initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
-            transition={{ duration: dur, ease: [0.16, 1, 0.3, 1] }}
+            initial={popMotion.initial}
+            animate={popMotion.animate}
+            exit={popMotion.exit}
+            transition={popMotion.transition}
+            style={{ transformOrigin: 'center center' }}
           >
             <header className="pz-sheet-head">
               <div>
@@ -84,10 +88,10 @@ export function PersonalizeSheet({
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={tab}
-                      initial={reduced ? { opacity: 0 } : { opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={reduced ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                      transition={{ duration: reduced ? 0 : 0.14 }}
+                      initial={sectionMotion.initial}
+                      animate={sectionMotion.animate}
+                      exit={sectionMotion.exit}
+                      transition={sectionMotion.transition}
                     >
                       {tab === 'look' && <LookTab />}
                       {tab === 'layout' && <LayoutTab />}

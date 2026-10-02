@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Bookmark,
   ClipboardCopy,
@@ -38,6 +39,8 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import { acceleratorForMenuId } from '../lib/shortcutsRegistry';
+import { isMotionOff, popupTransition } from '../lib/motionPresets';
+import { useStore } from '../store';
 
 export type SidebarMode = 'on' | 'auto' | 'off';
 
@@ -140,6 +143,9 @@ export function AppMenu({ actions }: Props) {
   const lastMouse = useRef({ x: 0, y: 0 });
   const menuId = useId();
   const hasPage = actions.hasPage !== false;
+  const settings = useStore((s) => s.settings);
+  const motionOff = isMotionOff(settings);
+  const popMotion = popupTransition(motionOff);
 
   const clearHoverTimer = () => {
     if (hoverTimer.current) {
@@ -585,8 +591,19 @@ export function AppMenu({ actions }: Props) {
       >
         <MenuIcon size={16} strokeWidth={1.75} />
       </button>
-      {open && (
-        <div className="app-menu-popover" id={menuId} role="menu" ref={popoverRef}>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="app-menu-popover motion-popup"
+            id={menuId}
+            role="menu"
+            ref={popoverRef}
+            initial={popMotion.initial}
+            animate={popMotion.animate}
+            exit={popMotion.exit}
+            transition={popMotion.transition}
+            style={{ transformOrigin: 'top right' }}
+          >
           <div className="app-menu-scroll">
           {items.map((it, i) => {
             if (it.kind === 'sep') return <hr key={`sep-${i}`} className="app-menu-sep" />;
@@ -724,47 +741,58 @@ export function AppMenu({ actions }: Props) {
             );
           })}
           </div>
-        </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {createPortal(
+        <AnimatePresence>
+          {open && subOpen
+            ? (() => {
+                const sub = items.find((x) => x.kind === 'submenu' && x.id === subOpen);
+                if (!sub || sub.kind !== 'submenu') return null;
+                return (
+                  <motion.div
+                    key={sub.id}
+                    className={`app-menu-submenu side-${subSide} motion-popup`}
+                    role="menu"
+                    ref={subPanelRef}
+                    initial={popMotion.initial}
+                    animate={popMotion.animate}
+                    exit={popMotion.exit}
+                    transition={popMotion.transition}
+                    style={{ transformOrigin: subSide === 'left' ? 'top right' : 'top left' }}
+                    onMouseEnter={() => clearCloseSubTimer()}
+                    onMouseLeave={() => scheduleCloseSub()}
+                  >
+                    {sub.children.map((ch, ci) => (
+                      <button
+                        key={ch.id}
+                        type="button"
+                        role="menuitem"
+                        className={`app-menu-item ${subFocus === ci ? 'focused' : ''}`}
+                        disabled={ch.disabled}
+                        title={ch.hint}
+                        onMouseEnter={() => setSubFocus(ci)}
+                        onClick={() => {
+                          ch.run();
+                          close();
+                        }}
+                      >
+                        <Ico>{ch.icon}</Ico>
+                        <span className="app-menu-label">
+                          {ch.label}
+                          {ch.hint ? <em className="app-menu-hint">{ch.hint}</em> : null}
+                        </span>
+                        {ch.shortcut ? <kbd>{ch.shortcut}</kbd> : null}
+                      </button>
+                    ))}
+                  </motion.div>
+                );
+              })()
+            : null}
+        </AnimatePresence>,
+        document.body,
       )}
-      {open &&
-        subOpen &&
-        (() => {
-          const sub = items.find((x) => x.kind === 'submenu' && x.id === subOpen);
-          if (!sub || sub.kind !== 'submenu') return null;
-          return createPortal(
-            <div
-              className={`app-menu-submenu side-${subSide}`}
-              role="menu"
-              ref={subPanelRef}
-              onMouseEnter={() => clearCloseSubTimer()}
-              onMouseLeave={() => scheduleCloseSub()}
-            >
-              {sub.children.map((ch, ci) => (
-                <button
-                  key={ch.id}
-                  type="button"
-                  role="menuitem"
-                  className={`app-menu-item ${subFocus === ci ? 'focused' : ''}`}
-                  disabled={ch.disabled}
-                  title={ch.hint}
-                  onMouseEnter={() => setSubFocus(ci)}
-                  onClick={() => {
-                    ch.run();
-                    close();
-                  }}
-                >
-                  <Ico>{ch.icon}</Ico>
-                  <span className="app-menu-label">
-                    {ch.label}
-                    {ch.hint ? <em className="app-menu-hint">{ch.hint}</em> : null}
-                  </span>
-                  {ch.shortcut ? <kbd>{ch.shortcut}</kbd> : null}
-                </button>
-              ))}
-            </div>,
-            document.body,
-          );
-        })()}
     </div>
   );
 }

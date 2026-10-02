@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { MotionConfig } from 'motion/react';
+import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useStore } from './store';
 import { TabContent, type SaveOffer } from './features/tabs';
@@ -11,6 +11,7 @@ import {
 } from './features/dialogs';
 import { useOmniboxDraft } from './features/omnibox';
 import { getActiveTabFlags } from './lib/activeTabFlags';
+import { isMotionOff, viewTransition } from './lib/motionPresets';
 import { useIpcEvents } from './hooks/useIpcEvents';
 import { useShortcuts } from './hooks/useShortcuts';
 import { useBindCommandHost } from './hooks/useAppMenuActions';
@@ -227,11 +228,8 @@ export function App() {
 
   const toggleSidebar = () => patchSettings({ showSidebar: !settings.showSidebar });
 
-  const motionOff =
-    settings.perfReduceMotion ||
-    !settings.uiMotion ||
-    (typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const motionOff = isMotionOff(settings);
+  const viewMotion = viewTransition(motionOff);
 
   useBindCommandHost({
     openTorTab,
@@ -255,145 +253,163 @@ export function App() {
     </MotionConfig>
   );
 
-  if (view === 'settings') {
-    return shell(
-      <div className={`app settings-mode ${settings.uiGlass ? 'glass-on' : ''}`}>
-        <div className="drag-strip absolute-drag" />
-        <ErrorBoundary name="settings">
-          <Suspense fallback={<LazyFallback label="Ustawienia…" />}>
-            <SettingsPage />
-          </Suspense>
-        </ErrorBoundary>
-      </div>,
-    );
-  }
-
   return shell(
-    <AppChrome
-      htmlFullscreen={htmlFullscreen}
-      windowMode={windowMode}
-      sidebarAutoOpen={sidebarAutoOpen}
-      setSidebarAutoOpen={setSidebarAutoOpen}
-      sidebarAutoTimer={sidebarAutoTimer}
-      sidebarMenu={sidebarMenu}
-      setSidebarMenu={setSidebarMenu}
-      navigateActive={navigateActive}
-      openBookmarkUrl={openBookmarkUrl}
-      openBookmarkDialog={openBookmarkDialog}
-      hotTabs={hotTabs}
-      torBusy={torBusy}
-      openTorTab={openTorTab}
-      tabMenu={tabMenu}
-      newTabMenu={newTabMenu}
-      setTabMenu={setTabMenu}
-      setNewTabMenu={setNewTabMenu}
-      draft={draft}
-      setDraft={setDraft}
-      omniEditingRef={omniEditingRef}
-      omniFocusedRef={omniFocusedRef}
-      omniMenu={omniMenu}
-      setOmniMenu={setOmniMenu}
-      nav={nav}
-      go={go}
-      currentView={currentView}
-      toggleSidebar={toggleSidebar}
-      active={active}
-      activeIsTor={activeIsTor}
-      isHome={isHome}
-      isTorHome={isTorHome}
-      isInternalAbout={isInternalAbout}
-      isHistoryPage={isHistoryPage}
-      guestWc={guestWc}
-      zoomFlash={zoomFlash}
-      zoomPercent={zoomPercent}
-      popupBlocked={popupBlocked}
-      setPopupBlocked={setPopupBlocked}
-      pageHasVideo={pageHasVideo}
-      togglePictureInPicture={togglePictureInPicture}
-      mediaFlags={mediaFlags}
-      bookmarkPop={bookmarkPop}
-      setBookmarkPop={setBookmarkPop}
-      bookmarkStarRef={bookmarkStarRef}
-      pwForPage={pwForPage}
-      shieldOpen={shieldOpen}
-      setShieldOpen={setShieldOpen}
-      blockedToday={blockedToday}
-      torInfo={torInfo}
-      requestNewIdentity={requestNewIdentity}
-      bumpZoom={bumpZoom}
-      applyZoom={applyZoom}
-      printActivePage={printActivePage}
-      saveActivePdf={saveActivePdf}
-      setTaskMgrOpen={setTaskMgrOpen}
-      setClearDataOpen={setClearDataOpen}
-      setQrOpen={setQrOpen}
-      setFindOpen={setFindOpen}
-      findOpen={findOpen}
-      findQuery={findQuery}
-      findActive={findActive}
-      findTotal={findTotal}
-      setFindQuery={setFindQuery}
-      runFind={runFind}
-      closeFind={closeFind}
-      fsToast={fsToast}
-      certWarn={certWarn}
-      setCertWarn={setCertWarn}
-      certRemember={certRemember}
-      setCertRemember={setCertRemember}
-      qrOpen={qrOpen}
-      clearDataOpen={clearDataOpen}
-      aboutInfo={aboutInfo}
-      setAboutInfo={setAboutInfo}
-      crashOffer={crashOffer}
-      setCrashOffer={setCrashOffer}
-      torProgress={torProgress}
-      torError={torError}
-      setTorError={setTorError}
-      permAsk={permAsk}
-      setPermAsk={setPermAsk}
-      permRemember={permRemember}
-      setPermRemember={setPermRemember}
-      saveOffer={saveOffer}
-      setSaveOffer={setSaveOffer}
-      setPwForPage={setPwForPage}
-      httpsWarn={httpsWarn}
-      setHttpsWarn={setHttpsWarn}
-    >
-      <TabContent
-        active={active}
-        activeId={activeId}
-        tabs={tabs}
-        activeIsTor={activeIsTor}
-        isHistoryPage={isHistoryPage}
-        isDownloadsPage={isDownloadsPage}
-        isBookmarksPage={isBookmarksPage}
-        isExtensionsPage={isExtensionsPage}
-        isAboutPage={isAboutPage}
-        isInternalAbout={isInternalAbout}
-        isHome={isHome}
-        isTorHome={isTorHome}
-        windowMode={windowMode}
-        torInfo={torInfo}
-        setTorInfo={setTorInfo}
-        torBusy={torBusy}
-        torError={torError}
-        torProgress={torProgress}
-        requestNewIdentity={requestNewIdentity}
-        navigateActive={navigateActive}
-        openBookmarkUrl={openBookmarkUrl}
-        openBookmarkDialog={openBookmarkDialog}
-        currentView={currentView}
-        bumpZoom={bumpZoom}
-        doBrowserNav={doBrowserNav}
-        onNav={onNav}
-        setSaveOffer={setSaveOffer}
-        onGuestMeta={onGuestMeta}
-        tabMediaRef={tabMediaRef}
-        setPageHasVideo={setPageHasVideo}
-        setFindActive={setFindActive}
-        setFindTotal={setFindTotal}
-        setHtmlFullscreen={setHtmlFullscreen}
-      />
-    </AppChrome>,
+    <div className="app-view-stack">
+      <AnimatePresence initial={false}>
+        {view === 'settings' ? (
+          <motion.div
+            key="settings"
+            className={`app settings-mode app-view-layer ${settings.uiGlass ? 'glass-on' : ''}`}
+            initial={viewMotion.initial}
+            animate={viewMotion.animate}
+            exit={viewMotion.exit}
+            transition={viewMotion.transition}
+          >
+            <div className="drag-strip absolute-drag" />
+            <ErrorBoundary name="settings">
+              <Suspense fallback={<LazyFallback label="Ustawienia…" />}>
+                <SettingsPage />
+              </Suspense>
+            </ErrorBoundary>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="browser"
+            className="app-view-layer"
+            initial={viewMotion.initial}
+            animate={viewMotion.animate}
+            exit={viewMotion.exit}
+            transition={viewMotion.transition}
+          >
+            <AppChrome
+              htmlFullscreen={htmlFullscreen}
+              windowMode={windowMode}
+              sidebarAutoOpen={sidebarAutoOpen}
+              setSidebarAutoOpen={setSidebarAutoOpen}
+              sidebarAutoTimer={sidebarAutoTimer}
+              sidebarMenu={sidebarMenu}
+              setSidebarMenu={setSidebarMenu}
+              navigateActive={navigateActive}
+              openBookmarkUrl={openBookmarkUrl}
+              openBookmarkDialog={openBookmarkDialog}
+              hotTabs={hotTabs}
+              torBusy={torBusy}
+              openTorTab={openTorTab}
+              tabMenu={tabMenu}
+              newTabMenu={newTabMenu}
+              setTabMenu={setTabMenu}
+              setNewTabMenu={setNewTabMenu}
+              draft={draft}
+              setDraft={setDraft}
+              omniEditingRef={omniEditingRef}
+              omniFocusedRef={omniFocusedRef}
+              omniMenu={omniMenu}
+              setOmniMenu={setOmniMenu}
+              nav={nav}
+              go={go}
+              currentView={currentView}
+              toggleSidebar={toggleSidebar}
+              active={active}
+              activeIsTor={activeIsTor}
+              isHome={isHome}
+              isTorHome={isTorHome}
+              isInternalAbout={isInternalAbout}
+              isHistoryPage={isHistoryPage}
+              guestWc={guestWc}
+              zoomFlash={zoomFlash}
+              zoomPercent={zoomPercent}
+              popupBlocked={popupBlocked}
+              setPopupBlocked={setPopupBlocked}
+              pageHasVideo={pageHasVideo}
+              togglePictureInPicture={togglePictureInPicture}
+              mediaFlags={mediaFlags}
+              bookmarkPop={bookmarkPop}
+              setBookmarkPop={setBookmarkPop}
+              bookmarkStarRef={bookmarkStarRef}
+              pwForPage={pwForPage}
+              shieldOpen={shieldOpen}
+              setShieldOpen={setShieldOpen}
+              blockedToday={blockedToday}
+              torInfo={torInfo}
+              requestNewIdentity={requestNewIdentity}
+              bumpZoom={bumpZoom}
+              applyZoom={applyZoom}
+              printActivePage={printActivePage}
+              saveActivePdf={saveActivePdf}
+              setTaskMgrOpen={setTaskMgrOpen}
+              setClearDataOpen={setClearDataOpen}
+              setQrOpen={setQrOpen}
+              setFindOpen={setFindOpen}
+              findOpen={findOpen}
+              findQuery={findQuery}
+              findActive={findActive}
+              findTotal={findTotal}
+              setFindQuery={setFindQuery}
+              runFind={runFind}
+              closeFind={closeFind}
+              fsToast={fsToast}
+              certWarn={certWarn}
+              setCertWarn={setCertWarn}
+              certRemember={certRemember}
+              setCertRemember={setCertRemember}
+              qrOpen={qrOpen}
+              clearDataOpen={clearDataOpen}
+              aboutInfo={aboutInfo}
+              setAboutInfo={setAboutInfo}
+              crashOffer={crashOffer}
+              setCrashOffer={setCrashOffer}
+              torProgress={torProgress}
+              torError={torError}
+              setTorError={setTorError}
+              permAsk={permAsk}
+              setPermAsk={setPermAsk}
+              permRemember={permRemember}
+              setPermRemember={setPermRemember}
+              saveOffer={saveOffer}
+              setSaveOffer={setSaveOffer}
+              setPwForPage={setPwForPage}
+              httpsWarn={httpsWarn}
+              setHttpsWarn={setHttpsWarn}
+            >
+              <TabContent
+                active={active}
+                activeId={activeId}
+                tabs={tabs}
+                activeIsTor={activeIsTor}
+                isHistoryPage={isHistoryPage}
+                isDownloadsPage={isDownloadsPage}
+                isBookmarksPage={isBookmarksPage}
+                isExtensionsPage={isExtensionsPage}
+                isAboutPage={isAboutPage}
+                isInternalAbout={isInternalAbout}
+                isHome={isHome}
+                isTorHome={isTorHome}
+                windowMode={windowMode}
+                torInfo={torInfo}
+                setTorInfo={setTorInfo}
+                torBusy={torBusy}
+                torError={torError}
+                torProgress={torProgress}
+                requestNewIdentity={requestNewIdentity}
+                navigateActive={navigateActive}
+                openBookmarkUrl={openBookmarkUrl}
+                openBookmarkDialog={openBookmarkDialog}
+                currentView={currentView}
+                bumpZoom={bumpZoom}
+                doBrowserNav={doBrowserNav}
+                onNav={onNav}
+                setSaveOffer={setSaveOffer}
+                onGuestMeta={onGuestMeta}
+                tabMediaRef={tabMediaRef}
+                setPageHasVideo={setPageHasVideo}
+                setFindActive={setFindActive}
+                setFindTotal={setFindTotal}
+                setHtmlFullscreen={setHtmlFullscreen}
+              />
+            </AppChrome>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>,
   );
 }
