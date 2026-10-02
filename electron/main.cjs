@@ -245,6 +245,12 @@ app.whenReady().then(async () => {
   });
 
   const ses = session.fromPartition('persist:main');
+  uaChrome.applyToSession(ses);
+  try {
+    uaChrome.applyToSession(session.defaultSession);
+  } catch {
+    /* */
+  }
   security.attachCsp(session.defaultSession, isDev);
   security.attachCsp(ses, false);
   security.attachPermissionHandlers(ses);

@@ -547,6 +547,12 @@ function attachDidCreateWindow(openerWc, onChild) {
 
     trackPopupChild(openerWc, childWin);
     attachPopupUrlChrome(childWin);
+    try {
+      const uaChrome = require('./ua-chrome.cjs');
+      void uaChrome.applyToWebContents(childWin.webContents, { tor: false });
+    } catch (err) {
+      console.warn('[popup] ua-chrome', err);
+    }
 
     childWin.webContents.setWindowOpenHandler((d) =>
       handleWindowOpen(childWin.webContents, {

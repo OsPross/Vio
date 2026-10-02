@@ -59,7 +59,10 @@ const LIST_URLS = FILTER_LISTS.map((l) => l.url);
  */
 const BUILTIN_EXCEPTIONS = [
   { id: 'consent.google.com', pattern: 'consent.google.com' },
+  { id: 'consent.youtube.com', pattern: 'consent.youtube.com' },
   { id: 'accounts.google.com', pattern: 'accounts.google.com' },
+  { id: 'accounts.youtube.com', pattern: 'accounts.youtube.com' },
+  { id: 'myaccount.google.com', pattern: 'myaccount.google.com' },
   { id: '*.gstatic.com', pattern: '*.gstatic.com' },
   { id: '*.googleapis.com', pattern: '*.googleapis.com' },
   { id: 'login.microsoftonline.com', pattern: 'login.microsoftonline.com' },

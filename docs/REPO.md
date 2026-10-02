@@ -69,3 +69,5 @@ Alternatywa bez auto-update: ręczna instalacja z Releases (przycisk w ustawieni
 ## 6. Test updatera lokalnie
 
 Skopiuj `dev-app-update.yml.example` → `dev-app-update.yml` (gitignore) i ustaw `url` na lokalny serwer plików z `latest.yml`. W unpackaged Electron ładuje ten plik gdy `electron-updater` jest w trybie testowym (patrz `electron/updater.cjs`).
+
+**logowanie Google zależy od UA – nie dodawać Electron do UA.**

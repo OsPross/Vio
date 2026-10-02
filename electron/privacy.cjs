@@ -246,7 +246,10 @@ function attachToSession(ses, opts) {
   });
 
   try {
-    if (cfg.chromeUa) ses.setUserAgent(CHROME_UA);
+    if (cfg.chromeUa) {
+      CHROME_UA = buildChromeUa();
+      ses.setUserAgent(CHROME_UA);
+    }
   } catch {}
   // Spellcheck is NOT disabled here — owned by electron/spellcheck.cjs + perfSpellcheck.
 }
@@ -259,7 +262,12 @@ function hardenGuest(wc) {
     if (cfg.webRtc === 'public_only') wc.setWebRTCIPHandlingPolicy('default_public_interface_only');
     else if (cfg.webRtc === 'disable_udp') wc.setWebRTCIPHandlingPolicy('disable_non_proxied_udp');
   } catch {}
-  try { if (cfg.chromeUa) wc.setUserAgent(CHROME_UA); } catch {}
+  try {
+    if (cfg.chromeUa) {
+      CHROME_UA = buildChromeUa();
+      wc.setUserAgent(CHROME_UA);
+    }
+  } catch {}
   let url = '';
   try { url = wc.getURL(); } catch {}
   if (cfg.fingerprint && !isException(url) && !isSensitive(url)) {

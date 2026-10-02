@@ -1,10 +1,11 @@
 /**
  * Make navigator.userAgent / userAgentData / sec-ch-ua look like desktop Google Chrome
- * (same major as process.versions.chrome). Tor guests are skipped — Tor keeps its own UA.
+ * (major from process.versions.chrome). Tor guests are skipped — Tor keeps its own UA.
  *
- * Uses CDP Emulation.setUserAgentOverride (userAgentMetadata). If DevTools holds the
- * debugger, we fall back to session/webContents.setUserAgent + HTTP Client Hints only
- * and retry when DevTools closes.
+ * CDP Emulation.setUserAgentOverride sets userAgentMetadata, then we detach so pages
+ * do not see an attached debugger (Google login blocks Electron / open DevTools).
+ * If DevTools holds the debugger, fall back to session/webContents.setUserAgent +
+ * HTTP Client Hints and retry when DevTools closes.
  */
 'use strict';
 
@@ -20,7 +21,7 @@ function chromeFull() {
 }
 
 function chromeMajor() {
-  return chromeFull().split('.')[0] || '134';
+  return brands.chromeMajor(chromeFull());
 }
 
 function buildChromeUa() {
@@ -34,15 +35,22 @@ function userAgentMetadata() {
 function clientHintHeaders() {
   const full = chromeFull();
   const major = chromeMajor();
-  const brands = `"Not.A/Brand";v="99", "Google Chrome";v="${major}", "Chromium";v="${major}"`;
+  const list = `"Not=A?Brand";v="99", "Google Chrome";v="${major}", "Chromium";v="${major}"`;
   return {
-    'sec-ch-ua': brands,
+    'sec-ch-ua': list,
+    'Sec-CH-UA': list,
     'sec-ch-ua-mobile': '?0',
+    'Sec-CH-UA-Mobile': '?0',
     'sec-ch-ua-platform': '"Windows"',
+    'Sec-CH-UA-Platform': '"Windows"',
     'sec-ch-ua-platform-version': '"15.0.0"',
+    'Sec-CH-UA-Platform-Version': '"15.0.0"',
     'sec-ch-ua-arch': '"x86"',
+    'Sec-CH-UA-Arch': '"x86"',
     'sec-ch-ua-bitness': '"64"',
-    'sec-ch-ua-full-version-list': `"Not.A/Brand";v="10.0.0.0", "Google Chrome";v="${full}", "Chromium";v="${full}"`,
+    'Sec-CH-UA-Bitness': '"64"',
+    'sec-ch-ua-full-version-list': `"Not=A?Brand";v="10.0.0.0", "Google Chrome";v="${full}", "Chromium";v="${full}"`,
+    'Sec-CH-UA-Full-Version-List': `"Not=A?Brand";v="10.0.0.0", "Google Chrome";v="${full}", "Chromium";v="${full}"`,
   };
 }
 
@@ -51,6 +59,19 @@ function applyBootFallback() {
     app.userAgentFallback = buildChromeUa();
   } catch (err) {
     console.warn('[ua-chrome] userAgentFallback', err);
+  }
+}
+
+/**
+ * @param {import('electron').Session} ses
+ */
+function applyToSession(ses) {
+  if (!ses) return;
+  const ua = buildChromeUa();
+  try {
+    if (typeof ses.setUserAgent === 'function') ses.setUserAgent(ua);
+  } catch (err) {
+    console.warn('[ua-chrome] session.setUserAgent', err);
   }
 }
 
@@ -78,20 +99,31 @@ async function applyToWebContents(wc, opts = {}) {
 
   const tryCdp = async () => {
     if (wc.isDestroyed()) return false;
+    let attachedHere = false;
     try {
       if (!wc.debugger.isAttached()) {
         wc.debugger.attach('1.3');
+        attachedHere = true;
       }
       await wc.debugger.sendCommand('Emulation.setUserAgentOverride', {
         userAgent: ua,
         acceptLanguage: 'pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7',
-        platform: 'Windows',
+        platform: 'Win32',
         userAgentMetadata: userAgentMetadata(),
       });
       return true;
-    } catch (err) {
+    } catch {
       // DevTools owns the debugger — HTTP UA still applied; retry on close
       return false;
+    } finally {
+      // Do not leave debugger attached — detectable by Google / anti-bot
+      if (attachedHere) {
+        try {
+          if (wc.debugger.isAttached()) wc.debugger.detach();
+        } catch {
+          /* */
+        }
+      }
     }
   };
 
@@ -109,6 +141,12 @@ async function applyToWebContents(wc, opts = {}) {
   wc.on('did-finish-load', () => {
     void tryCdp();
   });
+  wc.on('did-navigate', () => {
+    void tryCdp();
+  });
+  wc.on('did-navigate-in-page', () => {
+    void tryCdp();
+  });
 }
 
 module.exports = {
@@ -120,6 +158,7 @@ module.exports = {
   brandList: brands.brandList,
   fullVersionList: brands.fullVersionList,
   applyBootFallback,
+  applyToSession,
   applyToWebContents,
   CHROME_UA: buildChromeUa,
 };

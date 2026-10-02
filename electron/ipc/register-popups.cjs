@@ -55,6 +55,12 @@ function register(deps) {
             nativeWindowOpen: true,
           },
         });
+        try {
+          const uaChrome = require('../ua-chrome.cjs');
+          void uaChrome.applyToWebContents(child.webContents, { tor: false });
+        } catch (e) {
+          console.warn('[popup] ua-chrome', e);
+        }
         void child.loadURL(u);
         console.log('[popup] manual allow open', u.slice(0, 120));
         return { ok: true, via: 'window' };
