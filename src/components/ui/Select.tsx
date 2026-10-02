@@ -77,6 +77,8 @@ export function Select({
   placeholder = 'Wybierz…',
   'aria-label': ariaLabel,
   reduced: reducedProp,
+  trigger,
+  menuMinWidth = 0,
 }: {
   value: string;
   options?: SelectOption[];
@@ -87,6 +89,10 @@ export function Select({
   placeholder?: string;
   'aria-label'?: string;
   reduced?: boolean;
+  /** Custom trigger content (icon-only pickers etc.) */
+  trigger?: ReactNode;
+  /** Floor for popover width (useful for icon triggers) */
+  menuMinWidth?: number;
 }) {
   const settings = useStore((s) => s.settings);
   const reduced = reducedProp ?? isMotionOff(settings);
@@ -125,10 +131,17 @@ export function Select({
     const update = () => {
       const anchor = triggerRef.current!.getBoundingClientRect();
       const measured = menuRef.current?.getBoundingClientRect();
-      const menuW = Math.max(anchor.width, measured?.width || anchor.width);
+      const menuW = Math.max(
+        menuMinWidth || 0,
+        Math.max(anchor.width, measured?.width || anchor.width),
+      );
       const menuH = measured?.height || Math.min(280, Math.max(flat.length, 1) * 34 + 12);
       const next = placeMenu(anchor, menuW, menuH);
-      setPos({ left: next.left, top: next.top, minWidth: anchor.width });
+      setPos({
+        left: next.left,
+        top: next.top,
+        minWidth: Math.max(menuMinWidth || 0, anchor.width),
+      });
     };
     update();
     requestAnimationFrame(update);
@@ -138,7 +151,7 @@ export function Select({
       window.removeEventListener('resize', update);
       window.removeEventListener('scroll', update, true);
     };
-  }, [open, flat.length, rows.length]);
+  }, [open, flat.length, rows.length, menuMinWidth]);
 
   useEffect(() => {
     if (!open) return;
@@ -267,14 +280,21 @@ export function Select({
     (open && triggerRef.current
       ? (() => {
           const r = triggerRef.current!.getBoundingClientRect();
-          const next = placeMenu(r, r.width, Math.min(280, Math.max(flat.length, 1) * 34 + 12));
-          return { left: next.left, top: next.top, minWidth: r.width };
+          const minW = Math.max(menuMinWidth || 0, r.width);
+          const next = placeMenu(r, minW, Math.min(280, Math.max(flat.length, 1) * 34 + 12));
+          return { left: next.left, top: next.top, minWidth: minW };
         })()
       : null);
 
   return (
     <div
-      className={['ui-select', className || '', open ? 'is-open' : '', disabled ? 'is-disabled' : '']
+      className={[
+        'ui-select',
+        trigger ? 'ui-select-custom-trigger' : '',
+        className || '',
+        open ? 'is-open' : '',
+        disabled ? 'is-disabled' : '',
+      ]
         .filter(Boolean)
         .join(' ')}
       ref={rootRef}
@@ -291,8 +311,12 @@ export function Select({
         onClick={() => (open ? close() : openMenu())}
         onKeyDown={onTriggerKeyDown}
       >
-        <span className="ui-select-value">{selected?.label ?? placeholder}</span>
-        <ChevronDown size={14} strokeWidth={1.75} className="ui-select-chevron" aria-hidden />
+        {trigger ?? (
+          <>
+            <span className="ui-select-value">{selected?.label ?? placeholder}</span>
+            <ChevronDown size={14} strokeWidth={1.75} className="ui-select-chevron" aria-hidden />
+          </>
+        )}
       </button>
 
       {open &&

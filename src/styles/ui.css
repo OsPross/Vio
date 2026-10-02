@@ -248,6 +248,12 @@
   opacity: 0.45;
   cursor: default;
 }
+.ui-select-custom-trigger {
+  width: auto;
+}
+.ui-select-custom-trigger .ui-select-trigger {
+  width: auto;
+}
 .ui-select-value {
   flex: 1;
   min-width: 0;

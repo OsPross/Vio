@@ -526,13 +526,38 @@
   z-index: 8;
 }
 
-.home-engine-wrap .pz-select-menu {
-  left: 0;
-  right: auto;
-  min-width: 200px;
-  z-index: 40;
-  max-height: none;
-  overflow: visible;
+/* Home search engine picker — Select with icon trigger */
+.home-engine-select {
+  width: auto;
+  flex-shrink: 0;
+  z-index: 8;
+}
+.home-engine-select .ui-select-trigger {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 8px;
+  border-color: transparent;
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.home-engine-select.is-open .ui-select-trigger,
+.home-engine-select .ui-select-trigger:hover {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.home-engine-select .ui-select-trigger img {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: block;
+}
+.ui-select-engine-ico {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .home-search-inner input {

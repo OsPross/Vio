@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'motion/react';
-import { Check, Clock3, Search, Sparkles, X } from 'lucide-react';
+import { Clock3, Search, Sparkles, X } from 'lucide-react';
 import {
   SEARCH_ENGINES,
   engineLabel,
@@ -11,8 +10,27 @@ import {
   type SearchEngine,
 } from '../store';
 import { letterFavicon } from '../lib/favicon';
+import { Select, type SelectGroup } from '../components/ui/Select';
 
-const easeOut = [0.16, 1, 0.3, 1] as const;
+/** Home engine picker order — Zwykłe as requested (privacy engines mixed with web). */
+const ENGINE_GROUPS: { label: string; ids: SearchEngine[] }[] = [
+  {
+    label: 'Zwykłe',
+    ids: [
+      'brave',
+      'google',
+      'bing',
+      'ddg',
+      'startpage',
+      'qwant',
+      'ecosia',
+      'swisscows',
+      'yandex',
+    ],
+  },
+  { label: 'Tor / .onion', ids: ['ahmia', 'onionland'] },
+  { label: 'Własne', ids: ['searx', 'custom'] },
+];
 
 function EngineIconSelect({
   value,
@@ -23,59 +41,47 @@ function EngineIconSelect({
   onChange: (v: SearchEngine) => void;
   reduced: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
   const settings = useStore((s) => s.settings);
   const home = searchHome({ ...settings, searchEngine: value });
   const ico = letterFavicon(home);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
+  const groups = useMemo((): SelectGroup[] => {
+    const byId = new Map(SEARCH_ENGINES.map((e) => [e.id, e]));
+    return ENGINE_GROUPS.map((g) => ({
+      label: g.label,
+      options: g.ids
+        .map((id) => byId.get(id))
+        .filter(Boolean)
+        .map((e) => {
+          const url = searchHome({ ...settings, searchEngine: e!.id });
+          return {
+            value: e!.id,
+            label: e!.label.replace(/\s*\(.*\)\s*$/, '').replace(/\s*%s.*/, ''),
+            icon: (
+              <img
+                className="ui-select-engine-ico"
+                src={letterFavicon(url)}
+                alt=""
+                width={16}
+                height={16}
+              />
+            ),
+          };
+        }),
+    }));
+  }, [settings]);
 
   return (
-    <div className="home-engine-wrap pz-select" ref={ref}>
-      <button
-        type="button"
-        className="home-engine-btn"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        title={`Silnik: ${engineLabel(value)}`}
-      >
-        <img src={ico} alt="" width={16} height={16} />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className="pz-select-menu"
-            initial={reduced ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reduced ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: reduced ? 0.12 : 0.2, ease: easeOut }}
-          >
-            {SEARCH_ENGINES.map((e) => (
-              <button
-                key={e.id}
-                type="button"
-                className={`pz-option ${value === e.id ? 'on' : ''}`}
-                onClick={() => {
-                  onChange(e.id);
-                  setOpen(false);
-                }}
-              >
-                <span>{e.label}</span>
-                {value === e.id && <Check size={13} strokeWidth={2} />}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    <Select
+      className="home-engine-select"
+      value={value}
+      groups={groups}
+      onChange={(id) => onChange(id as SearchEngine)}
+      aria-label={`Silnik: ${engineLabel(value)}`}
+      reduced={reduced}
+      menuMinWidth={220}
+      trigger={<img src={ico} alt="" width={16} height={16} />}
+    />
   );
 }
 
