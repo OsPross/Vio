@@ -83,46 +83,62 @@ function wireCleanLoginSession(ses) {
 }
 
 /**
- * Apply Chrome UA metadata once via CDP, register a persistent new-document
- * brands shim, then DETACH. Do not leave the debugger attached.
+ * Brief CDP for UA metadata + new-document brands shim, then DETACH.
+ * Hard-capped — hanging debugger must never block loadURL (white window).
  * @param {import('electron').WebContents} wc
+ * @param {number} [ms]
  */
-async function applyStealthBrands(wc) {
+async function applyStealthBrands(wc, ms = 600) {
   if (!wc || wc.isDestroyed()) return;
-  const uaChrome = require('./ua-chrome.cjs');
-  const ua = uaChrome.buildChromeUa();
-  const meta = uaChrome.userAgentMetadata();
-  try {
-    wc.setUserAgent(ua);
-  } catch {
-    /* */
-  }
-  let attachedHere = false;
-  try {
-    if (!wc.debugger.isAttached()) {
-      wc.debugger.attach('1.3');
-      attachedHere = true;
+  const run = async () => {
+    const uaChrome = require('./ua-chrome.cjs');
+    const ua = uaChrome.buildChromeUa();
+    const meta = uaChrome.userAgentMetadata();
+    try {
+      wc.setUserAgent(ua);
+    } catch {
+      /* */
     }
-    await wc.debugger.sendCommand('Emulation.setUserAgentOverride', {
-      userAgent: ua,
-      acceptLanguage: 'pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7',
-      platform: 'Win32',
-      userAgentMetadata: meta,
-    });
-    // Survives debugger detach — patches page JS brands before any script runs
-    await wc.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
-      source: buildBrandsShimSource(meta, ua),
-    });
-  } catch (err) {
-    console.warn('[google-login] stealth brands', err && err.message);
-  } finally {
-    if (attachedHere) {
-      try {
-        if (wc.debugger.isAttached()) wc.debugger.detach();
-      } catch {
-        /* */
+    let attachedHere = false;
+    try {
+      if (!wc.debugger.isAttached()) {
+        wc.debugger.attach('1.3');
+        attachedHere = true;
+      }
+      await wc.debugger.sendCommand('Emulation.setUserAgentOverride', {
+        userAgent: ua,
+        acceptLanguage: 'pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7',
+        platform: 'Win32',
+        userAgentMetadata: meta,
+      });
+      await wc.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
+        source: buildBrandsShimSource(meta, ua),
+      });
+    } catch (err) {
+      console.warn('[google-login] stealth brands', err && err.message);
+    } finally {
+      if (attachedHere) {
+        try {
+          if (!wc.isDestroyed() && wc.debugger.isAttached()) wc.debugger.detach();
+        } catch {
+          /* */
+        }
       }
     }
+  };
+  try {
+    await Promise.race([
+      run(),
+      new Promise((resolve) => setTimeout(resolve, ms)),
+    ]);
+  } catch (err) {
+    console.warn('[google-login] stealth race', err && err.message);
+  }
+  // Always try to detach if something left the debugger attached
+  try {
+    if (!wc.isDestroyed() && wc.debugger.isAttached()) wc.debugger.detach();
+  } catch {
+    /* */
   }
 }
 
@@ -374,11 +390,25 @@ function openGoogleLoginWindow(opts) {
     }
   });
 
-  // Stealth BEFORE first navigation so brands shim is registered early
-  void applyStealthBrands(pageWc).then(() => {
+  // Stealth with timeout, then ALWAYS load (never leave a blank window)
+  void (async () => {
+    try {
+      await applyStealthBrands(pageWc, 600);
+    } catch (err) {
+      console.warn('[google-login] stealth', err && err.message);
+    }
     if (win.isDestroyed()) return;
-    void win.loadURL(url, loadOpts);
-  });
+    try {
+      await win.loadURL(url, loadOpts);
+    } catch (err) {
+      console.warn('[google-login] loadURL', err && err.message);
+      try {
+        await win.loadURL(url);
+      } catch (err2) {
+        console.warn('[google-login] loadURL retry', err2 && err2.message);
+      }
+    }
+  })();
   console.log('[google-login] open clean-session', url.slice(0, 120));
   return win;
 }
