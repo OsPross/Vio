@@ -435,20 +435,16 @@ function handleWindowOpen(openerWc, ctx) {
     disposition === 'background-tab' ||
     disposition === 'default';
 
-  // Google accounts → dedicated clean-session login window (never persist:main popup)
+  // Google accounts OAuth: same session as opener (real browser). Pause Ghostery
+  // cosmetics so the login document is not script-injected.
   if (!torMode && !blank) {
     try {
       const googleLogin = require('./google-login.cjs');
       if (googleLogin.isGoogleAccountsUrl(url)) {
-        googleLogin.openGoogleLoginWindow({
-          url,
-          openerWc,
-          hostWindow: ctx.hostWindow || null,
-        });
-        return { action: 'deny' };
+        googleLogin.pauseSessionPreloads(openerWc.session);
       }
     } catch (err) {
-      console.warn('[popup] google-login route', err);
+      console.warn('[popup] google-login pause', err);
     }
   }
 
@@ -566,35 +562,20 @@ function attachDidCreateWindow(openerWc, onChild) {
     attachPopupUrlChrome(childWin);
     try {
       const uaChrome = require('./ua-chrome.cjs');
-      const u = String(details?.url || '');
-      let isGoogleAccounts = false;
-      try {
-        const h = new URL(u).hostname.toLowerCase();
-        isGoogleAccounts = h === 'accounts.google.com' || h.endsWith('.accounts.google.com');
-      } catch {
-        /* */
-      }
-      if (isGoogleAccounts) {
-        // Route OAuth popups that land on accounts.google.com through the same
-        // preload-free login path (Ghostery session preload breaks Google).
-        try {
-          const googleLogin = require('./google-login.cjs');
-          googleLogin.pauseSessionPreloads(childWin.webContents.session);
-          childWin.on('closed', () => {
-            try {
-              googleLogin.resumeSessionPreloads(childWin.webContents.session);
-            } catch {
-              /* */
-            }
-          });
-        } catch (e) {
-          console.warn('[popup] google-login pause', e);
-        }
-      }
-      // Never leave CDP attached — Google treats it as automation
-      void uaChrome.applyToWebContents(childWin.webContents, { tor: false, persistDebugger: false });
+      void uaChrome.applyToWebContents(childWin.webContents, { tor: false });
     } catch (err) {
       console.warn('[popup] ua-chrome', err);
+    }
+    try {
+      const googleLogin = require('./google-login.cjs');
+      googleLogin.attachGoogleAccountsHardening(childWin.webContents, { torMode: false });
+      // If this popup opens directly on accounts, pause before first paint
+      const u = String(details?.url || '');
+      if (googleLogin.isGoogleAccountsUrl(u)) {
+        googleLogin.pauseSessionPreloads(childWin.webContents.session);
+      }
+    } catch (err) {
+      console.warn('[popup] google-login harden', err);
     }
 
     childWin.webContents.setWindowOpenHandler((d) =>

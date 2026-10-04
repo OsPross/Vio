@@ -57,31 +57,14 @@ function register(deps) {
         });
         try {
           const uaChrome = require('../ua-chrome.cjs');
-          const host = (() => {
-            try {
-              return new URL(u).hostname.toLowerCase();
-            } catch {
-              return '';
-            }
-          })();
-          if (host === 'accounts.google.com' || host.endsWith('.accounts.google.com')) {
-            try {
-              const googleLogin = require('../google-login.cjs');
-              googleLogin.pauseSessionPreloads(child.webContents.session);
-              child.on('closed', () => {
-                try {
-                  googleLogin.resumeSessionPreloads(child.webContents.session);
-                } catch {
-                  /* */
-                }
-              });
-            } catch (e2) {
-              console.warn('[popup] google-login pause', e2);
-            }
+          void uaChrome.applyToWebContents(child.webContents, { tor: false });
+          const googleLogin = require('../google-login.cjs');
+          googleLogin.attachGoogleAccountsHardening(child.webContents, { torMode: false });
+          if (googleLogin.isGoogleAccountsUrl(u)) {
+            googleLogin.pauseSessionPreloads(child.webContents.session);
           }
-          void uaChrome.applyToWebContents(child.webContents, { tor: false, persistDebugger: false });
         } catch (e) {
-          console.warn('[popup] ua-chrome', e);
+          console.warn('[popup] ua/google harden', e);
         }
         void child.loadURL(u);
         console.log('[popup] manual allow open', u.slice(0, 120));

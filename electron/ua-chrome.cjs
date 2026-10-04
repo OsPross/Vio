@@ -107,6 +107,21 @@ async function applyToWebContents(wc, opts = {}) {
 
   const tryCdp = async () => {
     if (wc.isDestroyed()) return false;
+    // Never attach CDP on Google login — detectable and previously hung/broke auth
+    try {
+      const cur = String(wc.getURL() || '');
+      if (/(^|\.)accounts\.google\.com$/i.test((() => {
+        try {
+          return new URL(cur).hostname;
+        } catch {
+          return '';
+        }
+      })())) {
+        return false;
+      }
+    } catch {
+      /* */
+    }
     let attachedHere = false;
     try {
       if (!wc.debugger.isAttached()) {
@@ -119,13 +134,8 @@ async function applyToWebContents(wc, opts = {}) {
         platform: 'Win32',
         userAgentMetadata: userAgentMetadata(),
       });
-      // Keeping debugger attached is the only way brands include Google Chrome
-      // after Emulation.setUserAgentOverride (detach reverts to Chromium-only).
-      // Used for the dedicated Google login BrowserWindow.
-      if (persistDebugger) return true;
       return true;
     } catch {
-      // DevTools owns the debugger — HTTP UA still applied; retry on close
       return false;
     } finally {
       if (attachedHere && !persistDebugger) {
@@ -146,9 +156,14 @@ async function applyToWebContents(wc, opts = {}) {
   wc.on('devtools-closed', () => {
     void tryCdp();
   });
-  // Apply before page scripts when possible
-  wc.on('did-start-navigation', (_e, _url, _inPlace, isMainFrame) => {
+  wc.on('did-start-navigation', (_e, url, _inPlace, isMainFrame) => {
     if (isMainFrame === false) return;
+    try {
+      const h = new URL(String(url || '')).hostname.toLowerCase();
+      if (h === 'accounts.google.com' || h.endsWith('.accounts.google.com')) return;
+    } catch {
+      /* */
+    }
     void tryCdp();
   });
   wc.on('dom-ready', () => {
@@ -157,10 +172,22 @@ async function applyToWebContents(wc, opts = {}) {
   wc.on('did-finish-load', () => {
     void tryCdp();
   });
-  wc.on('did-navigate', () => {
+  wc.on('did-navigate', (_e, url) => {
+    try {
+      const h = new URL(String(url || '')).hostname.toLowerCase();
+      if (h === 'accounts.google.com' || h.endsWith('.accounts.google.com')) return;
+    } catch {
+      /* */
+    }
     void tryCdp();
   });
-  wc.on('did-navigate-in-page', () => {
+  wc.on('did-navigate-in-page', (_e, url) => {
+    try {
+      const h = new URL(String(url || '')).hostname.toLowerCase();
+      if (h === 'accounts.google.com' || h.endsWith('.accounts.google.com')) return;
+    } catch {
+      /* */
+    }
     void tryCdp();
   });
 }
