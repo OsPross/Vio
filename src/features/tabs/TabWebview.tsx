@@ -199,12 +199,37 @@ function TabWebviewInner({
   onBrowserNav?: (dir: 'back' | 'forward', source?: string) => void;
 }) {
   const ref = useRef<WebviewEl | null>(null);
+  /** Latest tab.url for one-shot src init — never bind src={tab.url} (YT miniplayer SPA). */
+  const tabUrlRef = useRef(tab.url);
+  tabUrlRef.current = tab.url;
   const scrollbarCssKeyRef = useRef<string | null>(null);
   /** Full navigation generation — in-page SPA navigations must not re-run scrollbars / page scripts. */
   const docGenRef = useRef(0);
   const scrollbarsGenRef = useRef(-1);
   const pageScriptsGenRef = useRef(-1);
   const updateTab = useStore((s) => s.updateTab);
+
+  /**
+   * Set src only once per webview element. Syncing tab.url from did-navigate-in-page
+   * (YouTube miniplayer → home) must NOT rewrite the src attribute — that forces a
+   * full reload and kills the miniplayer. Omnibox navigation uses el.src directly.
+   */
+  const bindWebviewRef = useCallback(
+    (node: HTMLElement | null) => {
+      const el = node as unknown as WebviewEl | null;
+      ref.current = el;
+      if (!el) return;
+      const flag = el as unknown as { __djxxrSrcInit?: boolean };
+      if (flag.__djxxrSrcInit) return;
+      flag.__djxxrSrcInit = true;
+      try {
+        el.src = tabUrlRef.current;
+      } catch {
+        /* */
+      }
+    },
+    [tab.id],
+  );
   const onNavRef = useRef(onNav);
   const onSaveOfferRef = useRef(onSaveOffer);
   const onGuestMetaRef = useRef(onGuestMeta);
@@ -681,13 +706,12 @@ function TabWebviewInner({
 
   return (
     <webview
-      ref={ref as unknown as React.Ref<HTMLElement>}
+      ref={bindWebviewRef as unknown as React.Ref<HTMLElement>}
       className={active ? '' : 'hidden'}
       data-tab-id={tab.id}
-      src={tab.url}
       partition={partition}
       allowpopups={'true' as unknown as boolean}
-      webpreferences="contextIsolation=yes,nativeWindowOpen=yes,spellcheck=yes"
+      webpreferences="contextIsolation=yes,sandbox=yes,nativeWindowOpen=yes,spellcheck=yes"
     />
   );
 }
