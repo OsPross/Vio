@@ -20,11 +20,12 @@ export function useAutomationBridge(guestWc: Record<string, number>, enabled: bo
       let result: unknown = {};
       if (cmd === 'tabs') {
         result = {
-          activeId: st.view === 'browser' ? st.activeId : '',
           tabs: st.tabs.map((t) => ({
             tabId: t.id,
             title: t.title,
             url: t.url,
+            active: st.view === 'browser' && t.id === st.activeId,
+            discarded: Boolean(t.discarded),
             mode: t.mode ?? 'normal',
             partition: t.partition,
             wcId: guestWcRef.current[t.id] ?? null,

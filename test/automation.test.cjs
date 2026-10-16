@@ -74,14 +74,29 @@ const raw = [
   { tabId: 'i2', title: 'Ext', url: 'about:extensions' },
   { tabId: 'i3', title: 'About', url: 'djxxr://about' },
   { tabId: 'n3', title: 'Bad wc', url: 'https://c.com/', wcId: 9 },
+  // restored from session: stale webContents id that no longer exists
+  { tabId: 'r1', title: 'Restored', url: 'https://r.com/', wcId: 77 },
+  // slept by the discard timer
+  { tabId: 's1', title: 'Asleep', url: 'https://s.com/', discarded: true, wcId: 1 },
 ];
-const shown = filterTabs(raw, 'n1', (id) => id === 1);
+// 1 = live persist:main guest, 9 = live but fails the check (e.g. Tor webview), others gone
+const guestState = (id) => (id === 1 ? 'live' : id === 9 ? 'forbidden' : 'gone');
+const shown = filterTabs(
+  raw.map((t) => ({ ...t, active: t.tabId === 'n1' })),
+  guestState,
+);
 assert.deepEqual(
-  shown.map((t) => t.tabId),
-  ['n1', 'n2'],
+  shown.map((t) => [t.tabId, t.sleeping]),
+  [
+    ['n1', false],
+    ['n2', true],
+    ['r1', true],
+    ['s1', true],
+  ],
 );
 assert.equal(shown[0].active, true);
 assert.equal(shown[1].active, false);
+assert.equal(shown[2].wcId, null);
 
 // --- rate limiter ---
 let now = 0;
@@ -103,7 +118,9 @@ async function main() {
     },
     getGuest: () => null,
     rendererRequest: async (cmd) =>
-      cmd === 'tabs' ? { activeId: 'n2', tabs: raw } : { tabId: 'new' },
+      cmd === 'tabs'
+        ? { tabs: raw.map((t) => ({ ...t, active: t.tabId === 'n2' })) }
+        : { tabId: 'new' },
   });
   const st = await auto.setEnabled(true);
   const infoPath = path.join(dir, 'automation.json');
@@ -152,9 +169,11 @@ async function main() {
   assert.equal(list.ok, true);
   assert.deepEqual(
     list.result.map((t) => t.tabId),
-    ['n2'], // n1 dropped: its webContents fails the guest check
+    ['n2'], // no webContentsExists dep → unverifiable wcIds are dropped (fail-closed)
   );
   assert.equal('wcId' in list.result[0], false);
+  assert.equal(list.result[0].sleeping, true);
+  assert.equal(list.result[0].active, true);
 
   for (const tabId of ['t1', 'p1', 'i1', 'nope']) {
     const r = await call(ws, { id: 3, cmd: 'getPage', args: { tabId } });
@@ -189,6 +208,71 @@ async function main() {
   assert.equal((await call(ws3, { id: 1, cmd: 'auth', token: info2.token })).ok, true);
   assert.equal(consentAsked, 2);
   await auto.stop();
+
+  // tabs opened before the API was enabled + restored/sleeping ones are listed;
+  // commands on sleeping tabs say "tab not loaded" until activateTab
+  const preDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vio-automation-pre-'));
+  const liveGuest = {
+    id: 1,
+    getURL: () => 'https://httpbin.org/forms/post',
+    on() {},
+    once() {},
+    executeJavaScriptInIsolatedWorld: async () => ({
+      url: 'https://httpbin.org/forms/post',
+      title: 'Form',
+      text: 'x',
+    }),
+  };
+  const preTabs = [
+    // window A (opened long before Soul connected)
+    { tabId: 'a1', title: 'Form', url: 'https://httpbin.org/forms/post', wcId: 1, active: true },
+    { tabId: 'a2', title: 'Wiki', url: 'https://pl.wikipedia.org/', wcId: 50, discarded: true },
+    // window B, session restore: webview never mounted yet
+    { tabId: 'b1', title: 'Restored', url: 'https://example.com/', wcId: null },
+    { tabId: 'b2', title: 'Tor', url: 'https://x.com/', mode: 'tor', partition: 'tor-1', wcId: 9 },
+  ];
+  const activated = [];
+  const pre = createAutomation({
+    userDataDir: preDir,
+    // slower than the 5 s auth timeout: a user reading the dialog must not get disconnected
+    askConsent: () => new Promise((r) => setTimeout(() => r(true), 5300)),
+    getGuest: (id) => (id === 1 ? liveGuest : null),
+    webContentsExists: (id) => id === 1 || id === 9,
+    rendererRequest: async (cmd, args) => {
+      if (cmd === 'activate') activated.push(args.tabId);
+      return cmd === 'tabs' ? { tabs: preTabs } : {};
+    },
+  });
+  const pInfo = (await pre.setEnabled(true)).port;
+  const pws = new WebSocket(`ws://127.0.0.1:${pInfo}`);
+  await new Promise((r) => pws.once('open', r));
+  const pTok = JSON.parse(fs.readFileSync(path.join(preDir, 'automation.json'), 'utf8')).token;
+  assert.equal((await call(pws, { id: 1, cmd: 'auth', token: pTok })).ok, true);
+  const pList = (await call(pws, { id: 2, cmd: 'listTabs' })).result;
+  assert.deepEqual(pList, [
+    {
+      tabId: 'a1',
+      title: 'Form',
+      url: 'https://httpbin.org/forms/post',
+      active: true,
+      sleeping: false,
+    },
+    { tabId: 'a2', title: 'Wiki', url: 'https://pl.wikipedia.org/', active: false, sleeping: true },
+    { tabId: 'b1', title: 'Restored', url: 'https://example.com/', active: false, sleeping: true },
+  ]);
+  assert.equal((await call(pws, { id: 3, cmd: 'getPage', args: { tabId: 'a1' } })).ok, true);
+  for (const tabId of ['a2', 'b1']) {
+    const r = await call(pws, { id: 4, cmd: 'getElements', args: { tabId } });
+    assert.equal(r.error, 'tab not loaded (activateTab first)', tabId);
+    assert.equal((await call(pws, { id: 5, cmd: 'activateTab', args: { tabId } })).ok, true);
+  }
+  assert.deepEqual(activated, ['a2', 'b1']);
+  assert.equal(
+    (await call(pws, { id: 6, cmd: 'getPage', args: { tabId: 'b2' } })).error,
+    'forbidden',
+  );
+  await pre.stop();
+  fs.rmSync(preDir, { recursive: true, force: true });
 
   // consent denied → socket closed, nothing reachable
   const denyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vio-automation-deny-'));

@@ -536,6 +536,7 @@ const ipcDeps = {
   createWindow,
   getMainWindow: () => mainWindow,
   guestWebContentsById,
+  appWindows,
   askExternalProtocol,
   suggestedSaveName,
   wvPreloadPath,

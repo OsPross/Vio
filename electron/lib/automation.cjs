@@ -3,7 +3,7 @@
 /**
  * Local automation API for the "Soul" desktop assistant.
  * WebSocket on 127.0.0.1 only, token auth, user consent, whitelisted commands.
- * Only normal persist:main tabs of the main window are visible — Tor / private /
+ * Only normal persist:main tabs of normal Vio windows are visible (sleeping ones flagged) — Tor / private /
  * internal pages are filtered here AND re-checked per webContents by the caller's getGuest().
  * Protocol: docs/automation-api.md
  */
@@ -67,24 +67,28 @@ function normalizeUrl(raw) {
 }
 
 /**
- * @param {{tabId:string,title:string,url:string,mode?:string,partition?:string,wcId?:number|null}[]} raw
- * @param {string} activeId
- * @param {(wcId:number)=>boolean} guestOk  live webContents check (persist:main webview of main window)
+ * @param {{tabId:string,title:string,url:string,active?:boolean,discarded?:boolean,mode?:string,partition?:string,wcId?:number|null}[]} raw
+ *   tabs of normal Vio windows only (the caller never asks private/Tor windows)
+ * @param {(wcId:number)=>'live'|'gone'|'forbidden'} guestState  live: persist:main webview of a normal
+ *   window; gone: no such webContents (sleeping / restored / stale id); forbidden: exists but fails the check
  */
-function filterTabs(raw, activeId, guestOk) {
+function filterTabs(raw, guestState) {
   const out = [];
   for (const t of Array.isArray(raw) ? raw : []) {
     if (!t || typeof t.tabId !== 'string') continue;
     if (t.mode && t.mode !== 'normal') continue;
     if (t.partition && t.partition !== 'persist:main') continue;
     if (!isAllowedUrl(t.url)) continue;
-    if (t.wcId != null && !guestOk(t.wcId)) continue;
+    const state = t.wcId != null ? guestState(t.wcId) : 'gone';
+    if (state === 'forbidden') continue;
+    const sleeping = Boolean(t.discarded) || state !== 'live';
     out.push({
       tabId: t.tabId,
       title: String(t.title || ''),
       url: t.url,
-      active: t.tabId === activeId,
-      wcId: t.wcId ?? null,
+      active: t.active === true,
+      sleeping,
+      wcId: sleeping ? null : t.wcId,
     });
   }
   return out;
@@ -224,12 +228,20 @@ const KEYS = {
  * @param {object} deps
  * @param {string} deps.userDataDir
  * @param {(cmd:string, args?:object)=>Promise<any>} deps.rendererRequest  tabs | open | close | activate
- * @param {(wcId:number)=>import('electron').WebContents|null} deps.getGuest  null unless persist:main webview of the main window
+ * @param {(wcId:number)=>import('electron').WebContents|null} deps.getGuest  null unless persist:main webview of a normal window
+ * @param {(wcId:number)=>boolean} [deps.webContentsExists]  any live webContents with this id (default: assume yes → fail-closed)
  * @param {()=>Promise<boolean>} deps.askConsent
  * @param {(connected:number)=>void} [deps.onStatus]
  */
 function createAutomation(deps) {
-  const { userDataDir, rendererRequest, getGuest, askConsent, onStatus = () => {} } = deps;
+  const {
+    userDataDir,
+    rendererRequest,
+    getGuest,
+    webContentsExists = () => true,
+    askConsent,
+    onStatus = () => {},
+  } = deps;
   const infoPath = path.join(userDataDir, 'automation.json');
   const logPath = path.join(userDataDir, 'logs', 'automation.log');
 
@@ -361,11 +373,11 @@ function createAutomation(deps) {
   function onConnection(ws) {
     const c = { id: ++connSeq, ws, authed: false, allow: createRateLimiter() };
     clients.add(c);
-    const authTimer = setTimeout(() => {
+    c.authTimer = setTimeout(() => {
       if (!c.authed) ws.close(4401, 'auth timeout');
     }, AUTH_TIMEOUT_MS);
     ws.on('close', () => {
-      clearTimeout(authTimer);
+      clearTimeout(c.authTimer);
       clients.delete(c);
       if (c.authed) log(`#${c.id} disconnected`);
       emitStatus();
@@ -397,6 +409,7 @@ function createAutomation(deps) {
         return c.ws.close(4401, 'auth failed');
       }
       c.authing = true;
+      clearTimeout(c.authTimer); // token is valid — the consent dialog may take longer than the auth timeout
       const ok = await consentOnce();
       if (!ok) {
         log(`#${c.id} consent denied`);
@@ -424,7 +437,9 @@ function createAutomation(deps) {
 
   async function allowedTabs() {
     const res = await rendererRequest('tabs');
-    return filterTabs(res && res.tabs, res && res.activeId, (wcId) => Boolean(getGuest(wcId)));
+    return filterTabs(res && res.tabs, (wcId) =>
+      getGuest(wcId) ? 'live' : webContentsExists(wcId) ? 'forbidden' : 'gone',
+    );
   }
 
   /** Tab must be listed (normal persist:main) — anything else is "forbidden". */
@@ -436,7 +451,7 @@ function createAutomation(deps) {
 
   async function guestFor(tabId) {
     const tab = await tabFor(tabId);
-    const wc = tab.wcId != null ? getGuest(tab.wcId) : null;
+    const wc = tab.sleeping ? null : getGuest(tab.wcId);
     if (!wc) throw new Error('tab not loaded (activateTab first)');
     if (!isAllowedUrl(wc.getURL())) throw new Error('forbidden');
     if (!watched.has(wc)) {

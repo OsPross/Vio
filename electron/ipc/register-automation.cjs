@@ -19,21 +19,55 @@ function register(deps) {
     dialog,
     getMainWindow,
     guestWebContentsById,
+    electronWebContents,
+    appWindows,
     windowMode,
   } = deps;
 
   /** @type {Map<string, {resolve:Function, reject:Function, timer:NodeJS.Timeout}>} */
   const pending = new Map();
+  /** tabId → owning normal window, refreshed by every 'tabs' fan-out (tabFor() always runs one first). */
+  const tabWindow = new Map();
+
+  const isNormal = (win) =>
+    Boolean(win) && !win.isDestroyed() && windowMode.getWindowMeta(win).mode === 'normal';
 
   function normalMainWindow() {
     const win = getMainWindow();
-    if (!win || win.isDestroyed()) return null;
-    return windowMode.getWindowMeta(win).mode === 'normal' ? win : null;
+    return isNormal(win) ? win : null;
   }
 
-  function rendererRequest(cmd, args = {}) {
-    const win = normalMainWindow();
-    if (!win) return Promise.resolve({ tabs: [], activeId: '' });
+  /** All normal Vio windows — private / Tor windows are never asked. */
+  function normalWindows() {
+    return [...appWindows].filter(isNormal);
+  }
+
+  async function rendererRequest(cmd, args = {}) {
+    if (cmd === 'tabs') {
+      const wins = normalWindows();
+      const results = await Promise.allSettled(wins.map((w) => askWindow(w, 'tabs')));
+      tabWindow.clear();
+      const tabs = [];
+      results.forEach((r, i) => {
+        if (r.status !== 'fulfilled' || !r.value || !Array.isArray(r.value.tabs)) return;
+        for (const t of r.value.tabs) {
+          if (!t || typeof t.tabId !== 'string' || tabWindow.has(t.tabId)) continue;
+          tabWindow.set(t.tabId, wins[i]);
+          tabs.push(t);
+        }
+      });
+      return { tabs };
+    }
+    const win =
+      typeof args.tabId === 'string'
+        ? tabWindow.get(args.tabId)
+        : normalMainWindow() || normalWindows()[0];
+    if (!isNormal(win)) throw new Error('forbidden');
+    if (cmd === 'activate') win.show();
+    return askWindow(win, cmd, args);
+  }
+
+  function askWindow(win, cmd, args = {}) {
     const reqId = crypto.randomUUID();
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -45,14 +79,19 @@ function register(deps) {
     });
   }
 
-  /** Fail-closed: only a webview hosted by the normal main window, on the persist:main session. */
+  /** Fail-closed: only a webview hosted by a normal Vio window, on the persist:main session. */
   function getGuest(wcId) {
-    const win = normalMainWindow();
     const wc = guestWebContentsById(wcId);
-    if (!win || !wc || wc.getType() !== 'webview') return null;
-    if (!wc.hostWebContents || wc.hostWebContents.id !== win.webContents.id) return null;
+    if (!wc || wc.getType() !== 'webview' || !wc.hostWebContents) return null;
+    const hostId = wc.hostWebContents.id;
+    if (!normalWindows().some((w) => w.webContents.id === hostId)) return null;
     if (wc.session !== session.fromPartition('persist:main')) return null;
     return wc;
+  }
+
+  function webContentsExists(wcId) {
+    const wc = electronWebContents.fromId(Number(wcId));
+    return Boolean(wc && !wc.isDestroyed());
   }
 
   async function askConsent() {
@@ -76,6 +115,7 @@ function register(deps) {
     userDataDir: app.getPath('userData'),
     rendererRequest,
     getGuest,
+    webContentsExists,
     askConsent,
     onStatus: (connected) => {
       const win = getMainWindow();

@@ -51,7 +51,7 @@ Reply: `{"id": <same>, "ok": true, "result": …}` or `{"id": <same>, "ok": fals
 
 | cmd | args | result |
 |---|---|---|
-| `listTabs` | – | `[{tabId, title, url, active}]` |
+| `listTabs` | – | `[{tabId, title, url, active, sleeping}]` — normal tabs of all normal Vio windows; `sleeping: true` = discarded or not loaded yet (restored session), call `activateTab` first |
 | `openTab` | `{url}` | `{tabId}` (opens in the foreground) |
 | `closeTab` | `{tabId}` | `{}` |
 | `activateTab` | `{tabId}` | `{}` (also reloads a discarded tab) |
