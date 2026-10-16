@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Vio automation – strona testowa</title>
+<style>
+  body { font: 15px system-ui, sans-serif; margin: 12px 20px; }
+  label { display: block; margin: 4px 0; }
+  #log { white-space: pre-line; background: #eee; padding: 4px; min-height: 2em; }
+  .pad { height: 1800px; }
+</style>
+</head>
+<body>
+<div id="log"></div>
+<label>Data <input type="date" name="d"></label>
+<label>Liczba <input type="number" name="n"></label>
+<label>Suwak <input type="range" name="r" min="0" max="100" step="10"></label>
+<label>Pole A <input type="text" name="a"></label>
+<label>Pole B <input type="text" name="b"></label>
+<button type="button" name="btn">Licznik</button> <span id="count">0</span>
+<label>Tekst <textarea name="ta">alfa beta gamma</textarea></label>
+<button type="button" name="sel-field">Zaznacz pole</button>
+<button type="button" name="sel-page">Zaznacz akapit</button>
+<p id="para">Akapit do zaznaczenia na stronie.</p>
+<div class="pad"></div>
+<label>Pole na dole <input type="text" name="late"></label>
+<label>Duża lista <select name="big"></select></label>
+<script>
+const log = document.getElementById('log');
+const add = (s) => { log.textContent += s + '\n'; };
+const big = document.querySelector('select[name=big]');
+for (let i = 0; i < 35; i++) big.add(new Option('Opcja ' + i, 'v' + i));
+document.addEventListener('keydown', (e) => add('key:' + e.key));
+document.addEventListener('focusin', (e) => add('focus:' + (e.target.name || e.target.tagName)));
+document.addEventListener('change', (e) => add('change:' + e.target.name + '=' + e.target.value));
+document.querySelector('[name=btn]').addEventListener('click', () => {
+  const c = document.getElementById('count');
+  c.textContent = String(+c.textContent + 1);
+});
+document.querySelector('[name=sel-field]').addEventListener('click', () => {
+  const t = document.querySelector('[name=ta]');
+  t.focus();
+  t.setSelectionRange(0, 4);
+});
+document.querySelector('[name=sel-page]').addEventListener('click', () => {
+  document.activeElement.blur();
+  const r = document.createRange();
+  r.selectNodeContents(document.getElementById('para'));
+  getSelection().removeAllRanges();
+  getSelection().addRange(r);
+});
+</script>
+</body>
+</html>

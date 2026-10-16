@@ -548,6 +548,20 @@ function createAutomation(deps) {
     return wc.executeJavaScriptInIsolatedWorld(WORLD_ID, [{ code: js }]);
   }
 
+  /**
+   * Keyboard focus into the page, not the address bar: focus the <webview> element in the host UI (blurs the
+   * omnibox), then the guest itself. wc.focus() alone leaves OS key input on the host. Works with the window
+   * in the background; it does not raise the window.
+   */
+  async function focusGuest(wc) {
+    const host = wc.hostWebContents;
+    if (host && !host.isDestroyed()) {
+      const js = `(() => { const w = [...document.querySelectorAll('webview')].find((x) => { try { return x.getWebContentsId() === ${Number(wc.id)}; } catch { return false; } }); if (w) w.focus(); })()`;
+      await host.executeJavaScript(js).catch(() => {});
+    }
+    wc.focus();
+  }
+
   function checkRef(wc, ref) {
     const r = String(ref || '');
     const gen = refGen.get(wc.id);
@@ -598,7 +612,7 @@ function createAutomation(deps) {
       }
       case 'click': {
         const wc = await guestFor(args.tabId);
-        wc.focus(); // keyboard focus into the page, not the address bar
+        await focusGuest(wc);
         const r = await run(wc, refActionJs(checkRef(wc, args.ref), 'click'));
         if (!r || r.error) throw new Error((r && r.error) || 'click failed');
         return {};
@@ -607,7 +621,7 @@ function createAutomation(deps) {
         const wc = await guestFor(args.tabId);
         const text = typeof args.text === 'string' ? args.text.slice(0, 10_000) : '';
         const ref = checkRef(wc, args.ref);
-        wc.focus();
+        await focusGuest(wc);
         const r = await run(wc, refActionJs(ref, 'focus-fill'));
         if (!r || r.error) throw new Error((r && r.error) || 'fill failed');
         if (r.native) {
@@ -628,7 +642,7 @@ function createAutomation(deps) {
         const ref = checkRef(wc, args.ref);
         const hasValue = typeof args.value === 'string';
         if (!hasValue && typeof args.label !== 'string') throw new Error('value or label required');
-        wc.focus();
+        await focusGuest(wc);
         const r = await run(wc, selectOptionJs(ref, hasValue ? args.value : null, hasValue ? null : args.label));
         if (!r || r.error) throw new Error((r && r.error) || 'selectOption failed');
         return { value: r.value, label: r.label };
@@ -636,7 +650,7 @@ function createAutomation(deps) {
       case 'insertText': {
         const wc = await guestFor(args.tabId);
         if (typeof args.text !== 'string' || !args.text) throw new Error('text required');
-        wc.focus();
+        await focusGuest(wc);
         const r = await run(wc, focusedJs(false));
         if (!r || r.error) throw new Error((r && r.error) || 'insertText failed');
         wc.insertText(args.text.slice(0, 10_000));
@@ -652,7 +666,7 @@ function createAutomation(deps) {
         const wc = await guestFor(args.tabId);
         const keyCode = KEYS[String(args.key || '')];
         if (!keyCode) throw new Error(`key not allowed (use: ${Object.keys(KEYS).join(', ')})`);
-        wc.focus(); // Chromium drops key events for an unfocused widget, even with the OS window in the background
+        await focusGuest(wc);
         wc.sendInputEvent({ type: 'keyDown', keyCode });
         if (keyCode === 'Enter' || keyCode === 'Space')
           wc.sendInputEvent({ type: 'char', keyCode });

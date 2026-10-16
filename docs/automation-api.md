@@ -79,8 +79,9 @@ URLs without a scheme get `https://` (`"example.com"` → `https://example.com/`
 
 ### Notes
 
-- `click`, `fill`, `selectOption`, `insertText` and `pressKey` call `webContents.focus()` first, so keyboard focus is in the
-  page (not the address bar).
+- `click`, `fill`, `selectOption`, `insertText` and `pressKey` first focus the tab's `<webview>` element in the Vio UI (this
+  blurs the address bar) and then its `webContents`, so keyboard focus is in the page. `webContents.focus()` alone is not
+  enough. The Vio window is not raised; while it is inactive the page gets key events but no `focus` events.
 - `click` uses a DOM `click()` (after scrolling the element into view). `fill` focuses and selects the field, then types
   the text as real input (`webContents.insertText`), so React/Vue controlled inputs update.
 - `fill` on `time` (`HH:MM[:SS]`), `date` (`YYYY-MM-DD`), `datetime-local` (`YYYY-MM-DDTHH:MM[:SS]`), `number` and `range`
@@ -116,6 +117,9 @@ command name, tabId and ok/error. It never contains the token, filled text or UR
 
 - Unit tests: `node test/automation.test.cjs` (part of `npm test`). Covers auth, origin, consent, URL blocklist,
   Tor/private/internal filtering, rate limit and the info file.
+- Live on real pages: `node scripts/automation-live.cjs` (needs Vio with the Soul toggle on and a click on **Zezwól**; hands off
+  mouse and keyboard, ~1 min). Serves Soul's `order.html` and `scripts/automation-test-page.html` on 127.0.0.1, exercises every
+  form command, `pressKey` with another window in front and real OS keystrokes after `fill`, and prints a PASS/FAIL table.
 - Live: start Vio, enable the toggle, open any https page, then `node scripts/automation-test.cjs`
   (optional argument: path to `automation.json`). Click **Zezwól** in Vio. The script prints `listTabs` and
   `getPage` of the active tab.
