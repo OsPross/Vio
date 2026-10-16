@@ -361,6 +361,8 @@
   /* Sieć — keep visible, never collapse to empty */
   min-width: 72px;
 }
+
+.mx-home-widget {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 18px;

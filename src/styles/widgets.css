@@ -1033,8 +1033,6 @@
   overflow: hidden;
   box-sizing: border-box;
 }
-  overflow: hidden;
-}
 .hw-notes-resizer {
   flex: 0 0 6px;
   cursor: col-resize;

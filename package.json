@@ -8,6 +8,7 @@
     "name": "djxxr",
     "email": "djxxr@users.noreply.github.com"
   },
+  "desktopName": "vio.desktop",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
@@ -95,7 +96,7 @@
       "icon": "build/vio-512.png",
       "category": "Network;WebBrowser",
       "executableName": "vio",
-      "desktopName": "vio.desktop",
+      "syncDesktopName": true,
       "synopsis": "Vio web browser",
       "maintainer": "djxxr <djxxr@users.noreply.github.com>",
       "target": [
