@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="author" content="Anna Nowak">
+<title>Vio automation v2 – strona testowa</title>
+<style>
+  body { font: 15px system-ui, sans-serif; margin: 12px 20px; }
+  .pad { height: 2600px; }
+</style>
+</head>
+<body>
+<nav>Menu Start Kontakt Sklep</nav>
+<label>Szukaj <input type="text" name="q"></label>
+<label>Hasło <input type="password" name="pw" value="sekret123"></label>
+<button type="button" name="sel">Zaznacz akapit</button>
+<audio id="au" src="/tone.wav" loop></audio>
+<article>
+  <h1>Artykuł testowy</h1>
+  <p>Pierwszy akapit artykułu testowego, wystarczająco długi, żeby czytnik uznał go za treść główną strony.</p>
+  <p id="para">Tekst do zaznaczenia przez test automatyzacji.</p>
+  <p>Trzeci akapit z dodatkową treścią, żeby blok artykułu miał więcej niż kilkaset znaków tekstu do odczytania.</p>
+  <p>Czwarty akapit: kot, pies i chomik mieszkają razem w jednym mieszkaniu w centrum miasta przy rzece.</p>
+</article>
+<div class="pad"></div>
+<p>Daleki akapit na dole strony.</p>
+<label>Pole na dole <input type="text" name="far"></label>
+<script>
+document.querySelector('[name=sel]').addEventListener('click', () => {
+  const r = document.createRange();
+  r.selectNodeContents(document.getElementById('para'));
+  getSelection().removeAllRanges();
+  getSelection().addRange(r);
+});
+</script>
+</body>
+</html>

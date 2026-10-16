@@ -22,6 +22,8 @@ function register(deps) {
     electronWebContents,
     appWindows,
     windowMode,
+    BrowserWindow,
+    history,
   } = deps;
 
   /** @type {Map<string, {resolve:Function, reject:Function, timer:NodeJS.Timeout}>} */
@@ -111,18 +113,63 @@ function register(deps) {
     return r.response === 1;
   }
 
+  /** Soul icon / panel live in every normal window; private / Tor windows never hear about Soul. */
+  const toNormalWindows = (channel, payload) => {
+    for (const w of normalWindows()) w.webContents.send(channel, payload);
+  };
+
+  function isGuestVisible(wc) {
+    const win = wc.hostWebContents && BrowserWindow.fromWebContents(wc.hostWebContents);
+    return isNormal(win) && win.isVisible() && !win.isMinimized();
+  }
+
+  const normalFocused = () => {
+    const win = BrowserWindow.getFocusedWindow();
+    return appWindows.has(win) && isNormal(win);
+  };
+
   const automation = createAutomation({
     userDataDir: app.getPath('userData'),
     rendererRequest,
     getGuest,
     webContentsExists,
     askConsent,
-    onStatus: (connected) => {
-      const win = getMainWindow();
-      if (win && !win.isDestroyed())
-        win.webContents.send(C.AUTOMATION_STATUS_CHANGED, { connected });
-    },
+    vioVersion: app.getVersion(),
+    history,
+    isGuestVisible,
+    getWindowFocus: normalFocused,
+    onStatus: (connected) => toNormalWindows(C.AUTOMATION_STATUS_CHANGED, { connected }),
+    onSoulState: (s) => toNormalWindows(C.AUTOMATION_SOUL_STATE, s),
+    onPanel: (p) => toNormalWindows(C.AUTOMATION_PANEL, p),
   });
+
+  // Guest page events → automation (it drops everything that is not a listed persist:main tab).
+  app.on('web-contents-created', (_e, wc) => {
+    if (wc.getType() !== 'webview') return;
+    wc.on('did-finish-load', () => void automation.guestEvent(wc, 'load'));
+    wc.on('media-started-playing', () => void automation.guestEvent(wc, 'media-start'));
+    wc.on('media-paused', () => void automation.guestEvent(wc, 'media-stop'));
+    wc.on('found-in-page', (_ev, result) => void automation.guestEvent(wc, 'found', result));
+  });
+  const onFocusChange = () => setImmediate(() => automation.windowFocus(normalFocused()));
+  app.on('browser-window-focus', onFocusChange);
+  app.on('browser-window-blur', onFocusChange);
+
+  ipcMain.handle(
+    C.AUTOMATION_UI_EVENT,
+    wrapApp((event, name, data) => {
+      // tab / panel events only from normal windows
+      if (!isNormal(BrowserWindow.fromWebContents(event.sender))) return { ok: false };
+      const n = String(name || '');
+      if (n === 'tabActivated' || n === 'tabClosed') automation.tabEvent(n, data);
+      else automation.uiEvent(n, data);
+      return { ok: true };
+    }),
+  );
+  ipcMain.handle(
+    C.AUTOMATION_LOG,
+    wrapApp(() => automation.getLog()),
+  );
 
   ipcMain.handle(
     C.AUTOMATION_SET_ENABLED,

@@ -14,6 +14,8 @@ const {
   filterTabs,
   createRateLimiter,
   checkNativeValue,
+  sanitizePanel,
+  checkMediaArgs,
 } = require('../electron/lib/automation.cjs');
 
 // --- origin check ---
@@ -375,7 +377,278 @@ async function main() {
   await denier.stop();
   fs.rmSync(denyDir, { recursive: true, force: true });
   fs.rmSync(dir, { recursive: true, force: true });
+  await v2();
   console.log('automation.test.cjs OK');
+}
+
+// --- API v2: hello, events, new commands, STOP, log, security ---
+async function v2() {
+  assert.deepEqual(sanitizePanel({ open: false }), { open: false });
+  const p = sanitizePanel({
+    open: true,
+    content: { title: 'T', items: [{ text: 'a', action: 'go', payload: { x: 1 } }, { nope: 1 }, { text: 'b', payload: 'x'.repeat(3000) }] },
+  });
+  assert.deepEqual(p.content.items, [{ text: 'a', action: 'go', payload: { x: 1 } }, { text: 'b' }]);
+  assert.deepEqual(checkMediaArgs({ action: 'toggle' }), { action: 'toggle', value: null });
+  assert.throws(() => checkMediaArgs({ action: 'eval' }), /action must be/);
+  assert.throws(() => checkMediaArgs({ action: 'seek', value: '5' }), /number/);
+  assert.throws(() => checkMediaArgs({ action: 'volume', value: 2 }), /volume/);
+  assert.throws(() => checkMediaArgs({ action: 'rate', value: 10 }), /rate/);
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vio-automation-v2-'));
+  const { EventEmitter } = require('node:events');
+  const mkGuest = (id, url) => {
+    const g = new EventEmitter();
+    Object.assign(g, {
+      id,
+      url,
+      title: `Title ${id}`,
+      muted: false,
+      code: '',
+      reply: null,
+      back: true,
+      calls: [],
+      getURL: () => g.url,
+      getTitle: () => g.title,
+      isDestroyed: () => false,
+      isAudioMuted: () => g.muted,
+      focus() {},
+      hostWebContents: { isFocused: () => true, isDestroyed: () => false, executeJavaScript: async () => {} },
+      navigationHistory: {
+        canGoBack: () => g.back,
+        canGoForward: () => false,
+        goBack: () => g.calls.push('back'),
+        goForward: () => g.calls.push('forward'),
+      },
+      findInPage(text, opts) {
+        g.calls.push(`find:${text}:${opts.findNext}`);
+        setTimeout(() => auto.guestEvent(g, 'found', { requestId: 7, matches: 3, activeMatchOrdinal: 1, finalUpdate: true }), 10);
+        return 7;
+      },
+      stopFindInPage: () => g.calls.push('stopFind'),
+      capturePage: async () => ({ getSize: () => ({ width: 800, height: 600 }), toPNG: () => Buffer.from('png') }),
+      executeJavaScriptInIsolatedWorld: async (_w, [{ code }], gesture) => {
+        g.code = code;
+        g.gesture = gesture;
+        return typeof g.reply === 'function' ? g.reply(code) : g.reply;
+      },
+    });
+    return g;
+  };
+  const g1 = mkGuest(1, 'https://a.com/');
+  const g2 = mkGuest(2, 'https://b.com/'); // background tab
+  const torWc = mkGuest(9, 'https://tor.example/');
+  const guests = { 1: g1, 2: g2 };
+  let tabs = [
+    { tabId: 'a', title: 'A', url: 'https://a.com/', wcId: 1, active: true },
+    { tabId: 'b', title: 'B', url: 'https://b.com/', wcId: 2 },
+    { tabId: 'tor', title: 'Tor', url: 'https://tor.example/', mode: 'tor', partition: 'tor-1', wcId: 9 },
+  ];
+  const states = [];
+  const panels = [];
+  const asked = [];
+  const auto = createAutomation({
+    userDataDir: dir,
+    askConsent: async () => true,
+    getGuest: (id) => guests[id] || null,
+    webContentsExists: (id) => id === 1 || id === 2 || id === 9,
+    vioVersion: '9.9.9',
+    isGuestVisible: (wc) => wc === g1,
+    history: {
+      list: () => ({
+        items: [
+          { url: 'https://new.com/', title: 'New', lastVisit: 2000, visitCount: 1 },
+          { url: 'about:history', title: 'Internal', lastVisit: 1500 },
+          { url: 'https://old.com/', title: 'Old', lastVisit: 500 },
+        ],
+      }),
+    },
+    onSoulState: (s) => states.push(s),
+    onPanel: (x) => panels.push(x),
+    rendererRequest: async (cmd, args) => {
+      asked.push([cmd, args]);
+      if (cmd === 'tabs') return { tabs };
+      if (cmd === 'reopen') return { tabId: 'r1' };
+      if (cmd === 'bookmarks')
+        return { items: [{ url: 'https://bm.com/', title: 'BM', folder: 'Pasek' }, { url: 'javascript:alert(1)', title: 'x' }] };
+      return {};
+    },
+  });
+  auto.guestEvent(torWc, 'media-start'); // before start: ignored
+  const { port } = await auto.setEnabled(true);
+  const token = JSON.parse(fs.readFileSync(path.join(dir, 'automation.json'), 'utf8')).token;
+  const ws = new WebSocket(`ws://127.0.0.1:${port}`);
+  await new Promise((r) => ws.once('open', r));
+  const events = [];
+  const waiting = new Map();
+  let seq = 0;
+  ws.on('message', (d) => {
+    const m = JSON.parse(String(d));
+    if (m.type === 'event') events.push(m);
+    else (waiting.get(m.id) || (() => {}))(m), waiting.delete(m.id);
+  });
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const call = async (cmd, args, extra = {}) => {
+    await sleep(55); // under 20/s
+    const id = ++seq;
+    return new Promise((r) => {
+      waiting.set(id, r);
+      ws.send(JSON.stringify({ id, cmd, args, ...extra }));
+    });
+  };
+  assert.equal((await call('auth', undefined, { token })).ok, true);
+
+  // handshake
+  const hello = await call('hello', { client: 'soul', version: '1.0' });
+  assert.equal(hello.result.apiVersion, 2);
+  assert.equal(hello.result.vioVersion, '9.9.9');
+  for (const c of ['listTabs', 'scroll', 'getReadable', 'screenshot', 'panel', 'setSoulState']) assert.ok(hello.result.capabilities.includes(c), c);
+  assert.ok(hello.result.events.includes('selectionChanged'));
+  assert.deepEqual((await call('capabilities')).result, hello.result);
+
+  // subscribe
+  assert.match((await call('subscribe', { events: ['nope'] })).error, /unknown event/);
+  const sub = await call('subscribe', { events: ['tabActivated', 'tabClosed', 'pageLoaded', 'mediaState', 'windowFocus', 'soulIconClicked', 'panelAction', 'stopRequested'] });
+  assert.equal(sub.ok, true);
+
+  // tab events: normal passes, Tor / private / internal never emitted
+  auto.tabEvent('tabActivated', { tabId: 'a', title: 'A', url: 'https://a.com/', wcId: 1 });
+  auto.tabEvent('tabActivated', { tabId: 'tor', url: 'https://x.com/', mode: 'tor', partition: 'tor-1', wcId: 9 });
+  auto.tabEvent('tabActivated', { tabId: 'p', url: 'https://x.com/', mode: 'private', wcId: 5 });
+  auto.tabEvent('tabActivated', { tabId: 'p2', url: 'https://x.com/', partition: 'private-1', wcId: null });
+  auto.tabEvent('tabActivated', { tabId: 'h', url: 'about:home', wcId: null });
+  auto.tabEvent('tabActivated', { tabId: 'w', url: 'https://x.com/', wcId: 9 }); // live Tor webContents behind a "normal" tab
+  auto.tabEvent('tabClosed', { tabId: 'b', url: 'https://b.com/', wcId: 77 });
+  auto.tabEvent('tabClosed', { tabId: 'tor', url: 'https://x.com/', mode: 'tor', wcId: null });
+  // guest events
+  await auto.guestEvent(g1, 'load');
+  await auto.guestEvent(torWc, 'load');
+  g1.reply = { playing: true, muted: false, currentTime: 1, duration: 10, title: 'Song' };
+  await auto.guestEvent(g1, 'media-start');
+  await auto.guestEvent(torWc, 'media-start');
+  auto.windowFocus(true);
+  auto.windowFocus(true); // deduped
+  auto.uiEvent('soulIconClicked');
+  auto.uiEvent('panelAction', { action: 'open', payload: { n: 1 } });
+  await sleep(100);
+  assert.deepEqual(
+    events.map((e) => [e.event, e.data]),
+    [
+      ['windowFocus', { focused: false }], // current state, sent on subscribe
+      ['tabActivated', { tabId: 'a', url: 'https://a.com/', title: 'A' }],
+      ['tabClosed', { tabId: 'b' }],
+      ['pageLoaded', { tabId: 'a', url: 'https://a.com/', title: 'Title 1' }],
+      ['mediaState', { tabId: 'a', playing: true, muted: false, currentTime: 1, duration: 10, title: 'Song' }],
+      ['windowFocus', { focused: true }],
+      ['soulIconClicked', {}],
+      ['panelAction', { action: 'open', payload: { n: 1 } }],
+    ],
+  );
+  events.length = 0;
+
+  // selectionChanged / focusedField: poller on the active tab, debounced, password field has no value
+  assert.equal((await call('subscribe', { events: ['selectionChanged', 'focusedField'] })).ok, true);
+  let snap = { sel: 'hello', field: { ref: 'x-100001', type: 'text', label: 'Imię', editable: true } };
+  g1.reply = (code) => (code.includes('__vioSeq') ? snap : null);
+  await sleep(1300);
+  assert.deepEqual(events.find((e) => e.event === 'selectionChanged').data, { tabId: 'a', text: 'hello' });
+  assert.deepEqual(events.find((e) => e.event === 'focusedField').data, { tabId: 'a', ref: 'x-100001', type: 'text', label: 'Imię', editable: true });
+  assert.equal(events.filter((e) => e.event === 'selectionChanged').length, 1);
+  assert.match(g1.code, /type === 'password'/);
+  snap = { sel: '', field: null };
+  await sleep(1200);
+  assert.equal(events.filter((e) => e.event === 'focusedField').at(-1).data, null);
+  assert.equal(events.filter((e) => e.event === 'selectionChanged').at(-1).data.text, '');
+  // poller never looks at the Tor tab even when it is the only active one
+  tabs = tabs.map((t) => ({ ...t, active: t.tabId === 'tor' }));
+  g1.code = '';
+  await sleep(700);
+  assert.equal(g1.code, '');
+  assert.equal(torWc.code, '');
+  tabs = tabs.map((t) => ({ ...t, active: t.tabId === 'a' }));
+  await call('unsubscribe', { events: ['selectionChanged', 'focusedField'] });
+  events.length = 0;
+
+  // new commands
+  g1.reply = { title: 'Art', byline: 'Jan', text: 'body', lang: 'pl' };
+  assert.deepEqual((await call('getReadable', { tabId: 'a' })).result, { title: 'Art', byline: 'Jan', text: 'body', lang: 'pl' });
+  assert.match(g1.code, /50000/);
+  const shot = await call('screenshot', { tabId: 'a' });
+  assert.deepEqual(shot.result, { pngBase64: Buffer.from('png').toString('base64'), width: 800, height: 600 });
+  assert.equal((await call('screenshot', { tabId: 'b' })).error, 'tab not visible');
+  assert.equal((await call('screenshot', { tabId: 'a', fullPage: true })).error, 'fullPage not supported');
+  assert.deepEqual((await call('findInPage', { tabId: 'a', text: 'kot' })).result, { matches: 3, active: 1 });
+  await call('findInPage', { tabId: 'a', text: 'kot', next: true });
+  assert.deepEqual(g1.calls.slice(-2), ['find:kot:true', 'find:kot:false']);
+  assert.equal((await call('findInPage', { tabId: 'a', text: '' })).error, 'text required');
+  assert.equal((await call('stopFind', { tabId: 'a' })).ok, true);
+  g1.reply = { ok: true };
+  assert.equal((await call('scrollTo', { tabId: 'a', text: 'Rozdział 2' })).ok, true);
+  assert.match(g1.code, /Rozdział 2/);
+  assert.equal((await call('scrollTo', { tabId: 'a', ref: 'zz-1' })).error, 'stale ref');
+  assert.equal((await call('scrollTo', { tabId: 'a' })).error, 'ref or text required');
+  g1.reply = { playing: false, muted: false, currentTime: 5, duration: 10, title: 'Song' };
+  g1.muted = true;
+  const mc = await call('mediaControl', { action: 'pause' }); // no tabId → the playing tab
+  assert.equal(mc.result.muted, true);
+  assert.equal(g1.gesture, true);
+  assert.match((await call('mediaControl', { action: 'volume', value: 5 })).error, /volume/);
+  assert.equal((await call('muteTab', { tabId: 'a', muted: true })).ok, true);
+  assert.equal((await call('pinTab', { tabId: 'a', pinned: false })).ok, true);
+  assert.deepEqual(asked.filter(([c]) => c === 'mute' || c === 'pin').map(([c, a]) => [c, a.value]), [['mute', true], ['pin', false]]);
+  assert.match((await call('muteTab', { tabId: 'a' })).error, /muted must be/);
+  assert.equal((await call('muteTab', { tabId: 'tor', muted: true })).error, 'forbidden');
+  assert.deepEqual((await call('reopenClosedTab', {})).result, { tabId: 'r1' });
+  assert.equal((await call('goBack', { tabId: 'a' })).ok, true);
+  assert.equal((await call('goForward', { tabId: 'a' })).error, 'cannot go forward');
+  assert.deepEqual((await call('searchHistory', { query: 'x', since: 1000 })).result, [{ url: 'https://new.com/', title: 'New', lastVisit: 2000 }]);
+  assert.deepEqual((await call('searchBookmarks', { query: 'b' })).result, [{ url: 'https://bm.com/', title: 'BM', folder: 'Pasek' }]);
+  // highlight needs a fresh ref from getElements
+  g1.reply = [];
+  await call('getElements', { tabId: 'a' });
+  const ref = `${/const gen = "([a-f0-9]+)"/.exec(g1.code)[1]}-0`;
+  g1.reply = { ok: true };
+  assert.equal((await call('highlight', { tabId: 'a', ref, label: 'Klikam' })).ok, true);
+  assert.match(g1.code, /Klikam/);
+  assert.equal((await call('clearHighlight', { tabId: 'a' })).ok, true);
+  assert.match((await call('setSoulState', { state: 'dancing' })).error, /state must be/);
+  assert.equal((await call('setSoulState', { state: 'acting', text: 'Klikam' })).ok, true);
+  assert.deepEqual(states.at(-1), { state: 'acting', text: 'Klikam' });
+  assert.equal((await call('panel', { open: true, content: { title: 'Hi', items: [{ text: 'x', action: 'y' }] } })).ok, true);
+  assert.deepEqual(panels.at(-1), { open: true, content: { title: 'Hi', items: [{ text: 'x', action: 'y' }] } });
+
+  // every new tab command refuses Tor / unknown tabs
+  for (const c of ['getReadable', 'screenshot', 'findInPage', 'stopFind', 'scrollTo', 'goBack', 'goForward', 'highlight', 'clearHighlight', 'pinTab'])
+    assert.equal((await call(c, { tabId: 'tor', text: 'x', ref, pinned: true })).error, 'forbidden', c);
+  assert.equal((await call('mediaControl', { tabId: 'tor', action: 'play' })).error, 'forbidden');
+
+  // STOP: event, idle state, agent commands refused for 3 s, meta still allowed
+  auto.uiEvent('stopRequested');
+  await sleep(50);
+  assert.equal(events.at(-1).event, 'stopRequested');
+  assert.deepEqual(states.at(-1), { state: 'idle', text: '' });
+  assert.equal((await call('listTabs')).error, 'stopped by user');
+  assert.equal((await call('click', { tabId: 'a', ref })).error, 'stopped by user');
+  assert.equal((await call('setSoulState', { state: 'idle' })).ok, true);
+  await sleep(3000);
+  assert.equal((await call('listTabs')).ok, true);
+
+  // command log: last 200, no values
+  const log = auto.getLog();
+  assert.ok(log.length > 30);
+  assert.deepEqual(Object.keys(log[0]).sort(), ['cmd', 'result', 'tabId', 'time']);
+  assert.equal(JSON.stringify(log).includes('Klikam'), false);
+  assert.equal(log.find((e) => e.cmd === 'listTabs' && e.result !== 'ok').result, 'stopped by user');
+
+  // events are rate-limited (20/s per client)
+  events.length = 0;
+  for (let i = 0; i < 40; i++) auto.uiEvent('soulIconClicked');
+  await sleep(100);
+  assert.equal(events.length, 20);
+
+  ws.close();
+  await auto.stop();
+  fs.rmSync(dir, { recursive: true, force: true });
 }
 
 main().catch((err) => {

@@ -12,6 +12,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { WebSocketServer } = require('ws');
+const S = require('./automation-scripts.cjs');
 
 const BASE_PORT = 47821;
 const PORT_TRIES = 10;
@@ -21,6 +22,28 @@ const PAGE_TEXT_MAX = 20_000;
 const LOG_MAX_BYTES = 512 * 1024;
 // Separate JS world: page scripts can see the DOM we touch but not our functions/results.
 const WORLD_ID = 4721;
+const API_VERSION = 2;
+const CMD_LOG_MAX = 200;
+const STOP_BLOCK_MS = 3000;
+const POLL_MS = 500;
+const FIND_TIMEOUT_MS = 3000;
+
+const COMMANDS = [
+  'hello', 'capabilities', 'subscribe', 'unsubscribe',
+  'listTabs', 'openTab', 'closeTab', 'activateTab', 'navigate', 'getPage', 'getElements', 'click', 'fill',
+  'selectOption', 'insertText', 'getSelection', 'pressKey', 'scroll',
+  'getReadable', 'screenshot', 'findInPage', 'stopFind', 'scrollTo', 'mediaControl', 'muteTab', 'pinTab',
+  'reopenClosedTab', 'goBack', 'goForward', 'searchHistory', 'searchBookmarks', 'highlight', 'clearHighlight',
+  'setSoulState', 'panel',
+];
+const EVENTS = [
+  'tabActivated', 'pageLoaded', 'tabClosed', 'windowFocus', 'selectionChanged', 'focusedField', 'mediaState',
+  'soulIconClicked', 'panelAction', 'stopRequested',
+];
+/** Still allowed during the 3 s after STOP (they don't touch pages). */
+const META_COMMANDS = new Set(['hello', 'capabilities', 'subscribe', 'unsubscribe', 'setSoulState', 'panel']);
+const SOUL_STATES = new Set(['idle', 'listening', 'thinking', 'speaking', 'acting']);
+const MEDIA_ACTIONS = new Set(['play', 'pause', 'toggle', 'seek', 'seekBy', 'rate', 'volume']);
 
 // ---------- pure helpers (unit-tested in test/automation.test.cjs) ----------
 
@@ -106,6 +129,35 @@ function createRateLimiter(perSec = RATE_PER_SEC, now = Date.now) {
     count += 1;
     return count <= perSec;
   };
+}
+
+const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
+
+/** panel args → {open:false} | {open:true, content:{title, items:[{text, action?, payload?}]}} (clipped). */
+function sanitizePanel(args) {
+  if (args.open !== true) return { open: false };
+  const c = args.content && typeof args.content === 'object' ? args.content : {};
+  const items = (Array.isArray(c.items) ? c.items : []).slice(0, 30).flatMap((it) => {
+    if (!it || typeof it.text !== 'string') return [];
+    const item = { text: str(it.text, 500) };
+    if (typeof it.action === 'string' && it.action) item.action = str(it.action, 100);
+    if (it.payload !== undefined && JSON.stringify(it.payload).length <= 2000) item.payload = it.payload;
+    return [item];
+  });
+  return { open: true, content: { title: str(c.title, 200), items } };
+}
+
+/** mediaControl {action, value} → {action, value} or throws. */
+function checkMediaArgs(args) {
+  const action = String(args.action || '');
+  if (!MEDIA_ACTIONS.has(action)) throw new Error(`action must be one of: ${[...MEDIA_ACTIONS].join(', ')}`);
+  if (action === 'play' || action === 'pause' || action === 'toggle') return { action, value: null };
+  const v = Number(args.value);
+  if (typeof args.value !== 'number' || !Number.isFinite(v)) throw new Error('value must be a number');
+  if (action === 'seek' && v < 0) throw new Error('value must be >= 0');
+  if (action === 'rate' && (v < 0.25 || v > 4)) throw new Error('rate must be 0.25..4');
+  if (action === 'volume' && (v < 0 || v > 1)) throw new Error('volume must be 0..1');
+  return { action, value: v };
 }
 
 // ---------- page scripts (fixed source, args JSON-encoded — no arbitrary eval) ----------
@@ -312,6 +364,12 @@ const KEYS = {
  * @param {(wcId:number)=>boolean} [deps.webContentsExists]  any live webContents with this id (default: assume yes → fail-closed)
  * @param {()=>Promise<boolean>} deps.askConsent
  * @param {(connected:number)=>void} [deps.onStatus]
+ * @param {string} [deps.vioVersion]
+ * @param {{list:(o:object)=>{items:{url:string,title:string,lastVisit:number}[]}}} [deps.history]  normal-window visits only
+ * @param {(wc:import('electron').WebContents)=>boolean} [deps.isGuestVisible]  host window shown and not minimized
+ * @param {()=>boolean} [deps.getWindowFocus]  a normal Vio window is focused
+ * @param {(s:{state:string,text:string})=>void} [deps.onSoulState]
+ * @param {(p:object)=>void} [deps.onPanel]
  */
 function createAutomation(deps) {
   const {
@@ -321,6 +379,12 @@ function createAutomation(deps) {
     webContentsExists = () => true,
     askConsent,
     onStatus = () => {},
+    vioVersion = '',
+    history = null,
+    isGuestVisible = () => false,
+    getWindowFocus = () => false,
+    onSoulState = () => {},
+    onPanel = () => {},
   } = deps;
   const infoPath = path.join(userDataDir, 'automation.json');
   const logPath = path.join(userDataDir, 'logs', 'automation.log');
@@ -335,6 +399,17 @@ function createAutomation(deps) {
   const refGen = new Map();
   const watched = new WeakSet();
   const clients = new Set();
+  /** last 200 commands for Settings → Soul: {time, cmd, tabId, result} — never args/values */
+  const cmdLog = [];
+  let stoppedUntil = 0;
+  /** wcIds with media playing (media-started-playing / media-paused) */
+  const playingWc = new Set();
+  /** wcId → {requestId, resolve} of a pending findInPage */
+  const finds = new Map();
+  let pollTimer = null;
+  let polling = false;
+  const pollLast = { tabId: '', sel: '', selCandidate: '', fieldKey: '' };
+  let lastFocus = null;
 
   function log(line) {
     try {
@@ -414,6 +489,7 @@ function createAutomation(deps) {
     wss = null;
     for (const c of clients) c.ws.terminate();
     clients.clear();
+    updatePoller();
     await new Promise((r) => s.close(() => r()));
     log('stopped');
     emitStatus();
@@ -451,7 +527,14 @@ function createAutomation(deps) {
   }
 
   function onConnection(ws) {
-    const c = { id: ++connSeq, ws, authed: false, allow: createRateLimiter() };
+    const c = {
+      id: ++connSeq,
+      ws,
+      authed: false,
+      allow: createRateLimiter(),
+      allowEvent: createRateLimiter(),
+      events: new Set(),
+    };
     clients.add(c);
     c.authTimer = setTimeout(() => {
       if (!c.authed) ws.close(4401, 'auth timeout');
@@ -460,6 +543,7 @@ function createAutomation(deps) {
       clearTimeout(c.authTimer);
       clients.delete(c);
       if (c.authed) log(`#${c.id} disconnected`);
+      updatePoller();
       emitStatus();
     });
     ws.on('error', () => {});
@@ -504,22 +588,160 @@ function createAutomation(deps) {
     if (!c.allow()) return send(c, { id, ok: false, error: 'rate limited' });
     const cmd = String(msg.cmd || '');
     const args = msg.args && typeof msg.args === 'object' ? msg.args : {};
+    const tabId = args.tabId != null ? String(args.tabId).slice(0, 40) : '';
+    const note = (result) => {
+      cmdLog.push({ time: Date.now(), cmd: cmd.slice(0, 40), tabId, result });
+      if (cmdLog.length > CMD_LOG_MAX) cmdLog.shift();
+    };
     try {
-      const result = await runCommand(cmd, args);
-      log(`#${c.id} ${cmd}${args.tabId ? ` tab=${String(args.tabId).slice(0, 40)}` : ''} ok`);
+      if (Date.now() < stoppedUntil && !META_COMMANDS.has(cmd)) throw new Error('stopped by user');
+      const result = await runCommand(cmd, args, c);
+      log(`#${c.id} ${cmd}${tabId ? ` tab=${tabId}` : ''} ok`);
+      note('ok');
       send(c, { id, ok: true, result });
     } catch (err) {
       const error = String((err && err.message) || err);
       log(`#${c.id} ${cmd.slice(0, 40)} error=${error.slice(0, 80)}`);
+      note(error.slice(0, 80));
       send(c, { id, ok: false, error });
+    }
+  }
+
+  // ---------- events ----------
+
+  const hasSubs = (event) => [...clients].some((c) => c.authed && c.events.has(event));
+
+  /** Push to subscribed clients; events are rate-limited per client (excess dropped). */
+  function emit(event, data) {
+    for (const c of clients) {
+      if (c.authed && c.events.has(event) && c.allowEvent()) send(c, { type: 'event', event, data });
+    }
+  }
+
+  const guestState = (wcId) => (getGuest(wcId) ? 'live' : webContentsExists(wcId) ? 'forbidden' : 'gone');
+
+  /** Renderer-sourced tab events: raw tab data goes through the same filter as listTabs. */
+  function tabEvent(event, raw) {
+    if (!wss || (event !== 'tabActivated' && event !== 'tabClosed') || !hasSubs(event)) return;
+    const [t] = filterTabs([raw], guestState);
+    if (!t) return;
+    emit(event, event === 'tabClosed' ? { tabId: t.tabId } : { tabId: t.tabId, url: t.url, title: t.title });
+  }
+
+  /** Listed, loaded tab that owns this webContents (null for Tor / private / internal / unknown). */
+  async function tabOfWc(wc) {
+    if (!wc || (wc.isDestroyed && wc.isDestroyed()) || !getGuest(wc.id) || !isAllowedUrl(wc.getURL())) return null;
+    return (await allowedTabs()).find((t) => !t.sleeping && t.wcId === wc.id) || null;
+  }
+
+  /** Main-sourced webContents events: 'load' | 'media-start' | 'media-stop' | 'found' (+ found-in-page result). */
+  async function guestEvent(wc, kind, result) {
+    if (!wss || !wc) return;
+    if (kind === 'found') {
+      const f = finds.get(wc.id);
+      if (f && result && result.requestId === f.requestId && result.finalUpdate) {
+        finds.delete(wc.id);
+        f.resolve({ matches: result.matches || 0, active: result.activeMatchOrdinal || 0 });
+      }
+      return;
+    }
+    if (!getGuest(wc.id)) return; // Tor / private / internal: no state, no events
+    if (kind === 'media-start') playingWc.add(wc.id);
+    if (kind === 'media-stop') playingWc.delete(wc.id);
+    const event = kind === 'load' ? 'pageLoaded' : 'mediaState';
+    if (!hasSubs(event)) return;
+    try {
+      const tab = await tabOfWc(wc);
+      if (!tab) return;
+      if (event === 'pageLoaded') return emit(event, { tabId: tab.tabId, url: wc.getURL(), title: wc.getTitle() });
+      const m = await run(wc, S.mediaJs('', null));
+      if (m && !m.error) emit(event, { tabId: tab.tabId, ...m, muted: m.muted || wc.isAudioMuted() });
+    } catch {
+      /* page gone / navigating */
+    }
+  }
+
+  /** focused: is a normal Vio window focused (private / Tor windows count as "not Vio"). */
+  function windowFocus(focused) {
+    if (!wss || focused === lastFocus) return;
+    lastFocus = focused;
+    emit('windowFocus', { focused });
+  }
+
+  /** Soul icon / panel clicks from the Vio UI. */
+  function uiEvent(event, data) {
+    if (!wss) return;
+    if (event === 'stopRequested') return requestStop();
+    if (event === 'soulIconClicked') return emit(event, {});
+    if (event === 'panelAction' && data && typeof data.action === 'string') {
+      const payload = data.payload !== undefined && JSON.stringify(data.payload).length <= 2000 ? data.payload : null;
+      emit(event, { action: data.action.slice(0, 100), payload });
+    }
+  }
+
+  /** STOP button: tell Soul, refuse agent commands for 3 s, reset the icon. */
+  function requestStop() {
+    stoppedUntil = Date.now() + STOP_BLOCK_MS;
+    log('stop requested');
+    onSoulState({ state: 'idle', text: '' });
+    emit('stopRequested', {});
+  }
+
+  /** selectionChanged / focusedField come from polling the active tab (only while someone subscribed). */
+  function updatePoller() {
+    const want = Boolean(wss) && (hasSubs('selectionChanged') || hasSubs('focusedField'));
+    if (want && !pollTimer) pollTimer = setInterval(() => void poll(), POLL_MS);
+    if (!want && pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+      Object.assign(pollLast, { tabId: '', sel: '', selCandidate: '', fieldKey: '' });
+    }
+  }
+
+  async function poll() {
+    if (polling) return;
+    polling = true;
+    try {
+      const tabs = (await allowedTabs()).filter((t) => t.active && !t.sleeping);
+      const pick =
+        tabs.find((t) => getGuest(t.wcId)?.hostWebContents?.isFocused?.()) || tabs[0] || null;
+      const wc = pick && getGuest(pick.wcId);
+      let snap = { sel: '', field: null };
+      if (wc && isAllowedUrl(wc.getURL())) {
+        let gen = refGen.get(wc.id);
+        if (!gen) {
+          watch(wc);
+          gen = crypto.randomBytes(4).toString('hex');
+          refGen.set(wc.id, gen);
+        }
+        snap = (await run(wc, S.snapshotJs(gen))) || snap;
+      }
+      const tabId = wc ? pick.tabId : '';
+      if (tabId !== pollLast.tabId) {
+        Object.assign(pollLast, { tabId, sel: '', selCandidate: '' });
+      }
+      // debounce: emit once the selection is the same on two ticks in a row (~500 ms stable)
+      if (tabId && snap.sel === pollLast.selCandidate && snap.sel !== pollLast.sel) {
+        pollLast.sel = snap.sel;
+        emit('selectionChanged', { tabId, text: snap.sel });
+      }
+      pollLast.selCandidate = snap.sel;
+      const f = tabId && snap.field ? { tabId, ...snap.field } : null;
+      const key = f ? `${tabId}|${f.ref}` : '';
+      if (key !== pollLast.fieldKey) {
+        pollLast.fieldKey = key;
+        emit('focusedField', f);
+      }
+    } catch {
+      /* navigating / UI busy — next tick */
+    } finally {
+      polling = false;
     }
   }
 
   async function allowedTabs() {
     const res = await rendererRequest('tabs');
-    return filterTabs(res && res.tabs, (wcId) =>
-      getGuest(wcId) ? 'live' : webContentsExists(wcId) ? 'forbidden' : 'gone',
-    );
+    return filterTabs(res && res.tabs, guestState);
   }
 
   /** Tab must be listed (normal persist:main) — anything else is "forbidden". */
@@ -534,18 +756,62 @@ function createAutomation(deps) {
     const wc = tab.sleeping ? null : getGuest(tab.wcId);
     if (!wc) throw new Error('tab not loaded (activateTab first)');
     if (!isAllowedUrl(wc.getURL())) throw new Error('forbidden');
-    if (!watched.has(wc)) {
-      watched.add(wc);
-      const drop = () => refGen.delete(wc.id);
-      wc.on('did-navigate', drop);
-      wc.on('did-navigate-in-page', drop);
-      wc.once('destroyed', drop);
-    }
+    watch(wc);
     return wc;
   }
 
-  function run(wc, js) {
-    return wc.executeJavaScriptInIsolatedWorld(WORLD_ID, [{ code: js }]);
+  function watch(wc) {
+    if (watched.has(wc)) return;
+    watched.add(wc);
+    const drop = () => refGen.delete(wc.id);
+    wc.on('did-navigate', drop);
+    wc.on('did-navigate-in-page', drop);
+    wc.once('destroyed', () => (drop(), playingWc.delete(wc.id)));
+  }
+
+  function run(wc, js, userGesture = false) {
+    return wc.executeJavaScriptInIsolatedWorld(WORLD_ID, [{ code: js }], userGesture);
+  }
+
+  /** run a page script that answers {ok…} / {error} */
+  async function runOk(wc, js, what) {
+    const r = await run(wc, js);
+    if (!r || r.error) throw new Error((r && r.error) || `${what} failed`);
+    return r;
+  }
+
+  /** findInPage → resolved by guestEvent(wc, 'found', result) */
+  function find(wc, text, next) {
+    const prev = finds.get(wc.id);
+    if (prev) prev.resolve({ matches: 0, active: 0 });
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        finds.delete(wc.id);
+        resolve({ matches: 0, active: 0 });
+      }, FIND_TIMEOUT_MS);
+      const requestId = wc.findInPage(text, { findNext: !next, matchCase: false });
+      finds.set(wc.id, { requestId, resolve: (r) => (clearTimeout(timer), resolve(r)) });
+    });
+  }
+
+  /** mediaControl target: given tab, else a tab with media playing, else the active tab. */
+  async function mediaTab(tabId) {
+    if (tabId != null) return guestFor(tabId);
+    const tabs = (await allowedTabs()).filter((t) => !t.sleeping);
+    const t = tabs.find((x) => playingWc.has(x.wcId)) || tabs.find((x) => x.active);
+    if (!t) throw new Error('no active tab');
+    return guestFor(t.tabId);
+  }
+
+  function apiInfo() {
+    return { apiVersion: API_VERSION, vioVersion, capabilities: COMMANDS, events: EVENTS };
+  }
+
+  function eventNames(args) {
+    const list = Array.isArray(args.events) ? args.events.map(String) : [];
+    const bad = list.find((e) => !EVENTS.includes(e));
+    if (bad) throw new Error(`unknown event: ${bad.slice(0, 40)}`);
+    return list;
   }
 
   /**
@@ -570,8 +836,121 @@ function createAutomation(deps) {
     return r;
   }
 
-  async function runCommand(cmd, args) {
+  async function runCommand(cmd, args, c) {
     switch (cmd) {
+      case 'hello':
+        log(`#${c.id} hello ${str(args.client, 20)} ${str(args.version, 20)}`.replace(/[^\x20-\x7e]/g, '?'));
+        return apiInfo();
+      case 'capabilities':
+        return apiInfo();
+      case 'subscribe':
+      case 'unsubscribe': {
+        const names = eventNames(args);
+        const newFocus = cmd === 'subscribe' && names.includes('windowFocus') && !c.events.has('windowFocus');
+        for (const e of names) c.events[cmd === 'subscribe' ? 'add' : 'delete'](e);
+        updatePoller();
+        // current state right away, so Soul doesn't have to wait for the next focus change
+        if (newFocus) setImmediate(() => send(c, { type: 'event', event: 'windowFocus', data: { focused: getWindowFocus() } }));
+        return { events: [...c.events] };
+      }
+      case 'getReadable': {
+        const wc = await guestFor(args.tabId);
+        const r = await run(wc, S.READABLE_JS);
+        if (!r) throw new Error('page not ready');
+        return r;
+      }
+      case 'screenshot': {
+        if (args.fullPage === true) throw new Error('fullPage not supported');
+        const tab = await tabFor(args.tabId);
+        const wc = await guestFor(args.tabId);
+        if (!tab.active || !isGuestVisible(wc)) throw new Error('tab not visible');
+        const img = await wc.capturePage();
+        const { width, height } = img.getSize();
+        return { pngBase64: img.toPNG().toString('base64'), width, height };
+      }
+      case 'findInPage': {
+        const text = str(args.text, 500);
+        if (!text) throw new Error('text required');
+        return find(await guestFor(args.tabId), text, args.next === true);
+      }
+      case 'stopFind':
+        (await guestFor(args.tabId)).stopFindInPage('clearSelection');
+        return {};
+      case 'scrollTo': {
+        const wc = await guestFor(args.tabId);
+        const text = str(args.text, 500);
+        if (args.ref == null && !text) throw new Error('ref or text required');
+        await runOk(wc, S.scrollToJs(args.ref != null ? checkRef(wc, args.ref) : null, text), 'scrollTo');
+        return {};
+      }
+      case 'mediaControl': {
+        const { action, value } = checkMediaArgs(args);
+        const wc = await mediaTab(args.tabId);
+        const r = await run(wc, S.mediaJs(action, value), true);
+        if (!r || r.error) throw new Error((r && r.error) || 'mediaControl failed');
+        return { ...r, muted: r.muted || wc.isAudioMuted() };
+      }
+      case 'muteTab':
+      case 'pinTab': {
+        if (typeof args[cmd === 'muteTab' ? 'muted' : 'pinned'] !== 'boolean')
+          throw new Error(`${cmd === 'muteTab' ? 'muted' : 'pinned'} must be true|false`);
+        await tabFor(args.tabId);
+        await rendererRequest(cmd === 'muteTab' ? 'mute' : 'pin', {
+          tabId: String(args.tabId),
+          value: cmd === 'muteTab' ? args.muted : args.pinned,
+        });
+        return {};
+      }
+      case 'reopenClosedTab': {
+        const res = await rendererRequest('reopen');
+        if (!res || typeof res.tabId !== 'string') throw new Error('nothing to reopen');
+        return { tabId: res.tabId };
+      }
+      case 'goBack':
+      case 'goForward': {
+        const wc = await guestFor(args.tabId);
+        const h = wc.navigationHistory;
+        const back = cmd === 'goBack';
+        if (!(back ? h.canGoBack() : h.canGoForward())) throw new Error(`cannot go ${back ? 'back' : 'forward'}`);
+        if (back) h.goBack();
+        else h.goForward();
+        return {};
+      }
+      case 'searchHistory': {
+        if (!history) throw new Error('history unavailable');
+        const limit = Math.min(20, Math.max(1, Number(args.limit) || 10));
+        const since = Number(args.since) || 0;
+        const { items } = history.list({ q: str(args.query, 200), limit: 2000 });
+        return items
+          .filter((v) => v.lastVisit >= since && isAllowedUrl(v.url))
+          .slice(0, limit)
+          .map((v) => ({ url: v.url, title: v.title, lastVisit: v.lastVisit }));
+      }
+      case 'searchBookmarks': {
+        const limit = Math.min(20, Math.max(1, Number(args.limit) || 10));
+        const res = await rendererRequest('bookmarks', { query: str(args.query, 200) });
+        return (Array.isArray(res && res.items) ? res.items : [])
+          .filter((b) => b && isAllowedUrl(b.url))
+          .slice(0, limit)
+          .map((b) => ({ url: b.url, title: String(b.title || ''), folder: String(b.folder || '') }));
+      }
+      case 'highlight': {
+        const wc = await guestFor(args.tabId);
+        await runOk(wc, S.highlightJs(checkRef(wc, args.ref), str(args.label, 80)), 'highlight');
+        return {};
+      }
+      case 'clearHighlight':
+        await run(await guestFor(args.tabId), S.CLEAR_HIGHLIGHT_JS);
+        return {};
+      case 'setSoulState': {
+        const state = String(args.state || '');
+        if (!SOUL_STATES.has(state)) throw new Error(`state must be one of: ${[...SOUL_STATES].join(', ')}`);
+        onSoulState({ state, text: str(args.text, 200) });
+        return {};
+      }
+      case 'panel':
+        onPanel(sanitizePanel(args));
+        return {};
       case 'listTabs':
         return (await allowedTabs()).map(({ wcId, ...t }) => t);
       case 'openTab': {
@@ -687,7 +1066,17 @@ function createAutomation(deps) {
   // Stale file from a crash must not outlive the process.
   removeInfoFile();
 
-  return { setEnabled, stop, disconnectAll, status };
+  return {
+    setEnabled,
+    stop,
+    disconnectAll,
+    status,
+    getLog: () => cmdLog.slice(),
+    tabEvent,
+    guestEvent,
+    windowFocus,
+    uiEvent,
+  };
 }
 
 module.exports = {
@@ -699,5 +1088,9 @@ module.exports = {
   filterTabs,
   createRateLimiter,
   checkNativeValue,
+  sanitizePanel,
+  checkMediaArgs,
+  COMMANDS,
+  EVENTS,
   BASE_PORT,
 };

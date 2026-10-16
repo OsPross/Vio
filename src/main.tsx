@@ -24,6 +24,7 @@ import './styles/resources.css';
 import './styles/permissions.css';
 import './styles/extensions-menu.css';
 import './styles/tor.css';
+import './styles/soul.css';
 import './styles/privacy-extra.css';
 import './styles/chrome-layout.css';
 import './styles/widgets.css';

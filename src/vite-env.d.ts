@@ -416,6 +416,25 @@ declare global {
         cb: (payload: { reqId: string; cmd: string; args?: Record<string, unknown> }) => void,
       ) => () => void;
       onAutomationStatus: (cb: (payload: { connected?: number }) => void) => () => void;
+      automationUiEvent: (name: string, data?: unknown) => Promise<{ ok: boolean }>;
+      automationLog: () => Promise<
+        { time: number; cmd: string; tabId: string; result: string }[]
+      >;
+      onAutomationSoulState: (
+        cb: (payload: {
+          state?: 'idle' | 'listening' | 'thinking' | 'speaking' | 'acting';
+          text?: string;
+        }) => void,
+      ) => () => void;
+      onAutomationPanel: (
+        cb: (payload: {
+          open?: boolean;
+          content?: {
+            title: string;
+            items: { text: string; action?: string; payload?: unknown }[];
+          };
+        }) => void,
+      ) => () => void;
       setShortcutTrap: (enabled: boolean) => Promise<{ ok: boolean; enabled?: boolean }>;
       onShortcut: (
         cb: (payload: {

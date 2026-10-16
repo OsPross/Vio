@@ -3,7 +3,9 @@
 const C = require('./channels.cjs');
 
 function register(deps) {
-  const { ipcMain, wrapApp, history } = deps;
+  const { ipcMain, wrapApp, history, windowMode } = deps;
+  // Private windows never write history (also keeps them out of the Soul searchHistory command).
+  const fromPrivate = (e) => windowMode.getMetaForWebContents(e.sender).mode !== 'normal';
 
   ipcMain.handle(
     C.HISTORY_CONFIG,
@@ -14,16 +16,18 @@ function register(deps) {
 
   ipcMain.handle(
     C.HISTORY_RECORD_VISIT,
-    wrapApp((_e, opts) => {
+    wrapApp((e, opts) => {
       if (opts && opts.tor) return { ok: false, reason: 'tor' };
+      if (fromPrivate(e)) return { ok: false, reason: 'private' };
       return history.recordVisit(opts && typeof opts === 'object' ? opts : {});
     }),
   );
 
   ipcMain.handle(
     C.HISTORY_RECORD_QUERY,
-    wrapApp((_e, q, opts) => {
+    wrapApp((e, q, opts) => {
       if (opts && opts.tor) return { ok: false, reason: 'tor' };
+      if (fromPrivate(e)) return { ok: false, reason: 'private' };
       return history.recordQuery(String(q || ''), opts && typeof opts === 'object' ? opts : {});
     }),
   );

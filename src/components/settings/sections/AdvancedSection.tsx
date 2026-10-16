@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Input } from '../../ui/Input';
 import { useStore } from '../../../store';
 import { FieldRow, Row, SettingsGroup, Toggle } from '../SettingsControls';
+import { SoulLog } from './SoulLog';
 
 type DevSyncCommit = { hash: string; author: string; subject: string };
 type DevSyncCheck = {
@@ -144,6 +145,7 @@ export function AdvancedSection() {
           on={settings.automationEnabled}
           onChange={(v) => patchSettings({ automationEnabled: v })}
         />
+        {settings.automationEnabled && <SoulLog />}
       </SettingsGroup>
 
       {devSyncOn && (

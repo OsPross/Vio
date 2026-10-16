@@ -219,6 +219,18 @@ contextBridge.exposeInMainWorld('shell', {
     ipcRenderer.on('shell:automation-status-changed', handler);
     return () => ipcRenderer.removeListener('shell:automation-status-changed', handler);
   },
+  automationUiEvent: (name, data) => ipcRenderer.invoke('shell:automation-ui-event', name, data),
+  automationLog: () => ipcRenderer.invoke('shell:automation-log'),
+  onAutomationSoulState: (cb) => {
+    const handler = (_e, payload) => cb(payload || {});
+    ipcRenderer.on('shell:automation-soul-state', handler);
+    return () => ipcRenderer.removeListener('shell:automation-soul-state', handler);
+  },
+  onAutomationPanel: (cb) => {
+    const handler = (_e, payload) => cb(payload || {});
+    ipcRenderer.on('shell:automation-panel', handler);
+    return () => ipcRenderer.removeListener('shell:automation-panel', handler);
+  },
   setShortcutTrap: (enabled) => ipcRenderer.invoke('shell:set-shortcut-trap', enabled),
   onShortcut: (cb) => {
     const handler = (_e, payload) => cb(payload || {});

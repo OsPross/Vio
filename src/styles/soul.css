@@ -1,0 +1,123 @@
+/* Soul (automation API) — toolbar icon, STOP, side panel */
+
+.soul-btn {
+  position: relative;
+}
+
+.soul-dot {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--bg-elev);
+}
+
+.soul-listening .soul-dot { background: #34d399; }
+.soul-thinking .soul-dot { background: #fbbf24; }
+.soul-speaking .soul-dot { background: #60a5fa; }
+.soul-acting .soul-dot { background: #a78bfa; }
+
+.motion-on .soul-thinking .soul-dot,
+.motion-on .soul-acting .soul-dot {
+  animation: soul-pulse 1s ease-in-out infinite;
+}
+
+@keyframes soul-pulse {
+  50% { opacity: 0.35; }
+}
+
+.soul-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.soul-stop:hover {
+  background: #b91c1c;
+}
+
+.soul-panel {
+  position: fixed;
+  top: 84px;
+  right: 12px;
+  z-index: 60;
+  width: 280px;
+  max-height: calc(100vh - 110px);
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-elev-2);
+  color: var(--fg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.soul-panel header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.soul-panel header strong {
+  flex: 1;
+  font-size: 13px;
+}
+
+.soul-panel ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.soul-panel li > span {
+  display: block;
+  padding: 6px 8px;
+  color: var(--fg-2);
+}
+
+.soul-panel li > button {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.soul-panel li > button:hover {
+  background: var(--accent-dim);
+}
+
+.soul-log {
+  max-height: 260px;
+  overflow: auto;
+  margin: 0.5rem 0;
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+}
+
+.soul-log div {
+  display: grid;
+  grid-template-columns: 70px 120px 1fr auto;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.soul-log .err {
+  color: #f87171;
+}
