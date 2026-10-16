@@ -39,3 +39,6 @@ credentials.json
 **/vault*
 dev-app-update.yml
 !dev-app-update.yml.example
+
+graphify-out/
+.claude/
