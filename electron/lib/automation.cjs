@@ -112,9 +112,10 @@ function createRateLimiter(perSec = RATE_PER_SEC, now = Date.now) {
 
 const PAGE_TEXT_JS = `(() => ({ url: location.href, title: document.title, text: (document.body ? document.body.innerText : '').slice(0, ${PAGE_TEXT_MAX}) }))()`;
 
-function elementsJs(gen) {
+function elementsJs(gen, all) {
   return `(() => {
   const gen = ${JSON.stringify(gen)};
+  const all = ${JSON.stringify(Boolean(all))};
   document.querySelectorAll('[data-vio-ref]').forEach((e) => e.removeAttribute('data-vio-ref'));
   const sel = 'a[href],button,input,select,textarea,summary,[contenteditable=""],[contenteditable="true"],[role=button],[role=link],[role=checkbox],[role=radio],[role=tab],[role=menuitem],[role=option],[role=switch],[role=textbox],[role=combobox]';
   const vw = innerWidth, vh = innerHeight;
@@ -156,7 +157,9 @@ function elementsJs(gen) {
     if (out.length >= 300) break;
     if (el.disabled || el.type === 'hidden') continue;
     const r = el.getBoundingClientRect();
-    if (r.width < 1 || r.height < 1 || r.bottom < 0 || r.right < 0 || r.top > vh || r.left > vw) continue;
+    if (r.width < 1 || r.height < 1) continue;
+    const visible = !(r.bottom < 0 || r.right < 0 || r.top > vh || r.left > vw);
+    if (!visible && !all) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) === 0) continue;
     const ref = gen + '-' + (i++);
@@ -172,8 +175,9 @@ function elementsJs(gen) {
       ref, role: el.getAttribute('role') || implicitRole(el), tag, type,
       label: clip(labelOf(el), 120), name: clip(el.getAttribute('name'), 80),
       placeholder: clip(el.getAttribute('placeholder'), 80),
-      value: isPw ? null : clip(value, 200), empty: !value,
+      value: isPw ? null : clip(value, 200), empty: !value, visible,
     };
+    if (tag === 'select') item.options = Array.from(el.options).slice(0, 30).map((o) => ({ value: clip(o.value, 80), label: clip(o.text, 80), selected: o.selected }));
     if (type === 'checkbox' || type === 'radio') item.checked = Boolean(el.checked);
     else if (el.hasAttribute('aria-checked')) item.checked = el.getAttribute('aria-checked') === 'true';
     out.push(item);
@@ -182,19 +186,95 @@ function elementsJs(gen) {
 })()`;
 }
 
+// Inputs whose value is set natively (no typing): fill validates the format first.
+const NATIVE_TYPES = /^(time|date|datetime-local|number|range)$/;
+
+const refEl = (ref) =>
+  `const el = document.querySelector('[data-vio-ref=' + JSON.stringify(${JSON.stringify(ref)}) + ']');
+  if (!el) return { error: 'stale ref' };`;
+
+/** Is v a valid value for a native input type? Empty string = clear. */
+function checkNativeValue(type, v) {
+  if (v === '') return true;
+  if (type === 'number' || type === 'range') return /^-?\d+(\.\d+)?$/.test(v);
+  const time = (t) => {
+    const m = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(t);
+    return Boolean(m) && +m[1] < 24 && +m[2] < 60 && (m[3] == null || +m[3] < 60);
+  };
+  const date = (d) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    if (!m) return false;
+    const dt = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    return dt.getUTCFullYear() === +m[1] && dt.getUTCMonth() === +m[2] - 1 && dt.getUTCDate() === +m[3];
+  };
+  if (type === 'time') return time(v);
+  if (type === 'date') return date(v);
+  if (type === 'datetime-local') {
+    const [d, t, ...rest] = v.split('T');
+    return rest.length === 0 && t != null && date(d) && time(t);
+  }
+  return false;
+}
+
+/** Native value setter + input/change: works with React/Vue; echoes the (browser-sanitized) value. */
+function setNativeJs(ref, value) {
+  return `(() => {
+  ${refEl(ref)}
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, ${JSON.stringify(value)});
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  return { ok: true, value: el.value };
+})()`;
+}
+
+function selectOptionJs(ref, value, label) {
+  return `(() => {
+  ${refEl(ref)}
+  if (el.tagName !== 'SELECT') return { error: 'element is not a select' };
+  const value = ${JSON.stringify(value)}, label = ${JSON.stringify(label)};
+  const norm = (s) => String(s).replace(/\\s+/g, ' ').trim().toLowerCase();
+  const opts = Array.from(el.options);
+  const o = value != null ? opts.find((x) => x.value === value) : opts.find((x) => norm(x.text) === norm(label));
+  if (!o) return { error: 'no such option' };
+  if (o.disabled) return { error: 'option disabled' };
+  el.focus();
+  el.value = o.value;
+  o.selected = true;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  return { ok: true, value: o.value, label: o.text.trim() };
+})()`;
+}
+
+/** Focused editable element (never a password field) → {ok, text?} / {error}. */
+const focusedJs = (wantSelection) => `(() => {
+  const el = document.activeElement;
+  const tag = el && el.tagName ? el.tagName.toLowerCase() : '';
+  const type = tag === 'input' ? (el.type || 'text').toLowerCase() : '';
+  const field = tag === 'textarea' || (tag === 'input' && /^(text|search|email|url|tel|number|)$/.test(type));
+  if (type === 'password' || (el && /password/i.test(el.getAttribute?.('autocomplete') || ''))) return { error: 'forbidden' };
+  if (${JSON.stringify(wantSelection)}) {
+    const text = field ? String(el.value).slice(el.selectionStart, el.selectionEnd) : String(getSelection());
+    return { ok: true, text: text.slice(0, 10000) };
+  }
+  if (!field && !(el && el.isContentEditable)) return { error: 'no editable element focused' };
+  return { ok: true };
+})()`;
+
 /** action: 'click' | 'focus-fill' */
 function refActionJs(ref, action) {
   return `(() => {
-  const el = document.querySelector('[data-vio-ref=' + JSON.stringify(${JSON.stringify(ref)}) + ']');
-  if (!el) return { error: 'stale ref' };
+  ${refEl(ref)}
+  const NATIVE_TYPES = ${NATIVE_TYPES};
   el.scrollIntoView({ block: 'center', inline: 'center' });
   if (${JSON.stringify(action)} === 'click') { el.focus?.(); el.click(); return { ok: true }; }
   const tag = el.tagName.toLowerCase();
   const type = tag === 'input' ? (el.type || 'text').toLowerCase() : '';
   if (type === 'password' || /password/i.test(el.getAttribute('autocomplete') || '')) return { error: 'forbidden' };
-  const textLike = tag === 'textarea' || (tag === 'input' && /^(text|search|email|url|tel|number|)$/.test(type)) || el.isContentEditable;
-  if (!textLike) return { error: 'element is not a text field' };
   el.focus();
+  if (NATIVE_TYPES.test(type)) return { ok: true, native: type };
+  const textLike = tag === 'textarea' || (tag === 'input' && /^(text|search|email|url|tel|)$/.test(type)) || el.isContentEditable;
+  if (!textLike) return { error: 'element is not a text field' };
   if (el.isContentEditable) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
   else el.select();
   return { ok: true };
@@ -511,13 +591,14 @@ function createAutomation(deps) {
       case 'getElements': {
         const wc = await guestFor(args.tabId);
         const gen = crypto.randomBytes(4).toString('hex');
-        const r = await run(wc, elementsJs(gen));
+        const r = await run(wc, elementsJs(gen, args.all === true));
         if (!Array.isArray(r)) throw new Error('page not ready');
         refGen.set(wc.id, gen);
         return r;
       }
       case 'click': {
         const wc = await guestFor(args.tabId);
+        wc.focus(); // keyboard focus into the page, not the address bar
         const r = await run(wc, refActionJs(checkRef(wc, args.ref), 'click'));
         if (!r || r.error) throw new Error((r && r.error) || 'click failed');
         return {};
@@ -525,17 +606,53 @@ function createAutomation(deps) {
       case 'fill': {
         const wc = await guestFor(args.tabId);
         const text = typeof args.text === 'string' ? args.text.slice(0, 10_000) : '';
-        const r = await run(wc, refActionJs(checkRef(wc, args.ref), 'focus-fill'));
+        const ref = checkRef(wc, args.ref);
+        wc.focus();
+        const r = await run(wc, refActionJs(ref, 'focus-fill'));
         if (!r || r.error) throw new Error((r && r.error) || 'fill failed');
+        if (r.native) {
+          if (!checkNativeValue(r.native, text)) throw new Error(`invalid ${r.native} value`);
+          const n = await run(wc, setNativeJs(ref, text));
+          if (!n || n.error) throw new Error((n && n.error) || 'fill failed');
+          // range clamps to min/max/step by design; the other types must keep the value as given
+          if (n.value !== text && r.native !== 'range') throw new Error(`invalid ${r.native} value`);
+          return {};
+        }
         // Real text input → works with React/Vue controlled fields.
         if (text) wc.insertText(text);
         else wc.delete();
         return {};
       }
+      case 'selectOption': {
+        const wc = await guestFor(args.tabId);
+        const ref = checkRef(wc, args.ref);
+        const hasValue = typeof args.value === 'string';
+        if (!hasValue && typeof args.label !== 'string') throw new Error('value or label required');
+        wc.focus();
+        const r = await run(wc, selectOptionJs(ref, hasValue ? args.value : null, hasValue ? null : args.label));
+        if (!r || r.error) throw new Error((r && r.error) || 'selectOption failed');
+        return { value: r.value, label: r.label };
+      }
+      case 'insertText': {
+        const wc = await guestFor(args.tabId);
+        if (typeof args.text !== 'string' || !args.text) throw new Error('text required');
+        wc.focus();
+        const r = await run(wc, focusedJs(false));
+        if (!r || r.error) throw new Error((r && r.error) || 'insertText failed');
+        wc.insertText(args.text.slice(0, 10_000));
+        return {};
+      }
+      case 'getSelection': {
+        const wc = await guestFor(args.tabId);
+        const r = await run(wc, focusedJs(true));
+        if (!r || r.error) throw new Error((r && r.error) || 'getSelection failed');
+        return { text: r.text };
+      }
       case 'pressKey': {
         const wc = await guestFor(args.tabId);
         const keyCode = KEYS[String(args.key || '')];
         if (!keyCode) throw new Error(`key not allowed (use: ${Object.keys(KEYS).join(', ')})`);
+        wc.focus(); // Chromium drops key events for an unfocused widget, even with the OS window in the background
         wc.sendInputEvent({ type: 'keyDown', keyCode });
         if (keyCode === 'Enter' || keyCode === 'Space')
           wc.sendInputEvent({ type: 'char', keyCode });
@@ -567,5 +684,6 @@ module.exports = {
   normalizeUrl,
   filterTabs,
   createRateLimiter,
+  checkNativeValue,
   BASE_PORT,
 };

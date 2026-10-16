@@ -13,6 +13,7 @@ const {
   normalizeUrl,
   filterTabs,
   createRateLimiter,
+  checkNativeValue,
 } = require('../electron/lib/automation.cjs');
 
 // --- origin check ---
@@ -217,11 +218,22 @@ async function main() {
     getURL: () => 'https://httpbin.org/forms/post',
     on() {},
     once() {},
-    executeJavaScriptInIsolatedWorld: async () => ({
-      url: 'https://httpbin.org/forms/post',
-      title: 'Form',
-      text: 'x',
-    }),
+    calls: [],
+    reply: null,
+    focus() {
+      this.calls.push('focus');
+    },
+    insertText(t) {
+      this.calls.push(`insertText:${t}`);
+    },
+    sendInputEvent(e) {
+      this.calls.push(`key:${e.type}`);
+    },
+    executeJavaScriptInIsolatedWorld: async function (_w, [{ code }]) {
+      liveGuest.code = code;
+      if (liveGuest.reply) return liveGuest.reply;
+      return { url: 'https://httpbin.org/forms/post', title: 'Form', text: 'x' };
+    },
   };
   const preTabs = [
     // window A (opened long before Soul connected)
@@ -271,6 +283,77 @@ async function main() {
     (await call(pws, { id: 6, cmd: 'getPage', args: { tabId: 'b2' } })).error,
     'forbidden',
   );
+  // --- form commands (mocked page; scripts are fixed source, we check the flow around them)
+  const g = liveGuest;
+  const cmd = async (name, args) => (await new Promise((r) => setTimeout(r, 70)), call(pws, { id: 9, cmd: name, args: { tabId: 'a1', ...args } }));
+  g.reply = [];
+  assert.equal((await cmd('getElements', { all: true })).ok, true);
+  assert.match(g.code, /const all = true/);
+  assert.equal(g.code.includes('item.options'), true);
+  assert.equal(g.code.includes('slice(0, 30)'), true);
+  assert.match(g.code, /visible/);
+  await cmd('getElements', {});
+  assert.match(g.code, /const all = false/);
+  const refOf = async () => {
+    const gen = /const gen = "([a-f0-9]+)"/.exec(g.code)[1];
+    return `${gen}-0`;
+  };
+  g.reply = [];
+  await cmd('getElements', {});
+  const ref = await refOf();
+
+  g.calls.length = 0;
+  g.reply = { ok: true };
+  assert.equal((await cmd('click', { ref })).ok, true);
+  assert.equal(g.calls[0], 'focus');
+
+  g.calls.length = 0;
+  assert.equal((await cmd('fill', { ref, text: 'abc' })).ok, true);
+  assert.deepEqual(g.calls, ['focus', 'insertText:abc']);
+
+  // native types: validated in main, set natively, no typing
+  g.calls.length = 0;
+  g.reply = { ok: true, native: 'time', value: '14:30' };
+  assert.equal((await cmd('fill', { ref, text: '14:30' })).ok, true);
+  assert.equal(g.calls.includes('insertText:14:30'), false);
+  assert.match(g.code, /dispatchEvent\(new Event\('change'/);
+  assert.equal((await cmd('fill', { ref, text: '25:00' })).error, 'invalid time value');
+  g.reply = { ok: true, native: 'time', value: '' }; // browser refused the value
+  assert.equal((await cmd('fill', { ref, text: '14:30' })).error, 'invalid time value');
+
+  g.reply = { error: 'forbidden' };
+  assert.equal((await cmd('fill', { ref, text: 'x' })).error, 'forbidden');
+  assert.equal((await cmd('insertText', { text: 'x' })).error, 'forbidden');
+  assert.equal((await cmd('getSelection', {})).error, 'forbidden');
+
+  g.reply = { ok: true, value: 'b', label: 'Beta' };
+  assert.deepEqual((await cmd('selectOption', { ref, label: 'Beta' })).result, { value: 'b', label: 'Beta' });
+  assert.equal((await cmd('selectOption', { ref })).error, 'value or label required');
+  assert.equal((await cmd('selectOption', { ref: 'bad-1', value: 'b' })).error, 'stale ref');
+
+  g.calls.length = 0;
+  g.reply = { ok: true };
+  assert.equal((await cmd('insertText', { text: 'dyktando' })).ok, true);
+  assert.deepEqual(g.calls, ['focus', 'insertText:dyktando']);
+  assert.equal((await cmd('insertText', { text: '' })).error, 'text required');
+  g.reply = { ok: true, text: 'zaznaczone' };
+  assert.deepEqual((await cmd('getSelection', {})).result, { text: 'zaznaczone' });
+
+  g.calls.length = 0;
+  assert.equal((await cmd('pressKey', { key: 'Enter' })).ok, true);
+  assert.equal(g.calls[0], 'focus');
+  g.reply = null;
+
+  assert.equal(checkNativeValue('time', '09:05'), true);
+  assert.equal(checkNativeValue('time', '24:00'), false);
+  assert.equal(checkNativeValue('date', '2026-02-29'), false);
+  assert.equal(checkNativeValue('date', '2028-02-29'), true);
+  assert.equal(checkNativeValue('datetime-local', '2026-10-16T09:05'), true);
+  assert.equal(checkNativeValue('datetime-local', '2026-10-16 09:05'), false);
+  assert.equal(checkNativeValue('number', '-3.5'), true);
+  assert.equal(checkNativeValue('number', '1e5'), false);
+  assert.equal(checkNativeValue('range', ''), true);
+
   await pre.stop();
   fs.rmSync(preDir, { recursive: true, force: true });
 
