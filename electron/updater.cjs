@@ -2,7 +2,7 @@
 
 /**
  * Packaged auto-update via electron-updater.
- * Feed: public GitHub repo (djxxr-releases) — never embed GH tokens in the .exe.
+ * Feed: public GitHub repo (OsPross/vio-releases) — never embed GH tokens in the .exe.
  */
 
 const path = require('node:path');

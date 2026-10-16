@@ -106,7 +106,7 @@ More: `docs/ARCHITECTURE.md`, `PROJECT_OVERVIEW.md` (Tor/privacy details), `docs
 ## Workflow
 - The user does not read code. **At the end of each task, explain in simple Polish** what changed and what it means for using the browser.
 - Before saying "done": run `npm run typecheck` and `npm test` (plus the Tor/vault scripts if relevant). For UI changes, launch `npm run electron:dev` and check. Report failures honestly.
-- Commit only files you changed yourself (the working tree often holds other uncommitted WIP). Never commit `graphify-out/`, `.claude/`, `release*/`, `dist/`, `tmp-verify/`, or screenshots. Do not push unless asked (there is no remote yet; see `docs/REPO.md`).
+- Commit only files you changed yourself (the working tree often holds other uncommitted WIP). Never commit `graphify-out/`, `.claude/`, `release*/`, `dist/`, `tmp-verify/`, or screenshots. Do not push unless asked (remote: private `OsPross/Vio`, branch `main`).
 - After code changes, run `graphify update .` (Graphify is set up; the graph is in `graphify-out/`).
 
 ## Tools / plugins
@@ -117,10 +117,9 @@ More: `docs/ARCHITECTURE.md`, `PROJECT_OVERVIEW.md` (Tor/privacy details), `docs
 - Do not install new plugins or MCP servers without asking (limit ~6 in total).
 
 ## Known issues / TODO (as of 2026-10-16)
-- `package.json` `build.publish.owner` is still `REPLACE_WITH_YOUR_GITHUB_USER`, so `npm run release` won't publish correctly yet.
-- `EXTENSIONS_INSTALL_ASK` / `EXTENSIONS_INSTALL_RESPOND` exist in `electron/ipc/channels.cjs` but not in `src/lib/ipc-channels.ts` (this comes from uncommitted extensions WIP).
-- `test/chrome-extension-id.test.cjs` and `test/google-auth.test.cjs` pass but are not in the `npm test` chain.
+- Source repo is private `OsPross/Vio`. Updater releases go to the separate PUBLIC repo `OsPross/vio-releases`, which must exist before the first `npm run release`.
+- Guest-callable extension IPC (`extensions-list`, `extensions-install-store`) is allowed only from Chrome Web Store URLs (`isChromeWebStoreUrl`), and guest installs need the in-app consent bar (fail-closed).
 - `main.cjs` loads `scripts/probe-*`/`smoke-*` via env flags, but only when unpackaged (`!app.isPackaged`). Only `perf-bench.cjs` ships in the build.
-- Large uncommitted WIP (extensions popup, Google login, adblock, UI) in the tree. There is no `main` branch locally (work happens on `master`; there is also a `cleanup-2` branch).
+- There is also an old local `cleanup-2` branch. `beats/` (an audio file) is local-only and not committed.
 - `styles.css` overlaps with `styles/chrome-layout.css`; lint has ~43 warnings; repo root has stray files (`history-ui-check.png`, `BRIEFING-GROK-HOME.md`, `RAPORT-CLEANUP.md`, `tmp-verify/`).
 - There is no CI, so tests only run locally.

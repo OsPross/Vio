@@ -50,19 +50,19 @@ git push -u origin feature/foo
 
 Źródło (`djxxr`) jest **prywatne** — w instalatorze **nie** może być tokenu GitHub.
 
-**Wybrane rozwiązanie:** osobne **publiczne** repo tylko na releasy, np. `<TWOJ_USER>/djxxr-releases`  
+**Wybrane rozwiązanie:** osobne **publiczne** repo tylko na releasy, np. `OsPross/vio-releases`  
 (Electron-updater czyta `latest.yml` + NSIS bez auth.)
 
-1. Utwórz publiczne `djxxr-releases` (puste).
+1. Utwórz publiczne `OsPross/vio-releases` (puste).
 2. W `package.json` → `build.publish`: ustaw `owner` / `repo` na to publiczne repo.
 3. Lokalnie (token tylko w env, nigdy w repo):
 
 ```powershell
-$env:GH_TOKEN = "<fine-grained PAT: contents write do djxxr-releases>"
+$env:GH_TOKEN = "<fine-grained PAT: contents write do vio-releases>"
 npm run release
 ```
 
-4. Sprawdź Releases na `djxxr-releases` (`latest.yml` + `.exe`).
+4. Sprawdź Releases na `OsPross/vio-releases` (`latest.yml` + `.exe`).
 
 Alternatywa bez auto-update: ręczna instalacja z Releases (przycisk w ustawieniach może otworzyć URL).
 

@@ -3,17 +3,23 @@
   "version": "0.1.0",
   "private": true,
   "description": "Własna przeglądarka — UI, pasek, sidebar, ustawienia.",
+  "homepage": "https://github.com/OsPross/Vio",
+  "author": {
+    "name": "djxxr",
+    "email": "djxxr@users.noreply.github.com"
+  },
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "node test/home-widgets.test.mjs && node test/notes.test.mjs && node --experimental-strip-types test/url-display.test.mjs && node --experimental-strip-types test/bangs.test.mjs && node --experimental-strip-types test/omnibox-ghost.test.mjs && npx tsx test/store.test.mjs && npx tsx test/store-persist-hydrate.test.mjs && npx tsx test/shortcuts-registry.test.mjs && node test/popup-policy.test.cjs && node test/partitions.test.cjs && node test/ua-chrome.test.cjs && npx tsx test/tab-navigate.test.mjs",
+    "test": "node test/home-widgets.test.mjs && node test/notes.test.mjs && node --experimental-strip-types test/url-display.test.mjs && node --experimental-strip-types test/bangs.test.mjs && node --experimental-strip-types test/omnibox-ghost.test.mjs && npx tsx test/store.test.mjs && npx tsx test/store-persist-hydrate.test.mjs && npx tsx test/shortcuts-registry.test.mjs && node test/popup-policy.test.cjs && node test/partitions.test.cjs && node test/ua-chrome.test.cjs && npx tsx test/tab-navigate.test.mjs && node test/chrome-extension-id.test.cjs && node test/google-auth.test.cjs",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"*.md\" \"docs/**/*.md\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "electron:dev": "concurrently -k \"vite --host 127.0.0.1 --port 5173\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER=http://127.0.0.1:5173 electron .\"",
     "electron:build": "vite build && electron-builder --win",
+    "electron:build:linux": "npm run build && electron-builder --linux rpm AppImage -c.directories.output=release-linux",
     "release": "npm run build && electron-builder --win --publish always",
     "preview": "vite preview"
   },
@@ -73,8 +79,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "REPLACE_WITH_YOUR_GITHUB_USER",
-        "repo": "djxxr-releases",
+        "owner": "OsPross",
+        "repo": "vio-releases",
         "releaseType": "release"
       }
     ],
@@ -89,6 +95,9 @@
       "icon": "build/vio-512.png",
       "category": "Network;WebBrowser",
       "executableName": "vio",
+      "desktopName": "vio.desktop",
+      "synopsis": "Vio web browser",
+      "maintainer": "djxxr <djxxr@users.noreply.github.com>",
       "target": [
         "rpm",
         "AppImage"
