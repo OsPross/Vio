@@ -12,6 +12,27 @@
 const { app } = require('electron');
 const brands = require('./lib/ua-brands.cjs');
 
+/** Electron's stock UA before we overwrite with Chrome (needed for Google auth). */
+let originalElectronUa = '';
+
+function buildStockElectronUa() {
+  const chrome = String(process.versions.chrome || '134.0.0.0');
+  const electron = String(process.versions.electron || '0.0.0');
+  return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chrome} Electron/${electron} Safari/537.36`;
+}
+
+function captureOriginalElectronUa(candidate) {
+  if (originalElectronUa) return;
+  const s = String(candidate || '').trim();
+  // Only keep a real Electron UA — never lock in our Chrome spoof
+  if (!s || !/Electron\//i.test(s)) return;
+  originalElectronUa = s;
+}
+
+function getOriginalElectronUa() {
+  return originalElectronUa || buildStockElectronUa();
+}
+
 function chromeFull() {
   try {
     return String(process.versions.chrome || '134.0.0.0');
@@ -33,29 +54,28 @@ function userAgentMetadata() {
 }
 
 function clientHintHeaders() {
+  // Lowercase keys only — Chromium HTTP/2; capitalized duplicates do not overwrite (Tandem).
   const full = chromeFull();
   const major = chromeMajor();
   const list = `"Not?A_Brand";v="24", "Chromium";v="${major}", "Google Chrome";v="${major}"`;
   const fullList = `"Not?A_Brand";v="24.0.0.0", "Chromium";v="${full}", "Google Chrome";v="${full}"`;
   return {
     'sec-ch-ua': list,
-    'Sec-CH-UA': list,
     'sec-ch-ua-mobile': '?0',
-    'Sec-CH-UA-Mobile': '?0',
     'sec-ch-ua-platform': '"Windows"',
-    'Sec-CH-UA-Platform': '"Windows"',
     'sec-ch-ua-platform-version': '"15.0.0"',
-    'Sec-CH-UA-Platform-Version': '"15.0.0"',
     'sec-ch-ua-arch': '"x86"',
-    'Sec-CH-UA-Arch': '"x86"',
     'sec-ch-ua-bitness': '"64"',
-    'Sec-CH-UA-Bitness': '"64"',
     'sec-ch-ua-full-version-list': fullList,
-    'Sec-CH-UA-Full-Version-List': fullList,
   };
 }
 
 function applyBootFallback() {
+  try {
+    captureOriginalElectronUa(app.userAgentFallback);
+  } catch {
+    /* */
+  }
   try {
     app.userAgentFallback = buildChromeUa();
   } catch (err) {
@@ -74,6 +94,13 @@ function applyBootFallback() {
  */
 function applyToSession(ses) {
   if (!ses) return;
+  try {
+    if (typeof ses.getUserAgent === 'function') {
+      captureOriginalElectronUa(ses.getUserAgent());
+    }
+  } catch {
+    /* */
+  }
   const ua = buildChromeUa();
   try {
     if (typeof ses.setUserAgent === 'function') ses.setUserAgent(ua);
@@ -105,20 +132,24 @@ async function applyToWebContents(wc, opts = {}) {
     /* */
   }
 
-  const tryCdp = async () => {
-    if (wc.isDestroyed()) return false;
-    // Never attach CDP on Google login — detectable and previously hung/broke auth
+  if (wired.has(wc)) return;
+  wired.add(wc);
+
+  // One-shot CDP for navigator.userAgentData brands (YouTube miniplayer / feature
+  // detection). Re-attaching on every navigation crashed Electron on Windows —
+  // never wire did-navigate / dom-ready loops here.
+  const tryCdpOnce = async () => {
+    if (wc.isDestroyed()) return;
     try {
       const cur = String(wc.getURL() || '');
-      if (/(^|\.)accounts\.google\.com$/i.test((() => {
+      const host = (() => {
         try {
-          return new URL(cur).hostname;
+          return new URL(cur).hostname.toLowerCase();
         } catch {
           return '';
         }
-      })())) {
-        return false;
-      }
+      })();
+      if (host === 'accounts.google.com' || host.endsWith('.accounts.google.com')) return;
     } catch {
       /* */
     }
@@ -134,9 +165,8 @@ async function applyToWebContents(wc, opts = {}) {
         platform: 'Win32',
         userAgentMetadata: userAgentMetadata(),
       });
-      return true;
     } catch {
-      return false;
+      /* */
     } finally {
       if (attachedHere && !persistDebugger) {
         try {
@@ -148,48 +178,7 @@ async function applyToWebContents(wc, opts = {}) {
     }
   };
 
-  await tryCdp();
-
-  if (wired.has(wc)) return;
-  wired.add(wc);
-
-  wc.on('devtools-closed', () => {
-    void tryCdp();
-  });
-  wc.on('did-start-navigation', (_e, url, _inPlace, isMainFrame) => {
-    if (isMainFrame === false) return;
-    try {
-      const h = new URL(String(url || '')).hostname.toLowerCase();
-      if (h === 'accounts.google.com' || h.endsWith('.accounts.google.com')) return;
-    } catch {
-      /* */
-    }
-    void tryCdp();
-  });
-  wc.on('dom-ready', () => {
-    void tryCdp();
-  });
-  wc.on('did-finish-load', () => {
-    void tryCdp();
-  });
-  wc.on('did-navigate', (_e, url) => {
-    try {
-      const h = new URL(String(url || '')).hostname.toLowerCase();
-      if (h === 'accounts.google.com' || h.endsWith('.accounts.google.com')) return;
-    } catch {
-      /* */
-    }
-    void tryCdp();
-  });
-  wc.on('did-navigate-in-page', (_e, url) => {
-    try {
-      const h = new URL(String(url || '')).hostname.toLowerCase();
-      if (h === 'accounts.google.com' || h.endsWith('.accounts.google.com')) return;
-    } catch {
-      /* */
-    }
-    void tryCdp();
-  });
+  void tryCdpOnce();
 }
 
 module.exports = {
@@ -200,6 +189,7 @@ module.exports = {
   userAgentMetadata,
   brandList: brands.brandList,
   fullVersionList: brands.fullVersionList,
+  getOriginalElectronUa,
   applyBootFallback,
   applyToSession,
   applyToWebContents,

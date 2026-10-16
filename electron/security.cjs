@@ -88,15 +88,21 @@ function revokePermission(origin, permission) {
   return { ok: true };
 }
 
+function isWebAuthnPermission(perm) {
+  return /^publickey-credentials-(get|create)$/i.test(String(perm || ''));
+}
+
 function mapPermission(perm) {
   const p = String(perm || '');
-  if (/media|microphone|audioCapture/i.test(p)) return 'microphone';
-  if (/video|camera|videoCapture/i.test(p)) return 'camera';
-  if (/geolocation/i.test(p)) return 'geolocation';
-  if (/notifications/i.test(p)) return 'notifications';
-  if (/clipboard/i.test(p)) return 'clipboard';
-  if (/display-capture|desktopCapture|screen/i.test(p)) return 'display-capture';
-  if (/midi/i.test(p)) return 'midi';
+  // Exact / anchored matches — avoid substring traps (e.g. /media/ vs publickey-…)
+  if (isWebAuthnPermission(p)) return 'webauthn';
+  if (/^(media|microphone|audioCapture)$/i.test(p)) return 'microphone';
+  if (/^(video|camera|videoCapture)$/i.test(p)) return 'camera';
+  if (/^geolocation$/i.test(p)) return 'geolocation';
+  if (/^notifications$/i.test(p)) return 'notifications';
+  if (/^clipboard/i.test(p)) return 'clipboard';
+  if (/^(display-capture|desktopCapture)$/i.test(p) || /screen/i.test(p)) return 'display-capture';
+  if (/^midi/i.test(p)) return 'midi';
   return p || 'unknown';
 }
 
@@ -123,7 +129,48 @@ function askUser(origin, permission, details) {
   });
 }
 
+/** @type {WeakSet<import('electron').Session>} */
+const webauthnWired = new WeakSet();
+
+function attachWebAuthnAccountPicker(ses) {
+  if (!ses || webauthnWired.has(ses)) return;
+  webauthnWired.add(ses);
+  // Without this listener Electron cancels multi-credential WebAuthn with NotAllowedError
+  // → Google shows /signin/challenge/pk/error
+  ses.on('select-webauthn-account', (_event, details, callback) => {
+    try {
+      const accounts = Array.isArray(details?.accounts) ? details.accounts : [];
+      if (!accounts.length) {
+        callback();
+        return;
+      }
+      const pick = accounts[0];
+      const id = pick && pick.credentialId;
+      if (!id) {
+        callback();
+        return;
+      }
+      if (accounts.length > 1) {
+        console.log(
+          '[security] webauthn multi-account → first',
+          accounts.map((a) => a.name || a.username || a.displayName || '?'),
+        );
+      }
+      callback(id);
+    } catch (err) {
+      console.warn('[security] select-webauthn-account', err && err.message);
+      try {
+        callback();
+      } catch {
+        /* */
+      }
+    }
+  });
+}
+
 function attachPermissionHandlers(ses) {
+  attachWebAuthnAccountPicker(ses);
+
   ses.setPermissionRequestHandler(async (webContents, permission, callback, details) => {
     try {
       let origin = '';
@@ -132,8 +179,23 @@ function attachPermissionHandlers(ses) {
       } catch {
         origin = details?.requestingUrl ? new URL(details.requestingUrl).origin : '';
       }
+      // Installed Chrome extensions (chrome-extension://) — allow like Chrome after install
+      if (/^chrome-extension:/i.test(origin)) {
+        callback(true);
+        return;
+      }
       if (!/^https:/i.test(origin)) {
         callback(false);
+        return;
+      }
+      // Passkeys / security keys: Chrome-like auto-allow on HTTPS; OS (Win Hello) prompts
+      if (isWebAuthnPermission(permission)) {
+        callback(true);
+        return;
+      }
+      // YouTube / site PiP + miniplayer probes
+      if (/^picture-in-picture$/i.test(String(permission || ''))) {
+        callback(true);
         return;
       }
       const key = mapPermission(permission);
@@ -155,6 +217,7 @@ function attachPermissionHandlers(ses) {
         'clipboard',
         'display-capture',
         'media',
+        'webauthn',
       ]);
       if (!promptable.has(key) && key !== 'media') {
         callback(false);
@@ -170,7 +233,11 @@ function attachPermissionHandlers(ses) {
   ses.setPermissionCheckHandler((_wc, permission, requestingOrigin) => {
     try {
       const origin = requestingOrigin || '';
+      if (/^chrome-extension:/i.test(origin)) return true;
       if (!/^https:/i.test(origin)) return false;
+      // Must allow check — Chromium denies WebAuthn before Request if check is false
+      if (isWebAuthnPermission(permission)) return true;
+      if (/^picture-in-picture$/i.test(String(permission || ''))) return true;
       const key = mapPermission(permission);
       const saved = permissionStore.get(origin)?.[key];
       if (saved === 'allow') return true;
@@ -335,6 +402,7 @@ module.exports = {
   attachCsp,
   attachWebviewGuard,
   attachPermissionHandlers,
+  isWebAuthnPermission,
   attachNavigationGuards,
   isAllowedNavigation,
   isAllowedPartition,

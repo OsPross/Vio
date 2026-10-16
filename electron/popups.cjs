@@ -435,19 +435,6 @@ function handleWindowOpen(openerWc, ctx) {
     disposition === 'background-tab' ||
     disposition === 'default';
 
-  // Google accounts OAuth: same session as opener (real browser). Pause Ghostery
-  // cosmetics so the login document is not script-injected.
-  if (!torMode && !blank) {
-    try {
-      const googleLogin = require('./google-login.cjs');
-      if (googleLogin.isGoogleAccountsUrl(url)) {
-        googleLogin.pauseSessionPreloads(openerWc.session);
-      }
-    } catch (err) {
-      console.warn('[popup] google-login pause', err);
-    }
-  }
-
   if (tabDisposition && !popupFeatures) {
     if (r.ok === true && (/^https?:/i.test(url) || /^file:\/\//i.test(url))) {
       if (ctx.onOpenUrl) ctx.onOpenUrl(url, { background });
@@ -569,11 +556,6 @@ function attachDidCreateWindow(openerWc, onChild) {
     try {
       const googleLogin = require('./google-login.cjs');
       googleLogin.attachGoogleAccountsHardening(childWin.webContents, { torMode: false });
-      // If this popup opens directly on accounts, pause before first paint
-      const u = String(details?.url || '');
-      if (googleLogin.isGoogleAccountsUrl(u)) {
-        googleLogin.pauseSessionPreloads(childWin.webContents.session);
-      }
     } catch (err) {
       console.warn('[popup] google-login harden', err);
     }

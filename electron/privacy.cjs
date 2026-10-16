@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { app } = require('electron');
 const uaChrome = require('./ua-chrome.cjs');
+const googleAuth = require('./lib/google-auth.cjs');
 
 function chromeVersion() {
   return uaChrome.chromeMajor();
@@ -84,6 +85,49 @@ function isException(urlOrHost) {
 
 function isSensitive(url) {
   return SENSITIVE_HOST_RE.test(hostOf(url));
+}
+
+function isGoogleAuthUrl(url) {
+  return googleAuth.isGoogleAuthUrl(url);
+}
+
+function stripSecChUaHeaders(headers) {
+  googleAuth.stripSecChUaHeaders(headers);
+}
+
+function setRequestHeader(headers, name, value) {
+  googleAuth.setRequestHeader(headers, name, value);
+}
+
+/** Case-insensitive header get (Chromium HTTP/2 lowercase keys). */
+function getRequestHeader(headers, name) {
+  const lower = name.toLowerCase();
+  for (const key of Object.keys(headers || {})) {
+    if (key.toLowerCase() === lower) return String(headers[key] || '');
+  }
+  return '';
+}
+
+/**
+ * Tandem-style Client Hints: strip duplicates, keep Chromium GREASE, add Google Chrome,
+ * write lowercase keys only (capitalized keys do not overwrite HTTP/2).
+ */
+function applyChromeClientHints(headers) {
+  const major = chromeVersion();
+  const full = uaChrome.chromeFull();
+  const chromiumBrands = getRequestHeader(headers, 'sec-ch-ua');
+  const chromiumFullList = getRequestHeader(headers, 'sec-ch-ua-full-version-list');
+  stripSecChUaHeaders(headers);
+  headers['sec-ch-ua'] = googleAuth.withGoogleChromeBrand(chromiumBrands, major);
+  headers['sec-ch-ua-mobile'] = '?0';
+  headers['sec-ch-ua-platform'] = '"Windows"';
+  headers['sec-ch-ua-platform-version'] = '"15.0.0"';
+  headers['sec-ch-ua-arch'] = '"x86"';
+  headers['sec-ch-ua-bitness'] = '"64"';
+  headers['sec-ch-ua-full-version-list'] = googleAuth.withGoogleChromeBrand(
+    chromiumFullList || `"Not?A_Brand";v="24.0.0.0", "Chromium";v="${full}"`,
+    full,
+  );
 }
 
 function setTrackerHosts(hosts) {
@@ -189,29 +233,48 @@ function attachToSession(ses, opts) {
   };
 
   ses.webRequest.onBeforeSendHeaders({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
-    const headers = { ...details.requestHeaders };
-    if (cfg.enabled && !isException(details.url)) {
-      const sensitive = isSensitive(details.url);
-      if (cfg.chromeUa) {
-        CHROME_UA = buildChromeUa();
-        headers['User-Agent'] = CHROME_UA;
-        Object.assign(headers, clientHintHeaders());
-      }
-      // Sec-GPC/DNT on accounts.google.com looks non-stock Chrome and trips login checks
-      if (cfg.secGpc && !sensitive) headers['Sec-GPC'] = '1';
-      if (cfg.dnt && !sensitive) headers['DNT'] = '1';
-      if (cfg.referrerPolicy && !sensitive) {
-        try {
-          const page = details.referrer || headers.Referer || headers.referer;
-          if (page) {
-            const from = new URL(page);
-            const to = new URL(details.url);
-            if (from.origin !== to.origin) headers.Referer = from.origin + '/';
+    try {
+      const headers = { ...(details.requestHeaders || {}) };
+      if (cfg.enabled && !isException(details.url)) {
+        const sensitive = isSensitive(details.url);
+        const googleAuthReq = isGoogleAuthUrl(details.url);
+        if (cfg.chromeUa) {
+          if (googleAuthReq) {
+            // Wexond/Ferdium chromeless UA + Tandem: no forged Sec-CH-UA (CookieMismatch).
+            CHROME_UA = buildChromeUa();
+            setRequestHeader(headers, 'User-Agent', googleAuth.buildGoogleAuthUa(CHROME_UA));
+            stripSecChUaHeaders(headers);
+          } else {
+            CHROME_UA = buildChromeUa();
+            setRequestHeader(headers, 'User-Agent', CHROME_UA);
+            applyChromeClientHints(headers);
           }
-        } catch {}
+        }
+        // Sec-GPC/DNT on accounts.google.com looks non-stock Chrome and trips login checks
+        if (cfg.secGpc && !sensitive) headers['Sec-GPC'] = '1';
+        if (cfg.dnt && !sensitive) headers['DNT'] = '1';
+        if (cfg.referrerPolicy && !sensitive) {
+          try {
+            const page = details.referrer || headers.Referer || headers.referer;
+            if (page) {
+              const from = new URL(page);
+              const to = new URL(details.url);
+              if (from.origin !== to.origin) headers.Referer = from.origin + '/';
+            }
+          } catch {
+            /* */
+          }
+        }
+      }
+      callback({ requestHeaders: headers });
+    } catch (err) {
+      console.warn('[privacy] onBeforeSendHeaders', err && err.message);
+      try {
+        callback({ requestHeaders: details.requestHeaders });
+      } catch {
+        /* */
       }
     }
-    callback({ requestHeaders: headers });
   });
 
   ses.webRequest.onHeadersReceived({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
