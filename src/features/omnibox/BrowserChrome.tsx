@@ -1,6 +1,7 @@
 import {
   lazy,
   Suspense,
+  useState,
   type Dispatch,
   type MutableRefObject,
   type SetStateAction,
@@ -40,6 +41,9 @@ import type { WebviewEl } from '../tabs';
 
 const ShieldPanel = lazy(() =>
   import('../../components/ShieldPanel').then((m) => ({ default: m.ShieldPanel })),
+);
+const ExtensionsPopup = lazy(() =>
+  import('../../components/ExtensionsPopup').then((m) => ({ default: m.ExtensionsPopup })),
 );
 
 export type OmniMenuState = { x: number; y: number } | null;
@@ -148,6 +152,7 @@ export function BrowserChrome({
   const setActive = useStore((s) => s.setActive);
   const setView = useStore((s) => s.setView);
   const patchSettings = useStore((s) => s.patchSettings);
+  const [extMenuOpen, setExtMenuOpen] = useState(false);
 
   const menuActions = useAppMenuActions({
     activeIsTor,
@@ -374,15 +379,29 @@ export function BrowserChrome({
                 tab={String(guestWc[activeId] || '')}
                 alignment="bottom left"
               />
-              <button
-                type="button"
-                className="icon-btn"
-                title="Rozszerzenia"
-                aria-label="Rozszerzenia"
-                onClick={() => navigateActive(EXTENSIONS_URL)}
-              >
-                <Puzzle size={16} strokeWidth={1.75} />
-              </button>
+              <div className="bar-ext-wrap">
+                <button
+                  type="button"
+                  className={`icon-btn ${extMenuOpen ? 'on' : ''}`}
+                  data-ext-menu-btn
+                  title="Rozszerzenia"
+                  aria-label="Rozszerzenia"
+                  aria-expanded={extMenuOpen}
+                  onClick={() => {
+                    setShieldOpen(false);
+                    setExtMenuOpen((v) => !v);
+                  }}
+                >
+                  <Puzzle size={16} strokeWidth={1.75} />
+                </button>
+                <Suspense fallback={null}>
+                  <ExtensionsPopup
+                    open={extMenuOpen}
+                    onClose={() => setExtMenuOpen(false)}
+                    onManage={() => navigateActive(EXTENSIONS_URL)}
+                  />
+                </Suspense>
+              </div>
             </>
           ) : null}
           <div className="bar-shield-wrap">
@@ -394,7 +413,10 @@ export function BrowserChrome({
                   ? `Ochrona · dziś ${blockedToday} — kliknij panel tarczy`
                   : 'Ochrona wyłączona'
               }
-              onClick={() => setShieldOpen((v) => !v)}
+              onClick={() => {
+                setExtMenuOpen(false);
+                setShieldOpen((v) => !v);
+              }}
             >
               <Shield size={16} strokeWidth={1.75} />
               {settings.adblockEnabled && blockedToday > 0 ? (

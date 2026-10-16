@@ -9,6 +9,12 @@ export type PermAsk = {
   permission: string;
 };
 
+export type ExtInstallAsk = {
+  askId: string;
+  extensionId: string;
+  sourceUrl?: string;
+};
+
 export type HttpsWarn = { httpUrl: string; httpsUrl: string };
 
 export type PopupBlocked = {
@@ -47,6 +53,7 @@ export function useIpcEvents({
 }: UseIpcEventsArgs) {
   const [blockedToday, setBlockedToday] = useState(0);
   const [permAsk, setPermAsk] = useState<PermAsk | null>(null);
+  const [extInstallAsk, setExtInstallAsk] = useState<ExtInstallAsk | null>(null);
   const [httpsWarn, setHttpsWarn] = useState<HttpsWarn | null>(null);
   const [popupBlocked, setPopupBlocked] = useState<PopupBlocked | null>(null);
   const [certWarn, setCertWarn] = useState<CertWarn | null>(null);
@@ -142,6 +149,17 @@ export function useIpcEvents({
         askId: String(req.askId || ''),
         origin: String(req.origin || ''),
         permission: String(req.permission || ''),
+      });
+    });
+    return () => unsub?.();
+  }, []);
+
+  useEffect(() => {
+    const unsub = window.shell?.onExtensionsInstallAsk?.((req) => {
+      setExtInstallAsk({
+        askId: String(req?.askId || ''),
+        extensionId: String(req?.extensionId || ''),
+        sourceUrl: typeof req?.sourceUrl === 'string' ? req.sourceUrl : '',
       });
     });
     return () => unsub?.();
@@ -382,6 +400,8 @@ export function useIpcEvents({
     setBlockedToday,
     permAsk,
     setPermAsk,
+    extInstallAsk,
+    setExtInstallAsk,
     httpsWarn,
     setHttpsWarn,
     popupBlocked,

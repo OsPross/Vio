@@ -164,6 +164,8 @@ export function App() {
     blockedToday,
     permAsk,
     setPermAsk,
+    extInstallAsk,
+    setExtInstallAsk,
     httpsWarn,
     setHttpsWarn,
     popupBlocked,
@@ -363,6 +365,8 @@ export function App() {
               setTorError={setTorError}
               permAsk={permAsk}
               setPermAsk={setPermAsk}
+              extInstallAsk={extInstallAsk}
+              setExtInstallAsk={setExtInstallAsk}
               permRemember={permRemember}
               setPermRemember={setPermRemember}
               saveOffer={saveOffer}

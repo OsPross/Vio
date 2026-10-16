@@ -66,7 +66,7 @@ const boot = perf.applyBootSwitches();
 // Light inits only — heavy Ghostery lists / chrome-extensions / openpgp stay lazy
 history.init();
 notes.init();
-void extensions.init();
+// Extensions load after chrome API (setImmediate) — avoid loadExtension-before-ready
 downloads.init();
 
 if (!app.isPackaged && process.env.PERF_BENCH === '1') {
@@ -258,6 +258,11 @@ app.whenReady().then(async () => {
   security.setPermissionAskHandler((req) => {
     mainWindow?.webContents.send('shell:permission-ask', req);
   });
+  extensions.setInstallAskHandler((req) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('shell:extensions-install-ask', req);
+    }
+  });
 
   // Fast path: deserialize engine cache (ms), attach sessions, show window.
   // Heavy list refresh / chrome-extensions stay after show; guests gated until engine ready.
@@ -322,6 +327,8 @@ app.whenReady().then(async () => {
         },
         createWindow: () => createWindow({ secondary: true }),
       });
+      // Load after chrome API so getAllExtensions + extension-loaded are wired
+      void extensions.init().catch((err) => console.warn('[ext] init', err && err.message));
     } catch (err) {
       console.warn('[ext] initChromeApi', err);
     }

@@ -3,10 +3,10 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react';
-import { KeyRound, TriangleAlert } from 'lucide-react';
+import { KeyRound, Puzzle, TriangleAlert } from 'lucide-react';
 import { FindBar } from '../../components/FindBar';
 import { Switch } from '../../components/ui/Switch';
-import type { CertWarn, HttpsWarn, PermAsk } from '../../hooks/useIpcEvents';
+import type { CertWarn, ExtInstallAsk, HttpsWarn, PermAsk } from '../../hooks/useIpcEvents';
 import type { ClosedTab, Tab } from '../../store';
 import type { SaveOffer } from '../tabs';
 import { AboutDialog, ClearDataDialog, QrShareDialog } from './lazy';
@@ -276,6 +276,8 @@ export function HttpsWarnOverlay({
 export type StageOverlaysProps = {
   permAsk: PermAsk | null;
   setPermAsk: Dispatch<SetStateAction<PermAsk | null>>;
+  extInstallAsk: ExtInstallAsk | null;
+  setExtInstallAsk: Dispatch<SetStateAction<ExtInstallAsk | null>>;
   permRemember: boolean;
   setPermRemember: Dispatch<SetStateAction<boolean>>;
   saveOffer: SaveOffer | null;
@@ -289,6 +291,8 @@ export type StageOverlaysProps = {
 export function StageOverlays({
   permAsk,
   setPermAsk,
+  extInstallAsk,
+  setExtInstallAsk,
   permRemember,
   setPermRemember,
   saveOffer,
@@ -299,6 +303,39 @@ export function StageOverlays({
 }: StageOverlaysProps) {
   return (
     <>
+      {extInstallAsk && (
+        <div className="perm-bar ext-install-bar" role="alertdialog">
+          <Puzzle size={16} strokeWidth={1.75} aria-hidden />
+          <span>
+            Zainstalować rozszerzenie w <strong>Vio</strong>?
+            <span className="ext-install-id" title={extInstallAsk.extensionId}>
+              {extInstallAsk.extensionId.slice(0, 8)}…
+            </span>
+          </span>
+          <div className="pw-save-actions">
+            <button
+              type="button"
+              className="sbtn primary"
+              onClick={() => {
+                void window.shell?.extensionsInstallRespond?.(extInstallAsk.askId, true);
+                setExtInstallAsk(null);
+              }}
+            >
+              Zainstaluj
+            </button>
+            <button
+              type="button"
+              className="sbtn ghost"
+              onClick={() => {
+                void window.shell?.extensionsInstallRespond?.(extInstallAsk.askId, false);
+                setExtInstallAsk(null);
+              }}
+            >
+              Anuluj
+            </button>
+          </div>
+        </div>
+      )}
       {permAsk && (
         <div className="perm-bar" role="alertdialog">
           <span>
@@ -313,7 +350,9 @@ export function StageOverlays({
                     ? 'powiadomień'
                     : permAsk.permission === 'display-capture'
                       ? 'ekranu'
-                      : permAsk.permission}
+                      : permAsk.permission === 'webauthn'
+                        ? 'klucza / passkey'
+                        : permAsk.permission}
           </span>
           <label className="perm-remember">
             <Switch on={permRemember} onChange={setPermRemember} aria-label="Zapamiętaj" />

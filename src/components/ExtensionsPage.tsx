@@ -13,6 +13,9 @@ type ExtRow = {
   manifestVersion?: number;
   path?: string;
   source?: string;
+  electronId?: string | null;
+  chromeId?: string;
+  usesWebRequest?: boolean;
 };
 
 export function ExtensionsPage() {
@@ -71,8 +74,9 @@ export function ExtensionsPage() {
             Rozszerzenia
           </h1>
           <p className="internal-page-subtitle">
-            <code>session.loadExtension</code> (MV3 gdzie Electron pozwala). Tor — nigdy. Prywatne —
-            tylko gdy włączysz per rozszerzenie.
+            Chrome Web Store / CRX / folder — stabilne ID jak w Chrome, popupy i chrome.tabs przez
+            electron-chrome-extensions. Tor — nigdy. Okno prywatne — tylko gdy włączysz per
+            rozszerzenie.
           </p>
         </div>
         <div className="internal-page-toolbar extensions-actions">
@@ -121,9 +125,8 @@ export function ExtensionsPage() {
           <div className="extensions-empty">
             <p>Brak zainstalowanych rozszerzeń.</p>
             <p className="muted">
-              Wskaż rozpakowany katalog, plik .zip/.crx albo wklej link Chrome Web Store. Pełne
-              popupy chrome.action wymagają biblioteki electron-chrome-extensions (na razie
-              niepodłączonej).
+              Na stronie Chrome Web Store kliknij „Dodaj do Vio” (Google wyłącza „Dodaj do Chrome”
+              poza Chrome). Albo wskaż folder / .zip / .crx, albo wklej link poniżej.
             </p>
           </div>
         ) : (
@@ -136,6 +139,10 @@ export function ExtensionsPage() {
                     v{ext.version}
                     {ext.manifestVersion ? ` · MV${ext.manifestVersion}` : ''}
                     {ext.loaded ? ' · aktywne' : ' · wyłączone w sesji'}
+                    {ext.electronId || ext.chromeId || ext.id
+                      ? ` · ${(ext.electronId || ext.chromeId || ext.id).slice(0, 8)}…`
+                      : ''}
+                    {ext.usesWebRequest ? ' · webRequest (wstrzymuje Ghostery sieć)' : ''}
                     {ext.source ? ` · ${ext.source}` : ''}
                   </span>
                   {ext.permissions && ext.permissions.length > 0 ? (
@@ -175,10 +182,7 @@ export function ExtensionsPage() {
                   />
                   W prywatnym
                 </label>
-                <label
-                  className="extensions-toggle"
-                  title="Ikona na pasku (bez pełnego chrome.action)"
-                >
+                <label className="extensions-toggle" title="Przypnij ikonę na pasku narzędzi">
                   <input
                     type="checkbox"
                     checked={!!ext.pinned}
@@ -210,10 +214,9 @@ export function ExtensionsPage() {
 
       <footer className="extensions-foot muted">
         <p>
-          Trade-off: natywne <code>loadExtension</code> nie emuluje <code>chrome.tabs</code> /
-          action popup.
-          <code> electron-chrome-extensions</code> dodałaby te API kosztem utrzymania — celowo
-          odłożone.
+          Rozszerzenia z <code>webRequest</code> / DNR wyłączają sieciowy silnik Ghostery (konflikt
+          Chromium) — filtracja przechodzi wtedy na rozszerzenie. Content scripts i popupy działają
+          w sesji głównej; Tor jest zawsze bez rozszerzeń.
         </p>
       </footer>
     </div>

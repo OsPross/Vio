@@ -755,9 +755,14 @@ declare global {
       }>;
       extensionsInstallStore: (input: string) => Promise<{
         ok: boolean;
+        canceled?: boolean;
         error?: string;
         extension?: unknown;
       }>;
+      extensionsInstallRespond: (
+        askId: string,
+        allow: boolean,
+      ) => Promise<{ ok: boolean }>;
       extensionsSetEnabled: (
         id: string,
         enabled: boolean,
@@ -772,6 +777,9 @@ declare global {
       ) => Promise<{ ok: boolean; error?: string }>;
       extensionsRemove: (id: string) => Promise<{ ok: boolean; error?: string }>;
       extensionsSelectTab: (webContentsId: number) => Promise<{ ok: boolean }>;
+      onExtensionsInstallAsk: (
+        cb: (payload: { askId: string; extensionId: string; sourceUrl?: string }) => void,
+      ) => () => void;
       onExtensionsActivateTab: (cb: (payload: { webContentsId: number }) => void) => () => void;
       onExtensionsCloseTab: (cb: (payload: { webContentsId: number }) => void) => () => void;
       onHttpsWarn: (

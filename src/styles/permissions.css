@@ -22,6 +22,24 @@
   font-weight: 600;
 }
 
+.ext-install-bar {
+  z-index: 42;
+  gap: 10px;
+}
+
+.ext-install-id {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: var(--fg-3);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  vertical-align: middle;
+}
+
 .perm-remember {
   display: inline-flex;
   align-items: center;

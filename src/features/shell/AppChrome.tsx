@@ -21,7 +21,13 @@ import {
   StageOverlays,
   type AboutInfo,
 } from '../dialogs';
-import type { CertWarn, HttpsWarn, PermAsk, PopupBlocked } from '../../hooks/useIpcEvents';
+import type {
+  CertWarn,
+  ExtInstallAsk,
+  HttpsWarn,
+  PermAsk,
+  PopupBlocked,
+} from '../../hooks/useIpcEvents';
 import { TabStrip, type NewTabMenuState, type TabMenuState, type SaveOffer, type WebviewEl } from '../tabs';
 import { HOME_URL, TOR_HOME_URL, isBookmarkableUrl, useStore, type Tab } from '../../store';
 
@@ -112,6 +118,8 @@ export type AppChromeProps = {
   setTorError: Dispatch<SetStateAction<string | null>>;
   permAsk: PermAsk | null;
   setPermAsk: Dispatch<SetStateAction<PermAsk | null>>;
+  extInstallAsk: ExtInstallAsk | null;
+  setExtInstallAsk: Dispatch<SetStateAction<ExtInstallAsk | null>>;
   permRemember: boolean;
   setPermRemember: Dispatch<SetStateAction<boolean>>;
   saveOffer: SaveOffer | null;
@@ -204,6 +212,8 @@ export function AppChrome({
   setTorError,
   permAsk,
   setPermAsk,
+  extInstallAsk,
+  setExtInstallAsk,
   permRemember,
   setPermRemember,
   saveOffer,
@@ -525,6 +535,8 @@ export function AppChrome({
           <StageOverlays
             permAsk={permAsk}
             setPermAsk={setPermAsk}
+            extInstallAsk={extInstallAsk}
+            setExtInstallAsk={setExtInstallAsk}
             permRemember={permRemember}
             setPermRemember={setPermRemember}
             saveOffer={saveOffer}

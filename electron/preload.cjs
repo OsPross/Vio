@@ -100,10 +100,17 @@ contextBridge.exposeInMainWorld('shell', {
   extensionsList: () => ipcRenderer.invoke('shell:extensions-list'),
   extensionsInstallFolder: () => ipcRenderer.invoke('shell:extensions-install-folder'),
   extensionsInstallStore: (input) => ipcRenderer.invoke('shell:extensions-install-store', input),
+  extensionsInstallRespond: (askId, allow) =>
+    ipcRenderer.invoke('shell:extensions-install-respond', askId, allow),
   extensionsSetEnabled: (id, enabled) => ipcRenderer.invoke('shell:extensions-set-enabled', id, enabled),
   extensionsSetPrivate: (id, allow) => ipcRenderer.invoke('shell:extensions-set-private', id, allow),
   extensionsSetPinned: (id, pinned) => ipcRenderer.invoke('shell:extensions-set-pinned', id, pinned),
   extensionsRemove: (id) => ipcRenderer.invoke('shell:extensions-remove', id),
+  onExtensionsInstallAsk: (cb) => {
+    const handler = (_e, payload) => cb(payload);
+    ipcRenderer.on('shell:extensions-install-ask', handler);
+    return () => ipcRenderer.removeListener('shell:extensions-install-ask', handler);
+  },
   onHttpsWarn: (cb) => {
     const handler = (_e, payload) => cb(payload);
     ipcRenderer.on('shell:https-warn', handler);

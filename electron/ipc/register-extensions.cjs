@@ -5,8 +5,8 @@
  * @param {object} deps
  */
 function register(deps) {
-  const { ipcMain, wrapApp, extensions } = deps;
-  extensions.register(ipcMain, wrapApp);
+  const { ipcMain, wrapApp, wrapAppOrGuest, extensions } = deps;
+  extensions.register(ipcMain, wrapApp, wrapAppOrGuest);
 }
 
 module.exports = { register };

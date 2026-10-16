@@ -784,8 +784,26 @@ function cryptoHash(s) {
   return require('node:crypto').createHash('sha1').update(String(s)).digest('hex').slice(0, 16);
 }
 
+/** When true, Ghostery releases session.webRequest so chrome.webRequest extensions can own it. */
+let extensionWebRequestPriority = false;
+
 function ghosteryBlockingWanted() {
+  if (extensionWebRequestPriority) return false;
   return Boolean(blocker && config.enabled && config.network);
+}
+
+/**
+ * Suspend Ghostery network blocking while an enabled extension uses chrome.webRequest / DNR.
+ * Cosmetic filters stay available via getPageScript / getCosmeticCss when engine is loaded.
+ * @param {boolean} active
+ */
+function setExtensionWebRequestPriority(active) {
+  const next = Boolean(active);
+  if (extensionWebRequestPriority === next) return getStatus();
+  extensionWebRequestPriority = next;
+  console.log('[adblock+] extension webRequest priority', next ? 'ON (Ghostery network off)' : 'OFF');
+  syncBlockingOnSessions();
+  return getStatus();
 }
 
 function applyBuiltinAllowlist() {
@@ -1051,7 +1069,7 @@ function getPageScript(pageUrl) {
  * @param {string} [sourceUrl]
  */
 function shouldBlock(url, sourceUrl) {
-  if (!config.enabled || !config.network) return false;
+  if (!ghosteryBlockingWanted()) return false;
   if (!blocker) return false;
   if (isAllowlistedUrl(url)) return false;
   try {
@@ -1148,6 +1166,8 @@ function getStatus() {
     boot: getBootTiming(),
     lists: getListsStatus(),
     builtinExceptions: getBuiltinExceptions(),
+    extensionWebRequestPriority,
+    networkActive: ghosteryBlockingWanted(),
   };
 }
 
@@ -1178,6 +1198,7 @@ module.exports = {
   getListsStatus,
   getBuiltinExceptions,
   getBootTiming,
+  setExtensionWebRequestPriority,
   LIST_URLS,
   FILTER_LISTS,
   BUILTIN_EXCEPTIONS,
