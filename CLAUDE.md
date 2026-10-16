@@ -69,6 +69,11 @@ Helpers: `electron/lib/partition-names.cjs` (`assertEphemeralPrivate`), `electro
 - `dev-sync.cjs`: the "Pobierz zmiany" git fast-forward button (dev builds only)
 - `lib/logger.cjs`: `getLogger(ns)`. Use it instead of a bare `console.log` in main.
 
+### Soul automation API
+- `electron/lib/automation.cjs` (WebSocket server on 127.0.0.1:47821+, token auth, consent, whitelisted commands) + `electron/ipc/register-automation.cjs` (wiring, guest checks) + `src/hooks/useAutomationBridge.ts` (tab store bridge) + `src/components/SoulIndicator.tsx` (toolbar badge).
+- Off by default: `settings.automationEnabled` (Settings → Zaawansowane → Soul). Writes `<userData>/automation.json` `{port, token, pid}`; userData is `%APPDATA%\moja-przegladarka` (not `Vio`).
+- Only normal `persist:main` tabs of the main window. Tor, private and internal pages must stay invisible (`forbidden`). No arbitrary JS eval, no password-field fill. Tests: `test/automation.test.cjs`, live `scripts/automation-test.cjs`. Protocol: `docs/automation-api.md`.
+
 ### Renderer state (src/store/)
 - One Zustand store, `useStore` (`store/index.ts`), built from slices: `tabsSlice`, `settingsSlice`, `sessionSlice`, `uiSlice`, `homeSlice`
 - Persisted under key `moja-przegladarka-v8` (`constants.ts` `PERSIST_KEY`); migrations and merging in `src/lib/persistMerge.ts`, defaults in `DEFAULT_SETTINGS`

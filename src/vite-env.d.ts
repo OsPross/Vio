@@ -402,6 +402,20 @@ declare global {
         }) => void,
       ) => () => void;
       setDevtoolsEnabled: (enabled: boolean) => Promise<{ ok: boolean; enabled: boolean }>;
+      automationSetEnabled: (enabled: boolean) => Promise<{
+        ok: boolean;
+        error?: string;
+        enabled: boolean;
+        port: number | null;
+        connected: number;
+        infoPath: string;
+      }>;
+      automationDisconnect: () => Promise<{ ok: boolean }>;
+      automationReply: (reqId: string, result: unknown) => Promise<{ ok: boolean }>;
+      onAutomationRequest: (
+        cb: (payload: { reqId: string; cmd: string; args?: Record<string, unknown> }) => void,
+      ) => () => void;
+      onAutomationStatus: (cb: (payload: { connected?: number }) => void) => () => void;
       setShortcutTrap: (enabled: boolean) => Promise<{ ok: boolean; enabled?: boolean }>;
       onShortcut: (
         cb: (payload: {

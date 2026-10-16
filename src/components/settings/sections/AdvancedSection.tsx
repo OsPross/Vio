@@ -137,6 +137,14 @@ export function AdvancedSection() {
           onChange={(v) => patchSettings({ allowInspect: v })}
         />
       </SettingsGroup>
+      <SettingsGroup title="Soul">
+        <Toggle
+          label="Pozwól Soul sterować przeglądarką"
+          hint="Lokalny serwer 127.0.0.1 dla asystenta Soul (tylko zwykłe karty; Tor, prywatne i strony wewnętrzne są niedostępne). Przy pierwszym połączeniu Vio zapyta o zgodę."
+          on={settings.automationEnabled}
+          onChange={(v) => patchSettings({ automationEnabled: v })}
+        />
+      </SettingsGroup>
 
       {devSyncOn && (
         <SettingsGroup title="Współpraca (tylko tryb deweloperski)">

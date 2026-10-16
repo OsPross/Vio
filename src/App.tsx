@@ -22,6 +22,7 @@ import { useBrowserNav } from './hooks/useBrowserNav';
 import { usePictureInPicture } from './hooks/usePictureInPicture';
 import { useShellEffects } from './hooks/useShellEffects';
 import { usePageActions } from './hooks/usePageActions';
+import { useAutomationBridge } from './hooks/useAutomationBridge';
 
 /** Heavy routes / dialogs — not needed for first paint */
 const SettingsPage = lazy(() =>
@@ -138,6 +139,7 @@ export function App() {
   } = useTabLifecycle({ taskMgrOpen, isHome });
 
   const { crashOffer, setCrashOffer } = useSessionPersist({ guestWc, windowMode });
+  useAutomationBridge(guestWc, settings.automationEnabled);
 
   useShellEffects({
     settings,

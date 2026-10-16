@@ -23,6 +23,7 @@ import {
   Video,
 } from 'lucide-react';
 import { DownloadsButton } from '../../components/DownloadsUI';
+import { SoulIndicator } from '../../components/SoulIndicator';
 import { BookmarkPopover } from '../../components/BookmarkPopover';
 import { AppMenu } from '../../components/AppMenu';
 import { OmniboxSuggest } from '../../components/OmniboxSuggest';
@@ -498,6 +499,7 @@ export function BrowserChrome({
               </Suspense>
             )}
           </div>
+          <SoulIndicator />
           <DownloadsButton
             onOpenAll={() => {
               if (activeIsTor) return;

@@ -118,6 +118,7 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
     s.showSidebar = s.sidebarMode !== 'off';
   }
   if (typeof s.allowInspect !== 'boolean') s.allowInspect = true;
+  if (typeof s.automationEnabled !== 'boolean') s.automationEnabled = false;
   if (typeof s.privacySearchSuggest !== 'boolean') s.privacySearchSuggest = true;
   if (typeof s.privacyAllowAppNetwork !== 'boolean') s.privacyAllowAppNetwork = true;
   if (typeof s.newTabIsSearch !== 'boolean') s.newTabIsSearch = true;

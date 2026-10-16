@@ -275,6 +275,8 @@ export type Settings = {
   passwordsOfferSave: boolean;
   /** Allow Inspect / DevTools on guest pages (Advanced) */
   allowInspect: boolean;
+  /** Local automation API for the Soul assistant (Advanced, off by default) */
+  automationEnabled: boolean;
   /** Per-host zoom factor (host → factor, e.g. 1.25) */
   zoomFactors: Record<string, number>;
   /** Pasek zakładek pod paskiem narzędzi (Ctrl+Shift+B) */

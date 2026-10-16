@@ -307,6 +307,7 @@ export const DEFAULT_SETTINGS: Settings = {
   passwordsAutofill: true,
   passwordsOfferSave: true,
   allowInspect: true,
+  automationEnabled: false,
   zoomFactors: {},
   showBookmarksBar: false,
   darkPageScrollbars: true,

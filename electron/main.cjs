@@ -574,3 +574,4 @@ require('./ipc/register-passwords.cjs').register(ipcDeps);
 require('./ipc/register-metrics.cjs').register(ipcDeps);
 require('./ipc/register-dev-sync.cjs').register(ipcDeps);
 require('./ipc/register-updater.cjs').register(ipcDeps);
+require('./ipc/register-automation.cjs').register(ipcDeps);
