@@ -109,25 +109,6 @@ const Ico = ({ children }: { children: ReactNode }) => (
   </span>
 );
 
-/** Point-in-triangle (barycentric) — macOS-style submenu safe zone. */
-function pointInTriangle(
-  px: number,
-  py: number,
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number,
-  cx: number,
-  cy: number,
-) {
-  const d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy);
-  if (Math.abs(d) < 1e-6) return false;
-  const a = ((by - cy) * (px - cx) + (cx - bx) * (py - cy)) / d;
-  const b = ((cy - ay) * (px - cx) + (ax - cx) * (py - cy)) / d;
-  const c = 1 - a - b;
-  return a >= -0.02 && b >= -0.02 && c >= -0.02;
-}
-
 export function AppMenu({ actions }: Props) {
   const [open, setOpen] = useState(false);
   const [focusIdx, setFocusIdx] = useState(0);
@@ -140,7 +121,6 @@ export function AppMenu({ actions }: Props) {
   const subPanelRef = useRef<HTMLDivElement>(null);
   const hoverTimer = useRef<number | null>(null);
   const closeSubTimer = useRef<number | null>(null);
-  const lastMouse = useRef({ x: 0, y: 0 });
   const menuId = useId();
   const hasPage = actions.hasPage !== false;
   const settings = useStore((s) => s.settings);
@@ -519,13 +499,21 @@ export function AppMenu({ actions }: Props) {
     hoverTimer.current = window.setTimeout(() => {
       setSubOpen(id);
       setSubFocus(0);
-    }, 100);
+    }, 80);
   };
 
+  /** Short delay only for the gap between trigger and flyout. */
   const scheduleCloseSub = () => {
     clearHoverTimer();
     clearCloseSubTimer();
-    closeSubTimer.current = window.setTimeout(() => setSubOpen(null), 300);
+    closeSubTimer.current = window.setTimeout(() => setSubOpen(null), 120);
+  };
+
+  /** Other menu rows — close submenu immediately (no sticky flyout). */
+  const closeSubNow = () => {
+    clearHoverTimer();
+    clearCloseSubTimer();
+    setSubOpen(null);
   };
 
   const openSubNow = (id: string) => {
@@ -534,62 +522,6 @@ export function AppMenu({ actions }: Props) {
     setSubOpen(id);
     setSubFocus(0);
   };
-
-  // Safe zone only while crossing the narrow bridge from trigger → flyout.
-  // Old full-height corridor kept the submenu open when moving UP past it.
-  useEffect(() => {
-    if (!subOpen) return;
-    const onMove = (e: MouseEvent) => {
-      const wrap = subWrapRef.current;
-      const panel = subPanelRef.current;
-      if (!wrap || !panel) return;
-      const wr = wrap.getBoundingClientRect();
-      const pr = panel.getBoundingClientRect();
-      const x = e.clientX;
-      const y = e.clientY;
-      const prev = lastMouse.current;
-      lastMouse.current = { x, y };
-
-      const inWrap =
-        x >= wr.left - 2 && x <= wr.right + 2 && y >= wr.top - 2 && y <= wr.bottom + 2;
-      const inPanel =
-        x >= pr.left - 2 && x <= pr.right + 2 && y >= pr.top - 2 && y <= pr.bottom + 2;
-      if (inWrap || inPanel) {
-        clearCloseSubTimer();
-        return;
-      }
-
-      const openOnRight = pr.left >= wr.right - 8;
-      // Bridge: only the gap between trigger and flyout, height ≈ trigger row
-      const bridgeLeft = openOnRight ? wr.right - 4 : pr.right - 4;
-      const bridgeRight = openOnRight ? pr.left + 4 : wr.left + 4;
-      const bridgeTop = wr.top - 8;
-      const bridgeBottom = wr.bottom + 8;
-      const inBridge =
-        x >= Math.min(bridgeLeft, bridgeRight) &&
-        x <= Math.max(bridgeLeft, bridgeRight) &&
-        y >= bridgeTop &&
-        y <= bridgeBottom;
-
-      // Short triangle toward the near edge of the flyout (not full panel height)
-      const bx = openOnRight ? pr.left : pr.right;
-      const edgeTop = Math.min(pr.top, wr.top) - 4;
-      const edgeBottom = Math.max(pr.top + 48, wr.bottom + 4);
-      const inTriangle = pointInTriangle(x, y, prev.x, prev.y, bx, edgeTop, bx, edgeBottom);
-
-      if (inBridge || inTriangle) {
-        clearCloseSubTimer();
-        return;
-      }
-
-      // Clearly away (e.g. moved above) — close; don't reset timer on every pixel
-      if (!closeSubTimer.current) {
-        closeSubTimer.current = window.setTimeout(() => setSubOpen(null), 160);
-      }
-    };
-    document.addEventListener('mousemove', onMove, { passive: true });
-    return () => document.removeEventListener('mousemove', onMove);
-  }, [subOpen]);
 
   return (
     <div className="app-menu" ref={rootRef}>
@@ -632,7 +564,7 @@ export function AppMenu({ actions }: Props) {
                   aria-label="Pasek boczny"
                   onMouseEnter={() => {
                     setFocusIdx(fIdx);
-                    scheduleCloseSub();
+                    closeSubNow();
                   }}
                 >
                   <div className="app-menu-sidebar-label">
@@ -670,7 +602,7 @@ export function AppMenu({ actions }: Props) {
                   className={`app-menu-item zoom-row ${focused ? 'focused' : ''}`}
                   onMouseEnter={() => {
                     setFocusIdx(fIdx);
-                    scheduleCloseSub();
+                    closeSubNow();
                   }}
                 >
                   <Ico>
@@ -698,12 +630,15 @@ export function AppMenu({ actions }: Props) {
                   key={it.id}
                   className="app-menu-subwrap"
                   ref={subWrapRef}
-                  onMouseEnter={(e) => {
-                    lastMouse.current = { x: e.clientX, y: e.clientY };
+                  onMouseEnter={() => {
                     setFocusIdx(fIdx);
                     scheduleOpenSub(it.id);
                   }}
-                  onMouseLeave={() => scheduleCloseSub()}
+                  onMouseLeave={(e) => {
+                    const to = e.relatedTarget as Node | null;
+                    if (to && subPanelRef.current?.contains(to)) return;
+                    scheduleCloseSub();
+                  }}
                 >
                   <button
                     type="button"
@@ -739,7 +674,7 @@ export function AppMenu({ actions }: Props) {
                 title={it.hint}
                 onMouseEnter={() => {
                   setFocusIdx(fIdx);
-                  scheduleCloseSub();
+                  closeSubNow();
                 }}
                 onClick={() => {
                   if (it.disabled) return;
@@ -775,7 +710,11 @@ export function AppMenu({ actions }: Props) {
                     transition={popMotion.transition}
                     style={{ transformOrigin: subSide === 'left' ? 'top right' : 'top left' }}
                     onMouseEnter={() => clearCloseSubTimer()}
-                    onMouseLeave={() => scheduleCloseSub()}
+                    onMouseLeave={(e) => {
+                      const to = e.relatedTarget as Node | null;
+                      if (to && subWrapRef.current?.contains(to)) return;
+                      closeSubNow();
+                    }}
                   >
                     {sub.children.map((ch, ci) => (
                       <button
