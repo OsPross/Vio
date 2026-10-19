@@ -64,7 +64,23 @@ npm run release
 
 4. Sprawdź Releases na `OsPross/vio-releases` (`latest.yml` + `.exe`).
 
-Alternatywa bez auto-update: ręczna instalacja z Releases (przycisk w ustawieniach może otworzyć URL).
+### Wydanie przez GitHub Actions (`.github/workflows/release.yml`)
+
+Jednorazowo: w repo `Vio` → Settings → Secrets and variables → Actions dodaj secret `RELEASES_TOKEN`
+(fine-grained PAT, Contents: read/write tylko do `vio-releases`).
+
+Każde wydanie (wersja musi być wyższa niż ostatnia w `vio-releases`):
+
+```powershell
+npm version patch          # podbija package.json i tworzy tag vX.Y.Z
+git push origin main --follow-tags
+```
+
+Workflow buduje `.exe` (NSIS), `.rpm`, `.AppImage` i `.flatpak` i wrzuca je jako **draft** do `vio-releases`.
+Wejdź w Releases i kliknij **Publish** — dopiero opublikowany release widzi updater.
+
+Auto-update: Windows (exe), AppImage i rpm aktualizują się same (`latest.yml` / `latest-linux.yml`).
+Flatpak (plik `.flatpak`) nie ma auto-update — updater jest w nim wyłączony; nową wersję instaluje się ręcznie.
 
 ## 6. Test updatera lokalnie
 

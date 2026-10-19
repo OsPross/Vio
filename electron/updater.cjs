@@ -29,8 +29,12 @@ function push(win, payload) {
   }
 }
 
+// Flatpak is read-only and electron-updater would fall back to the AppImage updater and fail.
+const IS_FLATPAK = Boolean(process.env.FLATPAK_ID);
+
 function getUpdater() {
   if (updater) return updater;
+  if (IS_FLATPAK) return null;
   const { autoUpdater } = require('electron-updater');
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = false;
@@ -74,7 +78,9 @@ async function checkForUpdates() {
   if (!u) {
     return {
       ok: false,
-      error: app.isPackaged
+      error: IS_FLATPAK
+        ? 'W wersji Flatpak zainstaluj nowszy plik .flatpak z Releases.'
+        : app.isPackaged
         ? 'Updater niedostępny.'
         : 'Brak dev-app-update.yml (skopiuj z .example) — updater w trybie testowym.',
       status: 'unavailable',
@@ -107,7 +113,7 @@ function installDownloaded() {
 
 /** Quiet check shortly after ready (packaged only). */
 function scheduleStartupCheck() {
-  if (!app.isPackaged) return;
+  if (!app.isPackaged || IS_FLATPAK) return;
   setTimeout(() => {
     void checkForUpdates().catch(() => {});
   }, 8_000);

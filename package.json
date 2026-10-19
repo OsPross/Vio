@@ -22,6 +22,7 @@
     "electron:build": "vite build && electron-builder --win",
     "electron:build:linux": "npm run build && electron-builder --linux rpm AppImage -c.directories.output=release-linux",
     "release": "npm run build && electron-builder --win --publish always",
+    "release:linux": "npm run build && electron-builder --linux rpm AppImage flatpak --publish always",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -102,8 +103,13 @@
       "maintainer": "djxxr <djxxr@users.noreply.github.com>",
       "target": [
         "rpm",
-        "AppImage"
+        "AppImage",
+        "flatpak"
       ]
+    },
+    "flatpak": {
+      "runtimeVersion": "25.08",
+      "baseVersion": "25.08"
     },
     "nsis": {
       "oneClick": false,
