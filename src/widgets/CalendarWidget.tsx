@@ -1,9 +1,21 @@
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-const WEEK = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
+import { useT, useUiLocale } from '../i18n';
 
 export function CalendarWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?: boolean }) {
+  const t = useT();
+  const locale = useUiLocale();
+  const dateLocale = locale === 'en' ? 'en-US' : 'pl-PL';
+  const week = [
+    t('widgets.ui.weekMon'),
+    t('widgets.ui.weekTue'),
+    t('widgets.ui.weekWed'),
+    t('widgets.ui.weekThu'),
+    t('widgets.ui.weekFri'),
+    t('widgets.ui.weekSat'),
+    t('widgets.ui.weekSun'),
+  ];
+
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -27,7 +39,7 @@ export function CalendarWidget({ size, preview }: { size: 'S' | 'M' | 'L'; previ
     return out;
   }, [cursor, today]);
 
-  const title = cursor.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+  const title = cursor.toLocaleDateString(dateLocale, { month: 'long', year: 'numeric' });
   const compact = size === 'S';
 
   return (
@@ -54,7 +66,7 @@ export function CalendarWidget({ size, preview }: { size: 'S' | 'M' | 'L'; previ
         )}
       </div>
       <div className={`hw-cal-grid ${compact ? 'compact' : ''}`}>
-        {WEEK.map((d) => (
+        {week.map((d) => (
           <span key={d} className="hw-cal-dow">
             {compact ? d[0] : d}
           </span>

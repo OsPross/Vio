@@ -1,21 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useT } from '../i18n';
 import { Dropdown } from './ui/Dropdown';
 
 export type ClearDataRange = 'hour' | 'day' | 'week' | 'all';
-
-const RANGE_OPTIONS = [
-  { id: 'hour', label: 'Ostatnia godzina' },
-  { id: 'day', label: 'Dzisiaj' },
-  { id: 'week', label: 'Ostatni tydzień' },
-  { id: 'all', label: 'Cała historia' },
-] as const;
-
-const RANGE_LABELS: Record<ClearDataRange, string> = {
-  hour: 'ostatnią godzinę',
-  day: 'dziś',
-  week: 'ostatni tydzień',
-  all: 'całą historię',
-};
 
 type Props = {
   open: boolean;
@@ -30,16 +17,41 @@ export function ClearDataDialog({
   open,
   onClose,
   onConfirm,
-  title = 'Wyczyść dane przeglądania',
-  description = 'Usuwa wpisy historii z wybranego okresu. Tej operacji nie można cofnąć.',
+  title,
+  description,
 }: Props) {
+  const t = useT();
   const [range, setRange] = useState<ClearDataRange>('hour');
   const [busy, setBusy] = useState(false);
 
+  const rangeOptions = useMemo(
+    () =>
+      [
+        { id: 'hour' as const, label: t('dialogs.clearDataRangeHour') },
+        { id: 'day' as const, label: t('dialogs.clearDataRangeDay') },
+        { id: 'week' as const, label: t('dialogs.clearDataRangeWeek') },
+        { id: 'all' as const, label: t('dialogs.clearDataRangeAll') },
+      ] as const,
+    [t],
+  );
+
+  const rangeLabels = useMemo(
+    (): Record<ClearDataRange, string> => ({
+      hour: t('dialogs.clearDataRangeLabelHour'),
+      day: t('dialogs.clearDataRangeLabelDay'),
+      week: t('dialogs.clearDataRangeLabelWeek'),
+      all: t('dialogs.clearDataRangeLabelAll'),
+    }),
+    [t],
+  );
+
   if (!open) return null;
 
+  const dialogTitle = title ?? t('dialogs.clearData');
+  const dialogDesc = description ?? t('dialogs.clearDataDesc');
+
   const runClear = async () => {
-    if (!window.confirm(`Wyczyścić ${RANGE_LABELS[range]}?`)) return;
+    if (!window.confirm(t('dialogs.clearDataConfirmPrompt', { range: rangeLabels[range] }))) return;
     setBusy(true);
     try {
       if (onConfirm) {
@@ -62,15 +74,15 @@ export function ClearDataDialog({
         aria-labelledby="clear-data-title"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2 id="clear-data-title">{title}</h2>
-        <p className="muted">{description}</p>
+        <h2 id="clear-data-title">{dialogTitle}</h2>
+        <p className="muted">{dialogDesc}</p>
         <label className="clear-data-range">
-          <span>Zakres</span>
+          <span>{t('dialogs.clearDataRange')}</span>
           <Dropdown
             value={range}
-            options={[...RANGE_OPTIONS]}
+            options={[...rangeOptions]}
             onChange={(id) => setRange(id as ClearDataRange)}
-            aria-label="Zakres czyszczenia"
+            aria-label={t('dialogs.clearDataRangeAria')}
           />
         </label>
         <div className="clear-data-actions">
@@ -80,7 +92,7 @@ export function ClearDataDialog({
             disabled={busy}
             onClick={onClose}
           >
-            Anuluj
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -88,7 +100,7 @@ export function ClearDataDialog({
             disabled={busy}
             onClick={() => void runClear()}
           >
-            Wyczyść
+            {t('dialogs.clearDataConfirm')}
           </button>
         </div>
       </div>

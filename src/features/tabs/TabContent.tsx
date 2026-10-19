@@ -17,6 +17,7 @@ import {
   useStore,
   type Tab,
 } from '../../store';
+import { useT } from '../../i18n';
 import { isMotionOff } from '../../lib/motionPresets';
 import { TabWebview, type SaveOffer, type WebviewEl } from './TabWebview';
 
@@ -40,9 +41,10 @@ const TorLanding = lazy(() =>
 );
 
 function LazyFallback({ label }: { label?: string }) {
+  const t = useT();
   return (
     <div className="lazy-route-fallback" role="status" aria-live="polite">
-      {label || 'Ładowanie…'}
+      {label || t('common.loading')}
     </div>
   );
 }

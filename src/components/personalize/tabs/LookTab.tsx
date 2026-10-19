@@ -7,6 +7,7 @@ import {
   type ThemeId,
 } from '../../../store';
 import { ColorPicker, Slider } from '../../ui';
+import { useT } from '../../../i18n';
 import { ThemeCard } from '../minis/ThemeCard';
 import { BgStyleCard } from '../minis/BgStyleCard';
 import { WidgetStyleCard } from '../minis/WidgetStyleCard';
@@ -14,6 +15,7 @@ import { WidgetStyleCard } from '../minis/WidgetStyleCard';
 const BG_IDS = ['soft', 'vignette', 'mesh', 'solid'] as const;
 
 export function LookTab() {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
 
@@ -28,10 +30,16 @@ export function LookTab() {
     });
   };
 
+  const styleOptions: [HomeWidgetStyle, string][] = [
+    ['transparent', t('home.personalize.styleTransparent')],
+    ['glass', t('home.personalize.styleGlass')],
+    ['solid', t('home.personalize.styleSolid')],
+  ];
+
   return (
     <div className="pz-tab-pane">
       <section className="pz-section">
-        <h3>Motyw</h3>
+        <h3>{t('home.personalize.theme')}</h3>
         <div className="pz-theme-grid">
           {(Object.keys(THEMES) as ThemeId[]).map((id) => (
             <ThemeCard
@@ -50,7 +58,7 @@ export function LookTab() {
       </section>
 
       <section className="pz-section">
-        <h3>Tło</h3>
+        <h3>{t('home.personalize.background')}</h3>
         <div className="pz-bg-grid">
           {BG_IDS.map((id) => (
             <BgStyleCard
@@ -76,26 +84,26 @@ export function LookTab() {
         {settings.bgStyle === 'custom' && (
           <div className="pz-bg-custom-controls">
             <button type="button" className="pz-text-btn" onClick={() => void pickCustomBg()}>
-              Zmień obraz…
+              {t('home.personalize.changeImage')}
             </button>
             <label className="pz-slider-row">
-              <span>Rozmycie</span>
+              <span>{t('home.personalize.blur')}</span>
               <Slider
                 value={settings.homeBgBlur}
                 min={0}
                 max={40}
                 onChange={(homeBgBlur) => patchSettings({ homeBgBlur })}
-                aria-label="Rozmycie tła"
+                aria-label={t('home.personalize.blurAria')}
               />
             </label>
             <label className="pz-slider-row">
-              <span>Przyciemnienie</span>
+              <span>{t('home.personalize.dim')}</span>
               <Slider
                 value={settings.homeBgDim}
                 min={0}
                 max={80}
                 onChange={(homeBgDim) => patchSettings({ homeBgDim })}
-                aria-label="Przyciemnienie tła"
+                aria-label={t('home.personalize.dimAria')}
               />
             </label>
           </div>
@@ -103,7 +111,7 @@ export function LookTab() {
       </section>
 
       <section className="pz-section">
-        <h3>Akcent</h3>
+        <h3>{t('home.personalize.accent')}</h3>
         <div className="pz-accent-row">
           <button
             type="button"
@@ -115,35 +123,29 @@ export function LookTab() {
               })
             }
           >
-            Z motywu
+            {t('home.personalize.accentFromTheme')}
           </button>
           {ACCENT_SWATCHES.map((s) => (
             <button
               key={s.id}
               type="button"
               className={`ui-swatch ${s.className} ${!settings.useThemeAccent && settings.accent === s.value ? 'on' : ''}`}
-              aria-label={`Akcent ${s.id}`}
+              aria-label={t('home.personalize.accentSwatch', { id: s.id })}
               onClick={() => patchSettings({ useThemeAccent: false, accent: s.value })}
             />
           ))}
           <ColorPicker
             value={settings.accent}
             onChange={(accent) => patchSettings({ useThemeAccent: false, accent })}
-            aria-label="Własny kolor akcentu"
+            aria-label={t('home.personalize.customAccentAria')}
           />
         </div>
       </section>
 
       <section className="pz-section">
-        <h3>Styl kart widżetów</h3>
+        <h3>{t('home.personalize.widgetCardStyle')}</h3>
         <div className="pz-wstyle-grid">
-          {(
-            [
-              ['transparent', 'Przezroczyste'],
-              ['glass', 'Szkło'],
-              ['solid', 'Pełne'],
-            ] as [HomeWidgetStyle, string][]
-          ).map(([id, label]) => (
+          {styleOptions.map(([id, label]) => (
             <WidgetStyleCard
               key={id}
               id={id}

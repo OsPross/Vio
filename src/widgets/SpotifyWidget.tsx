@@ -19,6 +19,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import type { HomeWidget, HomeWidgetSize } from '../store';
+import { useT } from '../i18n';
 import { SpotifyGlyph } from './SpotifyGlyph';
 
 type Playback = Awaited<ReturnType<NonNullable<Window['shell']>['spotifyPlayback']>>;
@@ -62,13 +63,16 @@ export function SpotifyWidget({
   onPatchSettings?: (settings: Record<string, unknown>) => void;
   onGo?: (url: string) => void;
 }) {
+  const t = useT();
   const [status, setStatus] = useState<{
     connected: boolean;
     configured: boolean;
     needsAuthorSetup?: boolean;
     displayName?: string | null;
     redirectUri: string;
-  } | null>(preview ? { connected: true, configured: true, displayName: 'Ty', redirectUri: '' } : null);
+  } | null>(
+    preview ? { connected: true, configured: true, displayName: null, redirectUri: '' } : null,
+  );
   const [clientIdDraft, setClientIdDraft] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [playback, setPlayback] = useState<Playback | null>(preview ? PREVIEW_PLAYBACK : null);
@@ -87,7 +91,7 @@ export function SpotifyWidget({
         configured: true,
         redirectUri: 'http://127.0.0.1:47831/callback',
       });
-      setMsg('Zrestartuj Vio — brak API Spotify w tej sesji');
+      setMsg(t('widgets.ui.spotify.noApi'));
       return;
     }
     try {
@@ -113,9 +117,9 @@ export function SpotifyWidget({
         configured: true,
         redirectUri: 'http://127.0.0.1:47831/callback',
       });
-      setMsg('Nie udało się odczytać statusu Spotify');
+      setMsg(t('widgets.ui.spotify.statusError'));
     }
-  }, [preview]);
+  }, [preview, t]);
 
   const refreshPlayback = useCallback(async () => {
     if (preview) return;
@@ -170,7 +174,11 @@ export function SpotifyWidget({
     try {
       const r = await fn();
       if (r && !r.ok) {
-        setMsg(r.premium ? 'Wymaga Spotify Premium do sterowania' : r.error || 'Błąd');
+        setMsg(
+          r.premium
+            ? t('widgets.ui.spotify.premiumRequired')
+            : r.error || t('widgets.ui.spotify.error'),
+        );
       }
       await refreshPlayback();
     } finally {
@@ -226,7 +234,7 @@ export function SpotifyWidget({
     const uri = status?.redirectUri || '';
     try {
       await navigator.clipboard.writeText(uri);
-      setMsg('Skopiowano Redirect URI');
+      setMsg(t('widgets.ui.spotify.copiedRedirect'));
     } catch {
       setMsg(uri);
     }
@@ -234,14 +242,14 @@ export function SpotifyWidget({
 
   const doLogin = async () => {
     if (!window.shell?.spotifyLogin) {
-      setMsg('Zrestartuj Vio (Electron), żeby włączyć logowanie Spotify');
+      setMsg(t('widgets.ui.spotify.restartForLogin'));
       return;
     }
     setBusy(true);
     setMsg('');
     try {
       const r = await window.shell.spotifyLogin();
-      if (!r?.ok) setMsg(r?.error || 'Nie udało się zalogować');
+      if (!r?.ok) setMsg(r?.error || t('widgets.ui.spotify.loginFailed'));
       else {
         await refreshStatus();
         await refreshPlayback();
@@ -258,10 +266,10 @@ export function SpotifyWidget({
       <div className={`hw-spotify hw-spotify-setup hw-size-${size}`}>
         <div className="hw-spotify-setup-inner">
           <SpotifyGlyph size={32} />
-          <p className="hw-spotify-setup-title">Spotify</p>
-          <p className="hw-muted">Brak Client ID w aplikacji.</p>
+          <p className="hw-spotify-setup-title">{t('widgets.spotify')}</p>
+          <p className="hw-muted">{t('widgets.ui.spotify.noClientId')}</p>
           <button type="button" className="hw-btn" onClick={() => setShowAdvanced(true)}>
-            Własny Client ID
+            {t('widgets.ui.spotify.customClientId')}
           </button>
         </div>
       </div>
@@ -272,10 +280,15 @@ export function SpotifyWidget({
     return (
       <div className={`hw-spotify hw-spotify-setup hw-size-${size}`}>
         <div className="hw-spotify-setup-inner">
-          <p className="hw-spotify-setup-title">Własny Client ID</p>
+          <p className="hw-spotify-setup-title">{t('widgets.ui.spotify.customClientId')}</p>
           <div className="hw-spotify-redirect">
             <code>{status?.redirectUri || 'http://127.0.0.1:47831/callback'}</code>
-            <button type="button" className="hw-icon-btn" title="Kopiuj" onClick={() => void copyRedirect()}>
+            <button
+              type="button"
+              className="hw-icon-btn"
+              title={t('common.copy')}
+              onClick={() => void copyRedirect()}
+            >
               <Copy size={12} />
             </button>
           </div>
@@ -294,7 +307,7 @@ export function SpotifyWidget({
               setBusy(true);
               const r = await window.shell?.spotifySetClientId?.(clientIdDraft.trim());
               setBusy(false);
-              if (!r?.ok) setMsg(r?.error || 'Błąd');
+              if (!r?.ok) setMsg(r?.error || t('widgets.ui.spotify.error'));
               else {
                 setMsg('');
                 setShowAdvanced(false);
@@ -302,10 +315,14 @@ export function SpotifyWidget({
               }
             }}
           >
-            Zapisz
+            {t('common.save')}
           </button>
-          <button type="button" className="hw-btn hw-btn-ghost" onClick={() => setShowAdvanced(false)}>
-            Wróć
+          <button
+            type="button"
+            className="hw-btn hw-btn-ghost"
+            onClick={() => setShowAdvanced(false)}
+          >
+            {t('widgets.ui.spotify.goBack')}
           </button>
           {msg ? <p className="hw-spotify-err">{msg}</p> : null}
         </div>
@@ -321,8 +338,8 @@ export function SpotifyWidget({
           <span className="hw-spotify-badge">
             <SpotifyGlyph size={36} />
           </span>
-          <p className="hw-spotify-setup-title">Połącz Spotify</p>
-          <p className="hw-muted">Zobaczysz to, czego słuchasz — play, pauza, przewijanie.</p>
+          <p className="hw-spotify-setup-title">{t('widgets.ui.spotify.connectTitle')}</p>
+          <p className="hw-muted">{t('widgets.ui.spotify.connectHint')}</p>
           <button
             type="button"
             className="hw-btn hw-spotify-login-btn"
@@ -332,7 +349,7 @@ export function SpotifyWidget({
               void doLogin();
             }}
           >
-            {busy ? 'Logowanie…' : 'Zaloguj'}
+            {busy ? t('widgets.ui.spotify.loggingIn') : t('widgets.ui.spotify.login')}
           </button>
           {msg ? <p className="hw-spotify-err">{msg}</p> : null}
         </div>
@@ -353,11 +370,16 @@ export function SpotifyWidget({
           <span className="hw-spotify-badge">
             <SpotifyGlyph size={32} />
           </span>
-          <p className="hw-spotify-setup-title">Nic nie gra</p>
-          <p className="hw-muted">Odtwórz coś w aplikacji Spotify, potem odśwież.</p>
+          <p className="hw-spotify-setup-title">{t('widgets.ui.spotify.nothingPlaying')}</p>
+          <p className="hw-muted">{t('widgets.ui.spotify.playSomething')}</p>
           <div className="hw-spotify-actions">
-            <button type="button" className="hw-btn" disabled={busy} onClick={() => void refreshPlayback()}>
-              Odśwież
+            <button
+              type="button"
+              className="hw-btn"
+              disabled={busy}
+              onClick={() => void refreshPlayback()}
+            >
+              {t('common.refresh')}
             </button>
             <button
               type="button"
@@ -368,7 +390,7 @@ export function SpotifyWidget({
                 await refreshStatus();
               }}
             >
-              Wyloguj
+              {t('widgets.ui.spotify.logout')}
             </button>
           </div>
           {msg ? <p className="hw-spotify-err">{msg}</p> : null}
@@ -399,7 +421,7 @@ export function SpotifyWidget({
             <button
               type="button"
               className="hw-icon-btn"
-              title="Otwórz w Spotify"
+              title={t('widgets.ui.spotify.openInSpotify')}
               onClick={() => onGo?.(item.url!)}
             >
               <ExternalLink size={13} />
@@ -409,7 +431,7 @@ export function SpotifyWidget({
             <button
               type="button"
               className="hw-icon-btn"
-              title="Wyloguj"
+              title={t('widgets.ui.spotify.logout')}
               onClick={async () => {
                 await window.shell?.spotifyLogout?.();
                 setPlayback(null);
@@ -432,7 +454,7 @@ export function SpotifyWidget({
           aria-valuemin={0}
           aria-valuemax={dur}
           aria-valuenow={progress}
-          aria-label="Przewijanie"
+          aria-label={t('widgets.ui.spotify.scrub')}
           tabIndex={0}
         >
           <i style={{ width: `${pct}%` }} />
@@ -448,7 +470,7 @@ export function SpotifyWidget({
           <button
             type="button"
             className={`hw-icon-btn ${playback?.shuffle ? 'on' : ''}`}
-            title="Losowo"
+            title={t('widgets.ui.spotify.shuffle')}
             disabled={busy}
             onClick={() => void run(() => window.shell?.spotifyShuffle?.(!playback?.shuffle))}
           >
@@ -458,7 +480,7 @@ export function SpotifyWidget({
         <button
           type="button"
           className="hw-icon-btn"
-          title="Poprzedni"
+          title={t('widgets.ui.spotify.previous')}
           disabled={busy}
           onClick={() => void run(() => window.shell?.spotifyPrev?.())}
         >
@@ -467,7 +489,9 @@ export function SpotifyWidget({
         <button
           type="button"
           className="hw-spotify-play"
-          title={playback?.playing ? 'Pauza' : 'Odtwarzaj'}
+          title={
+            playback?.playing ? t('widgets.ui.spotify.pause') : t('widgets.ui.spotify.play')
+          }
           disabled={busy}
           onClick={() =>
             void run(() =>
@@ -480,7 +504,7 @@ export function SpotifyWidget({
         <button
           type="button"
           className="hw-icon-btn"
-          title="Następny"
+          title={t('widgets.ui.spotify.next')}
           disabled={busy}
           onClick={() => void run(() => window.shell?.spotifyNext?.())}
         >
@@ -490,7 +514,7 @@ export function SpotifyWidget({
           <button
             type="button"
             className={`hw-icon-btn ${playback?.repeat && playback.repeat !== 'off' ? 'on' : ''}`}
-            title="Powtarzaj"
+            title={t('widgets.ui.spotify.repeat')}
             disabled={busy}
             onClick={() => {
               const cur = playback?.repeat || 'off';

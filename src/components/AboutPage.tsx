@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Copy, ExternalLink, FolderOpen, Info } from 'lucide-react';
+import { useT } from '../i18n';
 import { InternalPage } from './InternalPage';
 import { CHROME_SHORTCUTS } from '../lib/shortcutsRegistry';
 
@@ -14,6 +15,7 @@ type AppInfo = {
 };
 
 export function AboutPage() {
+  const t = useT();
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -31,7 +33,7 @@ export function AboutPage() {
         `Node ${info.node}`,
         info.v8 ? `V8 ${info.v8}` : null,
         `Platform ${info.platform}`,
-        info.userData ? `Profil ${info.userData}` : null,
+        info.userData ? t('internal.aboutProfileLine', { path: info.userData }) : null,
       ].filter(Boolean)
     : [];
 
@@ -43,13 +45,13 @@ export function AboutPage() {
 
   return (
     <InternalPage
-      title="O Vio"
+      title={t('internal.about')}
       icon={<Info size={18} strokeWidth={1.75} />}
-      subtitle="Wersje, skróty i ścieżki profilu"
+      subtitle={t('internal.aboutSub')}
       toolbar={
         <button type="button" className="history-sbtn secondary" onClick={() => void copy()}>
           <Copy size={14} strokeWidth={1.75} />
-          {copied ? 'Skopiowano' : 'Kopiuj informacje o wersji'}
+          {copied ? t('common.copied') : t('internal.copyVersion')}
         </button>
       }
     >
@@ -60,13 +62,13 @@ export function AboutPage() {
           </div>
           <div>
             <h2>Vio</h2>
-            <p className="muted">Prywatna przeglądarka na Electronie</p>
+            <p className="muted">{t('internal.aboutTagline')}</p>
           </div>
         </div>
 
         <dl className="about-dl">
           <div>
-            <dt>Wersja aplikacji</dt>
+            <dt>{t('internal.aboutAppVersion')}</dt>
             <dd>{info?.appVersion ?? '…'}</dd>
           </div>
           <div>
@@ -88,12 +90,12 @@ export function AboutPage() {
             </div>
           ) : null}
           <div>
-            <dt>Platforma</dt>
+            <dt>{t('internal.aboutPlatform')}</dt>
             <dd>{info?.platform ?? '…'}</dd>
           </div>
           {info?.userData ? (
             <div>
-              <dt>Profil</dt>
+              <dt>{t('internal.aboutProfile')}</dt>
               <dd className="about-path">{info.userData}</dd>
             </div>
           ) : null}
@@ -106,7 +108,7 @@ export function AboutPage() {
             onClick={() => void window.shell?.openUserData?.()}
           >
             <FolderOpen size={14} strokeWidth={1.75} />
-            Otwórz folder profilu
+            {t('internal.openProfile')}
           </button>
           <button
             type="button"
@@ -114,11 +116,11 @@ export function AboutPage() {
             onClick={() => void window.shell?.openLogsFolder?.()}
           >
             <ExternalLink size={14} strokeWidth={1.75} />
-            Folder logów
+            {t('internal.openLogs')}
           </button>
         </div>
 
-        <h3 className="about-h3">Skróty klawiszowe</h3>
+        <h3 className="about-h3">{t('internal.shortcuts')}</h3>
         <ul className="about-shortcuts">
           {CHROME_SHORTCUTS.map((s) => (
             <li key={s.id}>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Shield, ShieldOff, Trash2, X } from 'lucide-react';
 import { Switch } from './ui/Switch';
+import { useT } from '../i18n';
 import { isMotionOff, popupTransition } from '../lib/motionPresets';
 import { useStore } from '../store';
 
@@ -26,6 +27,7 @@ export function ShieldPanel({
   onDisableOnThisPage,
   onForget,
 }: Props) {
+  const t = useT();
   const [blocked, setBlocked] = useState<{ host: string; url: string }[]>([]);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const settings = useStore((s) => s.settings);
@@ -49,12 +51,12 @@ export function ShieldPanel({
   useEffect(() => {
     if (!open) return;
     const onPtr = (e: PointerEvent) => {
-      const t = e.target as Node | null;
-      if (!t) return;
-      if (panelRef.current?.contains(t)) return;
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (panelRef.current?.contains(target)) return;
       if (
-        (t as Element).closest?.('.adblock-btn') ||
-        (t as Element).closest?.('.bar-shield-wrap > .icon-btn')
+        (target as Element).closest?.('.adblock-btn') ||
+        (target as Element).closest?.('.bar-shield-wrap > .icon-btn')
       )
         return;
       onClose();
@@ -83,6 +85,7 @@ export function ShieldPanel({
 
   const visible = grouped.slice(0, 5);
   const hasMore = grouped.length > 5;
+  const protectionLabel = host || t('chrome.protection');
 
   return (
     <AnimatePresence>
@@ -91,7 +94,7 @@ export function ShieldPanel({
           ref={panelRef}
           className="shield-panel chrome-flyout motion-popup"
           role="dialog"
-          aria-label="Ochrona prywatności"
+          aria-label={t('chrome.shieldAria')}
           initial={popMotion.initial}
           animate={popMotion.animate}
           exit={popMotion.exit}
@@ -105,9 +108,9 @@ export function ShieldPanel({
               ) : (
                 <ShieldOff size={14} strokeWidth={1.75} />
               )}
-              <strong title={host || 'Ochrona'}>{host || 'Ochrona'}</strong>
+              <strong title={protectionLabel}>{protectionLabel}</strong>
             </div>
-            <button type="button" className="icon-btn sm" onClick={onClose} title="Zamknij">
+            <button type="button" className="icon-btn sm" onClick={onClose} title={t('common.close')}>
               <X size={14} />
             </button>
           </header>
@@ -115,11 +118,11 @@ export function ShieldPanel({
           <div className="chrome-flyout-body">
             <div className="shield-panel-stats">
               <div>
-                <em>Dziś</em>
+                <em>{t('chrome.shieldToday')}</em>
                 <strong>{blockedToday}</strong>
               </div>
               <div>
-                <em>Domeny</em>
+                <em>{t('chrome.shieldDomains')}</em>
                 <strong>{grouped.length}</strong>
               </div>
             </div>
@@ -128,30 +131,28 @@ export function ShieldPanel({
               <Switch
                 on={protectionOn}
                 onChange={onToggleProtection}
-                aria-label="Ochrona dla tej strony"
+                aria-label={t('chrome.shieldForPage')}
               />
-              <span>Ochrona dla tej strony</span>
+              <span>{t('chrome.shieldForPage')}</span>
             </label>
             <p className="shield-hint">
-              {protectionOn
-                ? 'Coś nie działa? Wyłącz ochronę — zapamiętamy wyjątek per domena.'
-                : 'Ochrona wyłączona dla tej domeny (wyjątek zapisany).'}
+              {protectionOn ? t('chrome.shieldHintOn') : t('chrome.shieldHintOff')}
             </p>
 
             <div className="shield-actions">
               {protectionOn && (
                 <button type="button" className="sbtn ghost" onClick={onDisableOnThisPage}>
-                  Wyłącz na tej stronie
+                  {t('chrome.shieldDisablePage')}
                 </button>
               )}
               <button type="button" className="sbtn text" onClick={onForget}>
-                <Trash2 size={13} strokeWidth={1.75} /> Zapomnij tę stronę
+                <Trash2 size={13} strokeWidth={1.75} /> {t('chrome.shieldForgetPage')}
               </button>
             </div>
 
             {visible.length > 0 && (
               <div className="shield-blocked">
-                <span className="shield-blocked-label">Ostatnio zablokowane</span>
+                <span className="shield-blocked-label">{t('chrome.shieldRecentlyBlocked')}</span>
                 <ul>
                   {visible.map((b) => (
                     <li key={b.host} title={b.host}>
@@ -169,7 +170,7 @@ export function ShieldPanel({
                       setSettingsTab('adblock');
                     }}
                   >
-                    Pokaż wszystkie
+                    {t('chrome.shieldShowAll')}
                   </button>
                 )}
               </div>

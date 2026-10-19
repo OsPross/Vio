@@ -29,6 +29,7 @@ import { WIDGET_ICONS } from '../../../widgets/WidgetStrip';
 import { Segmented, Switch } from '../../ui';
 import { AddWidgetGallery } from '../../../widgets/AddWidgetGallery';
 import { WidgetPreview } from '../../../widgets/WidgetPreview';
+import { useT } from '../../../i18n';
 
 const RECOMMENDED: HomeWidgetType[] = ['weather', 'notes', 'todo', 'calendar'];
 
@@ -43,6 +44,7 @@ function SortableWidgetRow({
   onToggle: (on: boolean) => void;
   onPatchSettings: (settings: Record<string, unknown>) => void;
 }) {
+  const t = useT();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: widget.id,
   });
@@ -63,7 +65,7 @@ function SortableWidgetRow({
           className="pz-widget-grip"
           {...attributes}
           {...listeners}
-          title="Przeciągnij"
+          title={t('home.personalize.drag')}
         >
           <GripVertical size={14} />
         </button>
@@ -78,20 +80,24 @@ function SortableWidgetRow({
             { id: 'L', label: 'L' },
           ]}
           onChange={(id) => onSize(id as HomeWidgetSize)}
-          aria-label={`Rozmiar ${meta.label}`}
+          aria-label={t('home.personalize.sizeAria', { name: meta.label })}
         />
-        <Switch on={true} onChange={onToggle} aria-label={`Widoczność ${meta.label}`} />
+        <Switch
+          on={true}
+          onChange={onToggle}
+          aria-label={t('home.personalize.visibilityAria', { name: meta.label })}
+        />
         <span className="pz-widget-more" aria-hidden>
           <MoreHorizontal size={14} />
         </span>
       </div>
       {widget.type === 'weather' && (
         <label className="pz-widget-city">
-          <span>Miasto</span>
+          <span>{t('home.personalize.city')}</span>
           <input
             className="ui-input"
             value={city}
-            placeholder="Np. Kraków"
+            placeholder={t('home.personalize.cityPlaceholder')}
             spellCheck={false}
             onChange={(e) => onPatchSettings({ location: e.target.value })}
             onBlur={(e) => onPatchSettings({ location: e.target.value.trim() })}
@@ -109,6 +115,7 @@ export function WidgetsTab({
   onEditOnPage: () => void;
   reduced: boolean;
 }) {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -150,18 +157,18 @@ export function WidgetsTab({
     <div className="pz-tab-pane">
       <section className="pz-section">
         <div className="pz-section-head">
-          <h3>Widżety</h3>
+          <h3>{t('home.personalize.widgets')}</h3>
           {widgets.length > 0 && (
             <button type="button" className="pz-text-btn" onClick={() => setGalleryOpen(true)}>
               <Plus size={13} strokeWidth={2} />
-              Dodaj widżet
+              {t('home.addWidget')}
             </button>
           )}
         </div>
 
         {widgets.length === 0 ? (
           <>
-            <p className="pz-empty">Brak widżetów — wybierz polecane albo otwórz galerię.</p>
+            <p className="pz-empty">{t('home.personalize.widgetsEmpty')}</p>
             <div className="pz-rec-grid">
               {RECOMMENDED.map((type) => {
                 const meta = WIDGET_REGISTRY[type];
@@ -170,14 +177,14 @@ export function WidgetsTab({
                     <WidgetPreview type={type} size="M" className="pz-rec-preview" />
                     <strong>{meta.label}</strong>
                     <button type="button" className="pz-rec-add" onClick={() => addType(type)}>
-                      Dodaj
+                      {t('common.add')}
                     </button>
                   </div>
                 );
               })}
             </div>
             <button type="button" className="pz-text-btn" onClick={() => setGalleryOpen(true)}>
-              Wszystkie widżety
+              {t('home.personalize.allWidgets')}
             </button>
           </>
         ) : (
@@ -211,7 +218,7 @@ export function WidgetsTab({
 
       <button type="button" className="pz-secondary-btn" onClick={onEditOnPage}>
         <Pencil size={14} strokeWidth={1.75} />
-        Edytuj układ na stronie
+        {t('home.personalize.editOnPage')}
       </button>
 
       <AddWidgetGallery

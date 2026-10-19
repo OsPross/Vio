@@ -3,9 +3,11 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
 import { SEARCH_ENGINES, useStore, type SearchEngine, type SearchLanguage } from '../../../store';
+import { useT } from '../../../i18n';
 import { FieldRow, Row, SettingsDisclosure, SettingsGroup, Toggle } from '../SettingsControls';
 
 export function SearchSection() {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const bangs = useStore((s) => s.bangs);
   const setView = useStore((s) => s.setView);
@@ -21,36 +23,36 @@ export function SearchSection() {
 
   return (
     <div className="settings-stack">
-      <SettingsGroup title="Silnik domyślny">
-        <Row label="Silnik">
+      <SettingsGroup title={t('settings.search.engineGroup')}>
+        <Row label={t('settings.search.engine')}>
           <Select
-            aria-label="Silnik wyszukiwania"
+            aria-label={t('settings.search.engine')}
             value={settings.searchEngine}
             onChange={(v) => patchSettings({ searchEngine: v as SearchEngine })}
             groups={[
               {
-                label: 'Web',
+                label: t('settings.search.groupWeb'),
                 options: SEARCH_ENGINES.filter((e) => e.group === 'web').map((e) => ({
                   value: e.id,
                   label: e.label,
                 })),
               },
               {
-                label: 'Prywatność',
+                label: t('settings.search.groupPrivacy'),
                 options: SEARCH_ENGINES.filter((e) => e.group === 'privacy').map((e) => ({
                   value: e.id,
                   label: e.label,
                 })),
               },
               {
-                label: 'Onion / darknet (clearnet)',
+                label: t('settings.search.groupOnion'),
                 options: SEARCH_ENGINES.filter((e) => e.group === 'onion').map((e) => ({
                   value: e.id,
                   label: e.label,
                 })),
               },
               {
-                label: 'Lokalne / własne',
+                label: t('settings.search.groupLocal'),
                 options: SEARCH_ENGINES.filter(
                   (e) => e.group === 'local' || e.group === 'custom',
                 ).map((e) => ({
@@ -63,7 +65,7 @@ export function SearchSection() {
         </Row>
         {engineMeta?.hint && <p className="snote">{engineMeta.hint}</p>}
         {settings.searchEngine === 'searx' && (
-          <FieldRow label="URL SearXNG">
+          <FieldRow label={t('settings.search.searxUrl')}>
             <Input
               value={settings.searxUrl}
               onChange={(e) => patchSettings({ searxUrl: e.target.value })}
@@ -72,10 +74,7 @@ export function SearchSection() {
           </FieldRow>
         )}
         {settings.searchEngine === 'custom' && (
-          <FieldRow
-            label="Własny URL wyszukiwania"
-            desc="Użyj %s jako placeholder zapytania"
-          >
+          <FieldRow label={t('settings.search.customUrl')} desc={t('settings.search.customUrlDesc')}>
             <Input
               value={settings.customSearchUrl}
               onChange={(e) => patchSettings({ customSearchUrl: e.target.value })}
@@ -83,41 +82,26 @@ export function SearchSection() {
             />
           </FieldRow>
         )}
-        <Row
-          label="Język wyników"
-          desc="Angielski wymusza wyniki / UI po angielsku (Google, DDG, Brave…)"
-        >
+        <Row label={t('settings.search.resultsLang')} desc={t('settings.search.resultsLangDesc')}>
           <Select
-            aria-label="Język wyników wyszukiwania"
+            aria-label={t('settings.search.resultsLang')}
             value={settings.searchLanguage || 'en'}
             onChange={(v) => patchSettings({ searchLanguage: v as SearchLanguage })}
             options={[
-              { value: 'en', label: 'English' },
-              { value: 'pl', label: 'Polski' },
-              { value: 'auto', label: 'Auto (silnik / IP)' },
+              { value: 'en', label: t('settings.search.resultsEn') },
+              { value: 'pl', label: t('settings.search.resultsPl') },
+              { value: 'auto', label: t('settings.search.resultsAuto') },
             ]}
           />
         </Row>
       </SettingsGroup>
 
-      <SettingsGroup title="Tryb Tor">
-        <p className="tor-settings-note">
-          <strong>Tryb Tor</strong> ukrywa IP i izoluje sesję (osobna partycja w pamięci,
-          bez wspólnych ciasteczek z normalnymi kartami).{' '}
-          <strong>To nie jest Tor Browser</strong> — nie daje takiej ochrony przed
-          fingerprintingiem. Do spraw wrażliwych używaj oficjalnego Tor Browsera. Nie
-          nazywamy tego trybu „anonimowym”.
-        </p>
+      <SettingsGroup title={t('settings.search.torMode')}>
+        <p className="tor-settings-note">{t('settings.search.torNote1')}</p>
         <p className="tor-settings-note" style={{ marginTop: 8 }}>
-          Na tym PC: <strong>Tor Browser</strong> (pulpit) do spraw wrażliwych oraz
-          opcjonalny lokalny daemon SOCKS (<code>127.0.0.1:9050</code> / wbudowany Expert
-          Bundle na <code>19050</code>). Autostart daemona w Windows jest{' '}
-          <strong>wyłączony domyślnie</strong>.
+          {t('settings.search.torNote2')}
         </p>
-        <FieldRow
-          label="Preferowany SOCKS"
-          desc="Port 9050 to daemon systemowy, 9150 Tor Browser, 19050 wbudowany Expert Bundle"
-        >
+        <FieldRow label={t('settings.search.torSocks')} desc={t('settings.search.torSocksDesc')}>
           <Input
             value={settings.torProxyUrl}
             onChange={(e) => patchSettings({ torProxyUrl: e.target.value })}
@@ -125,8 +109,8 @@ export function SearchSection() {
           />
         </FieldRow>
         <Toggle
-          label="Autostart daemona Tor (Windows)"
-          hint="Skrót w folderze Autostart — tylko jeśli świadomie włączysz. Domyślnie wyłączone."
+          label={t('settings.search.torDaemonAutostart')}
+          hint={t('settings.search.torDaemonAutostartHint')}
           on={settings.torDaemonAutostart}
           onChange={(v) => {
             patchSettings({ torDaemonAutostart: v });
@@ -135,15 +119,12 @@ export function SearchSection() {
               .then((r: { ok?: boolean; error?: string }) => {
                 if (r && r.ok === false && v) {
                   patchSettings({ torDaemonAutostart: false });
-                  window.alert(r.error || 'Nie udało się włączyć autostartu Tora');
+                  window.alert(r.error || t('settings.search.torDaemonAutostartFail'));
                 }
               });
           }}
         />
-        <Row
-          label="Otwórz kartę Tor"
-          desc="Ctrl+Shift+N — fail-closed jeśli Tor nie wstanie"
-        >
+        <Row label={t('settings.search.torOpenTab')} desc={t('settings.search.torOpenTabDesc')}>
           <button
             type="button"
             className="sbtn primary"
@@ -152,15 +133,12 @@ export function SearchSection() {
               window.dispatchEvent(new CustomEvent('djxxr-open-tor'));
             }}
           >
-            Nowa karta Tor
+            {t('settings.search.torNewTab')}
           </button>
         </Row>
-        <FieldRow
-          label="Mosty (wbudowany Tor)"
-          desc="Bez Moat — wbudowana lista z Tor Browser albo własne linie. Zmiana restartuje daemona."
-        >
+        <FieldRow label={t('settings.search.torBridges')} desc={t('settings.search.torBridgesDesc')}>
           <Select
-            aria-label="Mosty Tor"
+            aria-label={t('settings.search.torBridgesAria')}
             value={settings.torBridgeMode}
             onChange={(v) => {
               const mode = v as typeof settings.torBridgeMode;
@@ -177,18 +155,18 @@ export function SearchSection() {
               });
             }}
             options={[
-              { value: 'none', label: 'Bez mostów (domyślnie)' },
-              { value: 'obfs4', label: 'obfs4 (wbudowane)' },
-              { value: 'snowflake', label: 'Snowflake' },
-              { value: 'meek', label: 'meek' },
-              { value: 'custom', label: 'Własne mosty' },
+              { value: 'none', label: t('settings.search.torBridgeNone') },
+              { value: 'obfs4', label: t('settings.search.torBridgeObfs4') },
+              { value: 'snowflake', label: t('settings.search.torBridgeSnowflake') },
+              { value: 'meek', label: t('settings.search.torBridgeMeek') },
+              { value: 'custom', label: t('settings.search.torBridgeCustom') },
             ]}
           />
         </FieldRow>
         {settings.torBridgeMode === 'custom' && (
           <FieldRow
-            label="Linie mostów"
-            desc="Jeden most na linię (obfs4 / snowflake / meek_lite)"
+            label={t('settings.search.torBridgeLines')}
+            desc={t('settings.search.torBridgeLinesDesc')}
           >
             <textarea
               rows={5}
@@ -213,33 +191,28 @@ export function SearchSection() {
             />
           </FieldRow>
         )}
-        <p
-          className="muted"
-          style={{ margin: '8px 2px 0', fontSize: 12, lineHeight: 1.4 }}
-        >
-          DNS: Chromium przy SOCKS5 wysyła hostname do proxy (≈ socks5h). Nowa tożsamość:
-          Ctrl+Shift+U — zamyka karty Tor, wipe sesji, SIGNAL NEWNYM. Izolacja SOCKS Auth
-          per domena niedostępna w Electron.
+        <p className="muted" style={{ margin: '8px 2px 0', fontSize: 12, lineHeight: 1.4 }}>
+          {t('settings.search.torDnsNote')}
         </p>
       </SettingsGroup>
 
-      <SettingsGroup title="Podpowiedzi">
+      <SettingsGroup title={t('settings.search.suggestions')}>
         <Toggle
-          label="Podpowiedzi z historii"
+          label={t('settings.search.suggestHistory')}
           on={settings.suggestHistory}
           onChange={(v) => patchSettings({ suggestHistory: v })}
         />
         <Toggle
-          label="Podpowiadaj bangs przy !"
+          label={t('settings.search.suggestBangs')}
           on={settings.suggestBangs}
           onChange={(v) => patchSettings({ suggestBangs: v })}
         />
       </SettingsGroup>
 
-      <SettingsGroup title="Bangs">
+      <SettingsGroup title={t('settings.search.bangs')}>
         <SettingsDisclosure
-          title="Twoje bangs"
-          summary="Skróty !klucz w omniboxie"
+          title={t('settings.search.yourBangs')}
+          summary={t('settings.search.bangsSummary')}
           badge={bangs.length}
           defaultOpen={bangs.length > 0 && bangs.length <= 10}
         >
@@ -257,22 +230,22 @@ export function SearchSection() {
                   type="button"
                   className="icon-btn sm"
                   onClick={() => removeBang(b.key)}
-                  aria-label={`Usuń bang !${b.key}`}
+                  aria-label={t('settings.search.removeBangAria', { key: b.key })}
                 >
                   <Trash2 size={14} strokeWidth={1.75} />
                 </button>
               </div>
             ))}
-            {!bangs.length ? <p className="snote">Brak własnych bangów.</p> : null}
+            {!bangs.length ? <p className="snote">{t('settings.search.noBangs')}</p> : null}
           </div>
           <div className="sfold-footer">
             <Input
-              placeholder="klucz"
+              placeholder={t('settings.search.bangKeyPlaceholder')}
               value={bangKey}
               onChange={(e) => setBangKey(e.target.value)}
             />
             <Input
-              placeholder="nazwa"
+              placeholder={t('settings.search.bangLabelPlaceholder')}
               value={bangLabel}
               onChange={(e) => setBangLabel(e.target.value)}
             />
@@ -297,7 +270,7 @@ export function SearchSection() {
                 setBangUrl('');
               }}
             >
-              <Plus size={14} strokeWidth={1.75} /> Dodaj
+              <Plus size={14} strokeWidth={1.75} /> {t('common.add')}
             </button>
           </div>
         </SettingsDisclosure>

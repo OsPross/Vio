@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { History } from 'lucide-react';
 import { faviconImgFallback, letterFavicon, resolveFavicon } from '../lib/favicon';
+import { useT } from '../i18n';
 import { WidgetEmpty } from './WidgetFrame';
 
 type HistItem = { id: string; url: string; title: string };
@@ -19,6 +20,7 @@ export function RecentWidget({
   size: 'S' | 'M' | 'L';
   preview?: boolean;
 }) {
+  const t = useT();
   const [items, setItems] = useState<HistItem[]>(preview ? DEMO : []);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export function RecentWidget({
   }, [size, preview]);
 
   if (!items.length) {
-    return <WidgetEmpty icon={History} text="Brak historii przeglądania." />;
+    return <WidgetEmpty icon={History} text={t('widgets.ui.recent.empty')} />;
   }
 
   return (

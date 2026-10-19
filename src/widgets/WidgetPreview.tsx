@@ -1,6 +1,7 @@
 import { ScaledPreview } from '../components/ScaledPreview';
 import type { HomeWidget, HomeWidgetType } from '../store';
 import { HOME_GRID_PX, widgetSizeCells } from '../store';
+import { useT } from '../i18n';
 import { sizePx, WIDGET_REGISTRY, type WidgetSizeId } from './registry';
 import { WidgetBody, WIDGET_ICONS } from './WidgetStrip';
 import { WidgetFrame } from './WidgetFrame';
@@ -22,6 +23,7 @@ export function WidgetPreview({
   size: WidgetSizeId;
   className?: string;
 }) {
+  const t = useT();
   const meta = WIDGET_REGISTRY[type];
   const Icon = WIDGET_ICONS[type];
   const { width, height } = widgetPreviewDims(size, type);
@@ -32,7 +34,7 @@ export function WidgetPreview({
     anchor: 'center',
     x: 0,
     y: 0,
-    settings: type === 'weather' ? { location: 'Warszawa' } : {},
+    settings: type === 'weather' ? { location: t('widgets.ui.weather.demoCity') } : {},
   };
 
   return (
@@ -48,7 +50,7 @@ export function WidgetPreview({
           <WidgetFrame title={meta.label} icon={Icon} className="hw-preview-frame">
             <WidgetBody widget={widget} size={size} preview reduced />
           </WidgetFrame>
-          <em className="hw-demo-badge">Przykład</em>
+          <em className="hw-demo-badge">{t('widgets.ui.example')}</em>
         </div>
       </ScaledPreview>
     </div>

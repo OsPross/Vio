@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bot, Square, X } from 'lucide-react';
+import { useT } from '../i18n';
 
 type SoulState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'acting';
 type Panel = {
@@ -7,19 +8,12 @@ type Panel = {
   content?: { title: string; items: { text: string; action?: string; payload?: unknown }[] };
 };
 
-const STATE_LABEL: Record<SoulState, string> = {
-  idle: 'gotowy',
-  listening: 'słucha',
-  thinking: 'myśli',
-  speaking: 'mówi',
-  acting: 'działa',
-};
-
 /**
  * Toolbar icon while Soul (automation API) is connected: state badge, STOP while acting,
  * click → soulIconClicked. Also hosts the small Soul side panel driven by the `panel` command.
  */
 export function SoulIndicator() {
+  const t = useT();
   const [connected, setConnected] = useState(0);
   const [soul, setSoul] = useState<{ state: SoulState; text: string }>({ state: 'idle', text: '' });
   const [panel, setPanel] = useState<Panel>({ open: false });
@@ -44,7 +38,19 @@ export function SoulIndicator() {
 
   if (!connected) return null;
   const ui = (name: string, data?: unknown) => void window.shell?.automationUiEvent?.(name, data);
-  const label = `Soul — ${STATE_LABEL[soul.state]}${soul.text ? `: ${soul.text}` : ''}`;
+  const stateLabel =
+    soul.state === 'idle'
+      ? t('chrome.soulReady')
+      : soul.state === 'listening'
+        ? t('chrome.soulListening')
+        : soul.state === 'thinking'
+          ? t('chrome.soulThinking')
+          : soul.state === 'speaking'
+            ? t('chrome.soulSpeaking')
+            : t('chrome.soulActing');
+  const label = soul.text
+    ? t('chrome.soulLabelWithText', { state: stateLabel, text: soul.text })
+    : t('chrome.soulLabel', { state: stateLabel });
   return (
     <>
       <button
@@ -61,7 +67,7 @@ export function SoulIndicator() {
         <button
           type="button"
           className="soul-stop"
-          title="Zatrzymaj Soul"
+          title={t('chrome.soulStop')}
           onClick={() => ui('stopRequested')}
         >
           <Square size={10} strokeWidth={2.5} fill="currentColor" /> STOP
@@ -75,7 +81,7 @@ export function SoulIndicator() {
             <button
               type="button"
               className="icon-btn sm"
-              aria-label="Zamknij panel Soul"
+              aria-label={t('chrome.soulClosePanel')}
               onClick={() => setPanel({ open: false })}
             >
               <X size={14} />

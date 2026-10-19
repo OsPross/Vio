@@ -7,6 +7,7 @@ import {
 } from '../../../store';
 import { letterFavicon } from '../../../lib/favicon';
 import { Dropdown, Switch } from '../../ui';
+import { useT } from '../../../i18n';
 import { ClockStyleCard } from '../minis/ClockStyleCard';
 
 function SettingsRow({
@@ -29,6 +30,7 @@ function SettingsRow({
 }
 
 export function ClockSearchTab({ reduced }: { reduced: boolean }) {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
 
@@ -45,33 +47,39 @@ export function ClockSearchTab({ reduced }: { reduced: boolean }) {
     ),
   }));
 
+  const clockStyles: [HomeClockStyle, string][] = [
+    ['thin', t('home.personalize.clockThin')],
+    ['classic', t('home.personalize.clockClassic')],
+    ['mono', t('home.personalize.clockMono')],
+  ];
+
   return (
     <div className="pz-tab-pane">
       <section className="pz-section">
-        <h3>Elementy</h3>
+        <h3>{t('home.personalize.elements')}</h3>
         <div className="ui-settings-group">
           <SettingsRow
-            label="Zegar"
+            label={t('home.personalize.clock')}
             on={settings.homeShowClock}
             onChange={(homeShowClock) => patchSettings({ homeShowClock })}
           />
           <SettingsRow
-            label="Data"
+            label={t('home.personalize.date')}
             on={settings.homeShowDate}
             onChange={(homeShowDate) => patchSettings({ homeShowDate })}
           />
           <SettingsRow
-            label="Powitanie"
+            label={t('home.personalize.greeting')}
             on={settings.homeShowGreeting}
             onChange={(homeShowGreeting) => patchSettings({ homeShowGreeting })}
           />
           <SettingsRow
-            label="Format 24h"
+            label={t('home.personalize.clock24h')}
             on={settings.clock24h}
             onChange={(clock24h) => patchSettings({ clock24h })}
           />
           <SettingsRow
-            label="Sekundy"
+            label={t('home.personalize.seconds')}
             on={settings.homeShowSeconds}
             onChange={(homeShowSeconds) => patchSettings({ homeShowSeconds })}
           />
@@ -79,15 +87,9 @@ export function ClockSearchTab({ reduced }: { reduced: boolean }) {
       </section>
 
       <section className="pz-section">
-        <h3>Styl zegara</h3>
+        <h3>{t('home.personalize.clockStyle')}</h3>
         <div className="pz-cstyle-grid">
-          {(
-            [
-              ['thin', 'Cienki'],
-              ['classic', 'Klasyczny'],
-              ['mono', 'Mono'],
-            ] as [HomeClockStyle, string][]
-          ).map(([id, label]) => (
+          {clockStyles.map(([id, label]) => (
             <ClockStyleCard
               key={id}
               id={id}
@@ -100,22 +102,22 @@ export function ClockSearchTab({ reduced }: { reduced: boolean }) {
       </section>
 
       <section className="pz-section">
-        <h3>Wyszukiwarka</h3>
+        <h3>{t('home.personalize.search')}</h3>
         <Dropdown
           value={settings.searchEngine}
           options={engineOptions}
           onChange={(id) => patchSettings({ searchEngine: id as SearchEngine })}
           reduced={reduced}
-          aria-label="Silnik wyszukiwania"
+          aria-label={t('home.personalize.searchEngineAria')}
         />
         <div className="ui-settings-group" style={{ marginTop: 12 }}>
           <SettingsRow
-            label="Ikona silnika w polu"
+            label={t('home.personalize.engineIcon')}
             on={settings.homeShowEngine}
             onChange={(homeShowEngine) => patchSettings({ homeShowEngine })}
           />
           <SettingsRow
-            label="Skróty"
+            label={t('home.personalize.shortcuts')}
             on={settings.homeShowApps}
             onChange={(homeShowApps) => patchSettings({ homeShowApps })}
           />

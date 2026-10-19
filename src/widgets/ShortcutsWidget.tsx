@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
 import { faviconImgFallback, letterFavicon } from '../lib/favicon';
+import { useT } from '../i18n';
 
 const MAX_DOCK = 12;
 const POP_W = 280;
@@ -80,6 +81,7 @@ function ShortcutForm({
   title: string;
   anchorEl: HTMLElement | null;
 }) {
+  const t = useT();
   const [label, setLabel] = useState(initialLabel);
   const [url, setUrl] = useState(initialUrl);
   const [err, setErr] = useState<string | null>(null);
@@ -117,11 +119,11 @@ function ShortcutForm({
     const name = label.trim();
     const href = normalizeUrl(url);
     if (!name) {
-      setErr('Podaj nazwę');
+      setErr(t('widgets.ui.shortcuts.nameRequired'));
       return;
     }
     if (!href) {
-      setErr('Nieprawidłowy adres');
+      setErr(t('widgets.ui.shortcuts.invalidUrl'));
       return;
     }
     onSave(name, href);
@@ -159,7 +161,7 @@ function ShortcutForm({
     >
       <strong id={formId}>{title}</strong>
       <label>
-        Nazwa
+        {t('widgets.ui.shortcuts.name')}
         <input
           ref={labelRef}
           value={label}
@@ -168,7 +170,7 @@ function ShortcutForm({
         />
       </label>
       <label>
-        Adres
+        {t('widgets.ui.shortcuts.url')}
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
@@ -179,10 +181,10 @@ function ShortcutForm({
       {err && <p className="home-dock-popover-err">{err}</p>}
       <div className="home-dock-popover-actions">
         <button type="button" className="ghost" onClick={onCancel}>
-          Anuluj
+          {t('common.cancel')}
         </button>
         <button type="button" className="primary" onClick={submit}>
-          {initialLabel ? 'Zapisz' : 'Dodaj'}
+          {initialLabel ? t('common.save') : t('common.add')}
         </button>
       </div>
     </div>,
@@ -197,6 +199,7 @@ export function ShortcutsWidget({
   onGo: (url: string) => void;
   size?: 'S' | 'M' | 'L';
 }) {
+  const t = useT();
   const shortcuts = useStore((s) => s.shortcuts);
   const addShortcut = useStore((s) => s.addShortcut);
   const removeShortcut = useStore((s) => s.removeShortcut);
@@ -242,7 +245,7 @@ export function ShortcutsWidget({
 
   return (
     <>
-      <nav className={`home-dock hw-shortcuts hw-size-${size}`} aria-label="Aplikacje">
+      <nav className={`home-dock hw-shortcuts hw-size-${size}`} aria-label={t('widgets.ui.shortcuts.appsAria')}>
         {dockShortcuts.map((s) => (
           <button
             key={s.id}
@@ -276,17 +279,17 @@ export function ShortcutsWidget({
               setFormAnchor(addBtnRef.current);
               setForm({ mode: 'add' });
             }}
-            title="Dodaj skrót"
+            title={t('widgets.ui.shortcuts.addTitle')}
           >
             <span className="home-dock-ico">+</span>
-            <span className="home-dock-label">Dodaj</span>
+            <span className="home-dock-label">{t('common.add')}</span>
           </button>
         )}
       </nav>
 
       {form?.mode === 'add' && (
         <ShortcutForm
-          title="Nowy skrót"
+          title={t('widgets.ui.shortcuts.newTitle')}
           initialLabel=""
           initialUrl="https://"
           anchorEl={formAnchor}
@@ -300,7 +303,7 @@ export function ShortcutsWidget({
 
       {form?.mode === 'edit' && editing && (
         <ShortcutForm
-          title="Edytuj skrót"
+          title={t('widgets.ui.shortcuts.editTitle')}
           initialLabel={editing.label}
           initialUrl={editing.url}
           anchorEl={formAnchor}
@@ -332,7 +335,7 @@ export function ShortcutsWidget({
               setCtx(null);
             }}
           >
-            Edytuj
+            {t('common.edit')}
           </button>
           <button
             type="button"
@@ -342,7 +345,7 @@ export function ShortcutsWidget({
               setCtx(null);
             }}
           >
-            Usuń
+            {t('common.remove')}
           </button>
         </div>
       )}

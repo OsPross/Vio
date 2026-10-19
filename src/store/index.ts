@@ -8,6 +8,7 @@ import {
   normalizeSettingsFields,
 } from '../lib/persistMerge';
 import { DEFAULT_BANGS, migrateBangsToDdg, resolveBang } from '../lib/bangs';
+import { getDefaultBookmarkFolders } from '../lib/getDefaultBookmarkFolders';
 import {
   ACCENT_SWATCHES,
   ABOUT_URL,
@@ -174,7 +175,7 @@ export const useStore = create<StoreState>()(
           ? p.bookmarkFolders
           : current.bookmarkFolders;
         const folders = [...bookmarkFolders];
-        for (const def of DEFAULT_BOOKMARK_FOLDERS) {
+        for (const def of getDefaultBookmarkFolders()) {
           if (!folders.some((f) => f.id === def.id)) folders.unshift(def);
         }
         return {
@@ -228,6 +229,7 @@ export type {
   PerfMode,
   SearchEngine,
   SearchLanguage,
+  UiLocale,
   Settings,
   SettingsTab,
   Shortcut,

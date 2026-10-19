@@ -245,6 +245,7 @@ declare global {
         error?: string;
       }>;
       setNativeTheme: (source: 'dark' | 'light' | 'system') => Promise<{ ok: boolean }>;
+      setUiLocale: (locale: 'pl' | 'en') => Promise<{ ok: boolean; locale?: 'pl' | 'en' }>;
       passwordsStatus: () => Promise<PwStatus>;
       passwordsSetup: (
         master: string,

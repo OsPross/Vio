@@ -1,6 +1,7 @@
 /**
  * Pure helpers for omnibox / tab navigation titles (no React).
  */
+import { t } from '../i18n/core';
 import {
   ABOUT_URL,
   BOOKMARKS_URL,
@@ -12,12 +13,12 @@ import {
 } from '../store';
 
 export function titleForInternalUrl(url: string, tor: boolean): string {
-  if (url === HISTORY_URL) return 'Historia';
-  if (url === DOWNLOADS_URL) return 'Pobrania';
-  if (url === BOOKMARKS_URL) return 'Zakładki';
-  if (url === EXTENSIONS_URL) return 'Rozszerzenia';
-  if (url === ABOUT_URL || url === 'about:about') return 'O Vio';
-  if (url === HOME_URL || url === TOR_HOME_URL) return tor ? 'Tor' : 'Nowa karta';
+  if (url === HISTORY_URL) return t('pages.history');
+  if (url === DOWNLOADS_URL) return t('pages.downloads');
+  if (url === BOOKMARKS_URL) return t('pages.bookmarks');
+  if (url === EXTENSIONS_URL) return t('pages.extensions');
+  if (url === ABOUT_URL || url === 'about:about') return t('pages.aboutVio');
+  if (url === HOME_URL || url === TOR_HOME_URL) return tor ? t('pages.tor') : t('pages.newTab');
   return '…';
 }
 

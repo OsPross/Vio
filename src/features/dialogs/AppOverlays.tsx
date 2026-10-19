@@ -7,8 +7,31 @@ import { KeyRound, Puzzle, TriangleAlert } from 'lucide-react';
 import { FindBar } from '../../components/FindBar';
 import { Switch } from '../../components/ui/Switch';
 import type { CertWarn, ExtInstallAsk, HttpsWarn, PermAsk } from '../../hooks/useIpcEvents';
+import { useT } from '../../i18n';
 import type { SaveOffer } from '../tabs';
 import { AboutDialog, ClearDataDialog, QrShareDialog } from './lazy';
+
+function permissionLabel(
+  permission: string,
+  t: ReturnType<typeof useT>,
+): string {
+  switch (permission) {
+    case 'microphone':
+      return t('dialogs.permissionMicrophone');
+    case 'camera':
+      return t('dialogs.permissionCamera');
+    case 'geolocation':
+      return t('dialogs.permissionGeolocation');
+    case 'notifications':
+      return t('dialogs.permissionNotifications');
+    case 'display-capture':
+      return t('dialogs.permissionDisplayCapture');
+    case 'webauthn':
+      return t('dialogs.permissionWebauthn');
+    default:
+      return permission;
+  }
+}
 
 export type AboutInfo = {
   appVersion: string;
@@ -64,6 +87,8 @@ export function ChromeOverlays({
   aboutInfo,
   setAboutInfo,
 }: ChromeOverlaysProps) {
+  const t = useT();
+  const certHost = certWarn?.host || t('chrome.thisDomain');
   return (
     <>
       {findOpen && (
@@ -79,26 +104,32 @@ export function ChromeOverlays({
           onNext={(backward) => runFind(findQuery, backward)}
         />
       )}
-      {fsToast && htmlFullscreen && <div className="html-fs-toast">Esc aby wyjść</div>}
+      {fsToast && htmlFullscreen && (
+        <div className="html-fs-toast">{t('chrome.escToExit')}</div>
+      )}
       {certWarn && (
         <div className="cert-warn-overlay" role="alertdialog">
           <div className="cert-warn-card">
             <TriangleAlert size={28} strokeWidth={1.6} />
-            <h2>Ostrzeżenie certyfikatu</h2>
+            <h2>{t('chrome.certWarnTitle')}</h2>
             <p>
-              Połączenie nie jest zaufane ({certWarn.error || 'błąd certyfikatu'}).
-              {certWarn.tor ? ' Tryb Tor — kontynuuj tylko jeśli ufasz tej stronie.' : ''}
+              {t('chrome.certWarnBody', {
+                error: certWarn.error || t('chrome.certErrorFallback'),
+              })}
+              {certWarn.tor ? t('chrome.certWarnTor') : ''}
             </p>
-            {certWarn.issuer ? <p className="muted">Wystawca: {certWarn.issuer}</p> : null}
+            {certWarn.issuer ? (
+              <p className="muted">{t('chrome.certWarnIssuer', { issuer: certWarn.issuer })}</p>
+            ) : null}
             <code className="cert-warn-url">{certWarn.url}</code>
             {!certWarn.tor ? (
               <label className="perm-remember">
                 <Switch
                   on={certRemember}
                   onChange={setCertRemember}
-                  aria-label={`Zapamiętaj wyjątek dla ${certWarn.host || 'tej domeny'}`}
+                  aria-label={t('chrome.certWarnRememberAria', { host: certHost })}
                 />
-                Zapamiętaj wyjątek dla {certWarn.host || 'tej domeny'}
+                {t('chrome.certWarnRemember', { host: certHost })}
               </label>
             ) : null}
             <div className="cert-warn-actions">
@@ -110,7 +141,7 @@ export function ChromeOverlays({
                   setCertWarn(null);
                 }}
               >
-                Anuluj
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -124,7 +155,7 @@ export function ChromeOverlays({
                   setCertWarn(null);
                 }}
               >
-                Kontynuuj mimo to
+                {t('chrome.certWarnProceed')}
               </button>
             </div>
           </div>
@@ -163,19 +194,20 @@ export type CrashRestoreOfferProps = {
 };
 
 export function CrashRestoreOffer({ crashOffer, onAccept, onDecline }: CrashRestoreOfferProps) {
+  const t = useT();
   if (!crashOffer) return null;
   return (
     <div className="session-crash-banner" role="alertdialog">
       <div className="session-crash-text">
-        <strong>Vio została nieoczekiwanie zamknięta.</strong>
-        <span> Przywrócić karty?</span>
+        <strong>{t('dialogs.crashRestoreClosed')}</strong>
+        <span> {t('dialogs.crashRestoreQuestion')}</span>
       </div>
       <div className="session-crash-actions">
         <button type="button" className="sbtn" onClick={onAccept}>
-          Przywróć
+          {t('dialogs.crashRestoreYes')}
         </button>
         <button type="button" className="sbtn danger-text" onClick={onDecline}>
-          Nie
+          {t('dialogs.crashRestoreNo')}
         </button>
       </div>
     </div>
@@ -193,20 +225,18 @@ export function HttpsWarnOverlay({
   setHttpsWarn,
   navigateActive,
 }: HttpsWarnOverlayProps) {
+  const t = useT();
   if (!httpsWarn) return null;
   return (
-    <div className="https-warn-overlay" role="alertdialog" aria-label="Ostrzeżenie HTTPS">
+    <div className="https-warn-overlay" role="alertdialog" aria-label={t('dialogs.httpsWarnAria')}>
       <div className="https-warn-card">
         <TriangleAlert size={28} strokeWidth={1.6} />
-        <h2>Połączenie nie jest bezpieczne</h2>
-        <p>
-          Strona nie odpowiada przez HTTPS. W trybie ścisłym możesz wejść mimo to — ruch będzie
-          nieszyfrowany.
-        </p>
+        <h2>{t('dialogs.httpsWarnTitle')}</h2>
+        <p>{t('dialogs.httpsWarnDesc')}</p>
         <code className="https-warn-url">{httpsWarn.httpUrl}</code>
         <div className="https-warn-actions">
           <button type="button" className="sbtn ghost" onClick={() => setHttpsWarn(null)}>
-            Anuluj
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -217,7 +247,7 @@ export function HttpsWarnOverlay({
               navigateActive(u);
             }}
           >
-            Wejdź mimo to
+            {t('dialogs.httpsWarnProceed')}
           </button>
         </div>
       </div>
@@ -253,13 +283,14 @@ export function StageOverlays({
   activeIsTor,
   setPwForPage,
 }: StageOverlaysProps) {
+  const t = useT();
   return (
     <>
       {extInstallAsk && (
         <div className="perm-bar ext-install-bar" role="alertdialog">
           <Puzzle size={16} strokeWidth={1.75} aria-hidden />
           <span>
-            Zainstalować rozszerzenie w <strong>Vio</strong>?
+            {t('dialogs.extInstallInVio')} <strong>Vio</strong>?
             <span className="ext-install-id" title={extInstallAsk.extensionId}>
               {extInstallAsk.extensionId.slice(0, 8)}…
             </span>
@@ -273,7 +304,7 @@ export function StageOverlays({
                 setExtInstallAsk(null);
               }}
             >
-              Zainstaluj
+              {t('dialogs.extInstallConfirm')}
             </button>
             <button
               type="button"
@@ -283,7 +314,7 @@ export function StageOverlays({
                 setExtInstallAsk(null);
               }}
             >
-              Anuluj
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -291,24 +322,16 @@ export function StageOverlays({
       {permAsk && (
         <div className="perm-bar" role="alertdialog">
           <span>
-            <strong>{permAsk.origin.replace(/^https:\/\//, '')}</strong> chce użyć:{' '}
-            {permAsk.permission === 'microphone'
-              ? 'mikrofonu'
-              : permAsk.permission === 'camera'
-                ? 'kamery'
-                : permAsk.permission === 'geolocation'
-                  ? 'lokalizacji'
-                  : permAsk.permission === 'notifications'
-                    ? 'powiadomień'
-                    : permAsk.permission === 'display-capture'
-                      ? 'ekranu'
-                      : permAsk.permission === 'webauthn'
-                        ? 'klucza / passkey'
-                        : permAsk.permission}
+            <strong>{permAsk.origin.replace(/^https:\/\//, '')}</strong> {t('dialogs.permissionWants')}{' '}
+            {permissionLabel(permAsk.permission, t)}
           </span>
           <label className="perm-remember">
-            <Switch on={permRemember} onChange={setPermRemember} aria-label="Zapamiętaj" />
-            Zapamiętaj
+            <Switch
+              on={permRemember}
+              onChange={setPermRemember}
+              aria-label={t('dialogs.permissionRemember')}
+            />
+            {t('dialogs.permissionRemember')}
           </label>
           <div className="pw-save-actions">
             <button
@@ -325,7 +348,7 @@ export function StageOverlays({
                 setPermAsk(null);
               }}
             >
-              Zezwól
+              {t('dialogs.permissionAllow')}
             </button>
             <button
               type="button"
@@ -341,7 +364,7 @@ export function StageOverlays({
                 setPermAsk(null);
               }}
             >
-              Zablokuj
+              {t('dialogs.permissionBlock')}
             </button>
           </div>
         </div>
@@ -350,9 +373,14 @@ export function StageOverlays({
         <div className="pw-save-bar" role="status">
           <KeyRound size={14} strokeWidth={1.75} />
           <span>
-            {saveOffer.mode === 'update' ? 'Zaktualizować' : 'Zapisać'} hasło dla{' '}
-            <strong>{saveOffer.origin.replace(/^https:\/\//, '')}</strong>
-            {saveOffer.username ? ` (${saveOffer.username})` : ''}?
+            {t('dialogs.savePasswordFor', {
+              action:
+                saveOffer.mode === 'update'
+                  ? t('dialogs.savePasswordUpdate')
+                  : t('dialogs.savePasswordCreate'),
+              origin: saveOffer.origin.replace(/^https:\/\//, ''),
+              user: saveOffer.username ? ` (${saveOffer.username})` : '',
+            })}
           </span>
           <div className="pw-save-actions">
             <button
@@ -365,7 +393,7 @@ export function StageOverlays({
                 });
               }}
             >
-              Zapisz
+              {t('dialogs.savePasswordSave')}
             </button>
             <button
               type="button"
@@ -375,7 +403,7 @@ export function StageOverlays({
                 setSaveOffer(null);
               }}
             >
-              Nie teraz
+              {t('dialogs.savePasswordNotNow')}
             </button>
             <button
               type="button"
@@ -386,7 +414,7 @@ export function StageOverlays({
                 setSaveOffer(null);
               }}
             >
-              Nigdy dla tej strony
+              {t('dialogs.savePasswordNever')}
             </button>
           </div>
         </div>

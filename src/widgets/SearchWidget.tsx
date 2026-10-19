@@ -11,11 +11,12 @@ import {
 } from '../store';
 import { letterFavicon } from '../lib/favicon';
 import { Select, type SelectGroup } from '../components/ui/Select';
+import { useT } from '../i18n';
 
-/** Home engine picker order — Zwykłe as requested (privacy engines mixed with web). */
-const ENGINE_GROUPS: { label: string; ids: SearchEngine[] }[] = [
+/** Home engine picker order — standard web engines first, then Tor / custom. */
+const ENGINE_GROUP_IDS: { labelKey: string; ids: SearchEngine[] }[] = [
   {
-    label: 'Zwykłe',
+    labelKey: 'widgets.ui.enginesWeb',
     ids: [
       'brave',
       'google',
@@ -28,8 +29,8 @@ const ENGINE_GROUPS: { label: string; ids: SearchEngine[] }[] = [
       'yandex',
     ],
   },
-  { label: 'Tor / .onion', ids: ['ahmia', 'onionland'] },
-  { label: 'Własne', ids: ['searx', 'custom'] },
+  { labelKey: 'widgets.ui.enginesTor', ids: ['ahmia', 'onionland'] },
+  { labelKey: 'widgets.ui.enginesCustom', ids: ['searx', 'custom'] },
 ];
 
 function EngineIconSelect({
@@ -41,14 +42,15 @@ function EngineIconSelect({
   onChange: (v: SearchEngine) => void;
   reduced: boolean;
 }) {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const home = searchHome({ ...settings, searchEngine: value });
   const ico = letterFavicon(home);
 
   const groups = useMemo((): SelectGroup[] => {
     const byId = new Map(SEARCH_ENGINES.map((e) => [e.id, e]));
-    return ENGINE_GROUPS.map((g) => ({
-      label: g.label,
+    return ENGINE_GROUP_IDS.map((g) => ({
+      label: t(g.labelKey),
       options: g.ids
         .map((id) => byId.get(id))
         .filter(Boolean)
@@ -69,7 +71,7 @@ function EngineIconSelect({
           };
         }),
     }));
-  }, [settings]);
+  }, [settings, t]);
 
   return (
     <Select
@@ -77,7 +79,7 @@ function EngineIconSelect({
       value={value}
       groups={groups}
       onChange={(id) => onChange(id as SearchEngine)}
-      aria-label={`Silnik: ${engineLabel(value)}`}
+      aria-label={t('widgets.ui.engineAria', { name: engineLabel(value) })}
       reduced={reduced}
       menuMinWidth={220}
       trigger={<img src={ico} alt="" width={16} height={16} />}
@@ -206,6 +208,7 @@ export function SearchWidget({
   /** Personalize live preview or home edit mode — no focus, suggestions, or history */
   inert?: boolean;
 }) {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const bangs = useStore((s) => s.bangs);
   const patchSettings = useStore((s) => s.patchSettings);
@@ -330,7 +333,8 @@ export function SearchWidget({
   const showSuggest = !inPreview && focused && suggestions.length > 0;
   const engineName = engineLabel(settings.searchEngine);
   const placeholder =
-    settings.homePlaceholder?.trim() || `Szukaj w ${engineName} albo wklej adres…`;
+    settings.homePlaceholder?.trim() ||
+    t('widgets.ui.searchPlaceholder', { engine: engineName });
 
   const run = (title?: string, fill?: string) => {
     if (fill) {

@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
+import { t } from '../../i18n/core';
 import { hostFromPageUrl, zoomFactorForHost } from '../../lib/pageHost';
 import { getWindowPartition } from '../../lib/windowBoot';
 import { pageScrollbarCss } from '../../lib/page-scrollbars';
@@ -283,8 +284,9 @@ function TabWebviewInner({
     const sync = () => {
       try {
         const url = el.getURL();
-        const title = el.getTitle() || 'Karta';
-        const cur = useStore.getState().tabs.find((t) => t.id === tab.id);
+        const untitled = t('tabs.untitled');
+        const title = el.getTitle() || untitled;
+        const cur = useStore.getState().tabs.find((x) => x.id === tab.id);
         const patch: Partial<Tab> = {};
         if (!cur || cur.url !== url) patch.url = url;
         if (!cur || cur.title !== title) patch.title = title;
@@ -296,7 +298,7 @@ function TabWebviewInner({
           tab.mode !== 'tor' &&
           title &&
           title !== '…' &&
-          title !== 'Karta' &&
+          title !== untitled &&
           /^https?:/i.test(url)
         ) {
           recordVisitFromTab(tab, url, title, { soft: true });
@@ -414,7 +416,7 @@ function TabWebviewInner({
       }
       onLoadFailedRef.current?.({
         errorCode: -9001,
-        description: 'Proces renderowania strony został zakończony.',
+        description: t('tabs.renderProcessGone'),
         url,
         kind: 'crash',
       });
@@ -430,7 +432,7 @@ function TabWebviewInner({
       }
       onLoadFailedRef.current?.({
         errorCode: -9001,
-        description: `Proces strony: ${ev.reason || 'crashed'}`,
+        description: t('tabs.renderProcessReason', { reason: ev.reason || 'crashed' }),
         url,
         kind: 'crash',
       });
@@ -667,7 +669,7 @@ function TabWebviewInner({
     const el = ref.current;
     if (!el || !active) return;
     try {
-      onNav(el.canGoBack(), el.canGoForward(), el.getURL(), el.getTitle() || 'Karta');
+      onNav(el.canGoBack(), el.canGoForward(), el.getURL(), el.getTitle() || t('tabs.untitled'));
     } catch {
       /* */
     }

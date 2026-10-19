@@ -63,6 +63,12 @@ process.on('unhandledRejection', (reason) => {
 privacy.applyBootSwitches();
 uaChrome.applyBootFallback();
 const boot = perf.applyBootSwitches();
+const { setAppLocale, t } = require('./lib/locale.cjs');
+try {
+  setAppLocale('pl');
+} catch {
+  /* */
+}
 // Light inits only — heavy Ghostery lists / chrome-extensions / openpgp stay lazy
 history.init();
 notes.init();
@@ -146,11 +152,11 @@ async function askExternalProtocol(url) {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const result = await dialog.showMessageBox(mainWindow, {
     type: 'question',
-    buttons: ['Anuluj', 'Otwórz'],
+    buttons: [t('common.cancel'), t('common.open')],
     defaultId: 0,
     cancelId: 0,
-    title: 'Zewnętrzny protokół',
-    message: 'Otworzyć link poza przeglądarką?',
+    title: t('dialogs.externalProtocolTitle'),
+    message: t('dialogs.externalProtocol'),
     detail: String(url).slice(0, 400),
   });
   if (result.response === 1) {

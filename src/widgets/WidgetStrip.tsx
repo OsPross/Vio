@@ -65,6 +65,7 @@ import {
 } from './snapMath';
 import { WidgetSettingsPopover, type SettingsTarget } from './WidgetSettingsPopover';
 import type { WidgetFrameIcon } from './WidgetFrame';
+import { useT } from '../i18n';
 
 export const WIDGET_ICONS: Record<HomeWidgetType, WidgetFrameIcon> = {
   weather: CloudSun,
@@ -77,10 +78,10 @@ export const WIDGET_ICONS: Record<HomeWidgetType, WidgetFrameIcon> = {
   spotify: SpotifyGlyph,
 };
 
-const CHROME_META: Record<HomeChromeId, { label: string; icon: LucideIcon }> = {
-  clock: { label: 'Zegar', icon: Clock3 },
-  search: { label: 'Wyszukiwarka', icon: Search },
-  shortcuts: { label: 'Skróty', icon: LayoutGrid },
+const CHROME_ICONS: Record<HomeChromeId, LucideIcon> = {
+  clock: Clock3,
+  search: Search,
+  shortcuts: LayoutGrid,
 };
 
 export function WidgetBody({
@@ -198,9 +199,17 @@ export function WidgetStrip({
   /** Live preview in Personalize — no suggest portals / autofocus */
   preview?: boolean;
 }) {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
   const chrome = normalizeHomeChrome(settings.homeChrome);
+
+  const chromeLabel = (id: HomeChromeId) =>
+    id === 'clock'
+      ? t('widgets.clock')
+      : id === 'search'
+        ? t('widgets.ui.searchBox')
+        : t('widgets.shortcuts');
 
   const rootRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -579,13 +588,13 @@ export function WidgetStrip({
       {editMode && !locked && (
         <div className="hw-edit-bar">
           <button type="button" onClick={centerAll}>
-            Wyśrodkuj wszystko
+            {t('widgets.ui.centerAll')}
           </button>
           <button type="button" onClick={undo} disabled={!undoStack.length}>
-            <RotateCcw size={13} /> Cofnij
+            <RotateCcw size={13} /> {t('widgets.ui.undo')}
           </button>
           <button type="button" className="primary" onClick={() => onExitEdit?.()}>
-            <Check size={13} /> Gotowe
+            <Check size={13} /> {t('common.done')}
           </button>
         </div>
       )}
@@ -613,8 +622,8 @@ export function WidgetStrip({
           )}
 
         {visibleChrome.map((c) => {
-          const meta = CHROME_META[c.id];
-          const Icon = meta.icon;
+          const Icon = CHROME_ICONS[c.id];
+          const label = chromeLabel(c.id);
           const key = `chrome:${c.id}`;
           const dim = chromeSizeToPx(c.id);
           let style: CSSProperties = { width: '100%', maxWidth: 'var(--home-chrome-w, 580px)' };
@@ -645,7 +654,7 @@ export function WidgetStrip({
               onPointerDown={(e) => onCardPointerDown(e, key, box)}
             >
               <WidgetFrame
-                title={meta.label}
+                title={label}
                 icon={Icon}
                 bare
                 editMode={editMode}

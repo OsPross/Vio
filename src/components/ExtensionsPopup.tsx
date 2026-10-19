@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Pin, Puzzle, Settings2, X } from 'lucide-react';
 import { Switch } from './ui/Switch';
+import { useT } from '../i18n';
 import { isMotionOff, popupTransition } from '../lib/motionPresets';
 import { useStore } from '../store';
 
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export function ExtensionsPopup({ open, onClose, onManage }: Props) {
+  const t = useT();
   const [rows, setRows] = useState<ExtRow[]>([]);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const settings = useStore((s) => s.settings);
@@ -41,10 +43,10 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
   useEffect(() => {
     if (!open) return;
     const onPtr = (e: PointerEvent) => {
-      const t = e.target as Node | null;
-      if (!t) return;
-      if (panelRef.current?.contains(t)) return;
-      if ((t as Element).closest?.('[data-ext-menu-btn]')) return;
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (panelRef.current?.contains(target)) return;
+      if ((target as Element).closest?.('[data-ext-menu-btn]')) return;
       onClose();
     };
     const onKey = (e: KeyboardEvent) => {
@@ -65,7 +67,7 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
           ref={panelRef}
           className="ext-menu-panel chrome-flyout motion-popup"
           role="dialog"
-          aria-label="Rozszerzenia"
+          aria-label={t('chrome.extensions')}
           initial={popMotion.initial}
           animate={popMotion.animate}
           exit={popMotion.exit}
@@ -75,9 +77,9 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
           <header className="chrome-flyout-head">
             <div className="chrome-flyout-head-label">
               <Puzzle size={14} strokeWidth={1.75} />
-              <strong>Rozszerzenia</strong>
+              <strong>{t('chrome.extensions')}</strong>
             </div>
-            <button type="button" className="icon-btn sm" onClick={onClose} title="Zamknij">
+            <button type="button" className="icon-btn sm" onClick={onClose} title={t('common.close')}>
               <X size={14} />
             </button>
           </header>
@@ -85,8 +87,8 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
           {rows.length === 0 ? (
             <div className="chrome-flyout-empty">
               <Puzzle size={22} strokeWidth={1.5} aria-hidden />
-              <p>Brak rozszerzeń</p>
-              <span>Zainstalujesz je ze sklepu Chrome albo ze strony zarządzania</span>
+              <p>{t('chrome.extensionsEmpty')}</p>
+              <span>{t('chrome.extensionsEmptyDesc')}</span>
             </div>
           ) : (
             <ul className="ext-menu-list">
@@ -97,13 +99,13 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
                     <span className="muted">
                       v{ext.version}
                       {ext.manifestVersion ? ` · MV${ext.manifestVersion}` : ''}
-                      {ext.loaded ? '' : ext.enabled ? ' · start…' : ''}
+                      {ext.loaded ? '' : ext.enabled ? t('chrome.extStarting') : ''}
                     </span>
                   </div>
                   <button
                     type="button"
                     className={`icon-btn sm ${ext.pinned ? 'on' : ''}`}
-                    title={ext.pinned ? 'Odepnij z paska' : 'Przypnij na pasek'}
+                    title={ext.pinned ? t('chrome.unpinFromBar') : t('chrome.pinToBar')}
                     disabled={!ext.enabled}
                     onClick={() => {
                       void window.shell
@@ -118,7 +120,11 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
                     onChange={(on) => {
                       void window.shell?.extensionsSetEnabled?.(ext.id, on).then(() => reload());
                     }}
-                    aria-label={ext.enabled ? `Wyłącz ${ext.name}` : `Włącz ${ext.name}`}
+                    aria-label={
+                      ext.enabled
+                        ? t('chrome.disableExtension', { name: ext.name })
+                        : t('chrome.enableExtension', { name: ext.name })
+                    }
                   />
                 </li>
               ))}
@@ -135,7 +141,7 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
               }}
             >
               <Settings2 size={14} strokeWidth={1.75} />
-              Zarządzaj
+              {t('chrome.manage')}
             </button>
           </footer>
         </motion.div>

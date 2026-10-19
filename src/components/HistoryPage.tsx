@@ -12,6 +12,8 @@ import { letterFavicon } from '../lib/favicon';
 import { formatUrlForDisplay, formatUrlPlain } from '../lib/url-display';
 import { Dropdown } from './ui/Dropdown';
 import { Input } from './ui/Input';
+import { useT, useUiLocale } from '../i18n';
+import { t as tCore } from '../i18n/core';
 import { InternalPage } from './InternalPage';
 
 type Visit = {
@@ -35,33 +37,19 @@ const ROW_H = 52;
 const HEADER_H = 36;
 const OVERSCAN = 8;
 
-const CLEAR_OPTIONS = [
-  { id: 'hour', label: 'Ostatnia godzina' },
-  { id: 'day', label: 'Dzisiaj' },
-  { id: 'week', label: 'Ostatni tydzień' },
-  { id: 'all', label: 'Cała historia' },
-];
-
-const CLEAR_LABELS: Record<'hour' | 'day' | 'week' | 'all', string> = {
-  hour: 'ostatnią godzinę',
-  day: 'dziś',
-  week: 'ostatni tydzień',
-  all: 'całą historię',
-};
-
 function dayKey(ts: number) {
   const d = new Date(ts);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function dayLabel(ts: number) {
+function dayLabel(ts: number, locale: string) {
   const d = new Date(ts);
   const today = new Date();
   const yday = new Date();
   yday.setDate(today.getDate() - 1);
-  if (dayKey(ts) === dayKey(today.getTime())) return 'Dzisiaj';
-  if (dayKey(ts) === dayKey(yday.getTime())) return 'Wczoraj';
-  return d.toLocaleDateString('pl-PL', {
+  if (dayKey(ts) === dayKey(today.getTime())) return tCore('internal.today');
+  if (dayKey(ts) === dayKey(yday.getTime())) return tCore('internal.yesterday');
+  return d.toLocaleDateString(locale === 'en' ? 'en-US' : 'pl-PL', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -120,6 +108,8 @@ type Props = {
 type CtxMenu = { x: number; y: number; item: GroupedVisit };
 
 export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
+  const t = useT();
+  const uiLocale = useUiLocale();
   const [q, setQ] = useState('');
   const [items, setItems] = useState<Visit[]>([]);
   const [total, setTotal] = useState(0);
@@ -132,6 +122,31 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
   const [viewportH, setViewportH] = useState(480);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastAnchorRef = useRef<number | null>(null);
+
+  const clearOptions = useMemo(
+    () => [
+      { id: 'hour' as const, label: t('internal.historyClearHour') },
+      { id: 'day' as const, label: t('internal.historyClearDay') },
+      { id: 'week' as const, label: t('internal.historyClearWeek') },
+      { id: 'all' as const, label: t('internal.historyClearAll') },
+    ],
+    [t],
+  );
+
+  const clearConfirmRange = useCallback(
+    (range: 'hour' | 'day' | 'week' | 'all') => {
+      const key =
+        range === 'hour'
+          ? 'internal.historyClearConfirmHour'
+          : range === 'day'
+            ? 'internal.historyClearConfirmDay'
+            : range === 'week'
+              ? 'internal.historyClearConfirmWeek'
+              : 'internal.historyClearConfirmAll';
+      return t('internal.historyClearConfirm', { range: t(key) });
+    },
+    [t],
+  );
 
   const reload = useCallback(async () => {
     const res = await window.shell?.historyList?.({ q, limit: 2000 });
@@ -186,14 +201,19 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
     for (const it of grouped) {
       const dk = dayKey(it.lastVisit);
       if (dk !== lastDay) {
-        rows.push({ kind: 'header', key: `h-${dk}`, label: dayLabel(it.lastVisit), dayKey: dk });
+        rows.push({
+          kind: 'header',
+          key: `h-${dk}`,
+          label: dayLabel(it.lastVisit, uiLocale),
+          dayKey: dk,
+        });
         lastDay = dk;
       }
       rows.push({ kind: 'item', key: it.id, item: it, flatIndex });
       flatIndex += 1;
     }
     return rows;
-  }, [grouped]);
+  }, [grouped, uiLocale]);
 
   const itemRows = useMemo(
     () => flatRows.filter((r): r is Extract<FlatRow, { kind: 'item' }> => r.kind === 'item'),
@@ -286,7 +306,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
 
   const removeDomain = async (url: string) => {
     const host = hostOf(url);
-    if (!window.confirm(`Usunąć całą historię dla ${host}?`)) return;
+    if (!window.confirm(t('internal.historyDeleteDomainConfirm', { host }))) return;
     await window.shell?.historyDeleteDomain?.(host);
     void reload();
   };
@@ -294,12 +314,12 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
   const removeSelected = async () => {
     const ids = [...selected];
     if (!ids.length) return;
-    if (!window.confirm(`Usunąć ${ids.length} zaznaczonych wpisów?`)) return;
+    if (!window.confirm(t('internal.historyDeleteSelectedConfirm', { n: ids.length }))) return;
     await removeIds(ids);
   };
 
   const clearData = async () => {
-    if (!window.confirm(`Wyczyścić ${CLEAR_LABELS[clearRange]}?`)) return;
+    if (!window.confirm(clearConfirmRange(clearRange))) return;
     await window.shell?.historyClear?.({ range: clearRange });
     void reload();
   };
@@ -354,12 +374,11 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
   return (
     <InternalPage
       className="history-page"
-      title="Historia"
+      title={t('internal.history')}
       icon={<History size={18} strokeWidth={1.75} />}
       subtitle={
         <span>
-          {total} {total === 1 ? 'wpis' : 'wpisów'} · tylko karty normalne (Tor nigdy nie jest
-          zapisywany)
+          {t(total === 1 ? 'internal.historySubOne' : 'internal.historySub', { n: total })}
         </span>
       }
       toolbar={
@@ -369,23 +388,23 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Szukaj w historii…"
+              placeholder={t('internal.searchHistory')}
               spellCheck={false}
             />
           </label>
           <div className="history-clear">
             <Dropdown
               value={clearRange}
-              options={CLEAR_OPTIONS}
+              options={clearOptions}
               onChange={(id) => setClearRange(id as typeof clearRange)}
-              aria-label="Zakres czyszczenia"
+              aria-label={t('internal.historyClearRangeAria')}
             />
             <button
               type="button"
               className="history-sbtn secondary"
               onClick={() => void clearData()}
             >
-              Wyczyść dane
+              {t('internal.historyClearData')}
             </button>
           </div>
         </>
@@ -393,13 +412,13 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
     >
       {selectionActive && (
         <div className="history-toolbar">
-          <span>{selected.size} zaznaczone</span>
+          <span>{t('internal.historySelectedCount', { n: selected.size })}</span>
           <button
             type="button"
             className="history-sbtn danger-text"
             onClick={() => void removeSelected()}
           >
-            Usuń zaznaczone
+            {t('internal.historyRemoveSelected')}
           </button>
         </div>
       )}
@@ -410,8 +429,8 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
             <span className="ip-empty-ico" aria-hidden>
               <History size={28} strokeWidth={1.5} />
             </span>
-            <p>Brak wpisów{q ? ' dla tego zapytania' : ''}</p>
-            <span className="muted">Odwiedzone strony z kart normalnych pojawią się tutaj.</span>
+            <p>{q.trim() ? t('internal.historyEmptyQuery') : t('internal.historyEmpty')}</p>
+            <span className="muted">{t('internal.historyEmptyHint')}</span>
           </div>
         )}
         {!!flatRows.length && (
@@ -435,7 +454,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
                   style={{ height: ROW_H }}
                   onContextMenu={(e) => onRowContext(e, it)}
                 >
-                  <label className="history-check" title="Zaznacz">
+                  <label className="history-check" title={t('internal.historySelect')}>
                     <input
                       type="checkbox"
                       checked={sel}
@@ -455,7 +474,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
                   </button>
                   <div className="history-meta">
                     <span className="history-time">
-                      {new Date(it.lastVisit).toLocaleTimeString('pl-PL', {
+                      {new Date(it.lastVisit).toLocaleTimeString(uiLocale === 'en' ? 'en-US' : 'pl-PL', {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
@@ -466,7 +485,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
                     <button
                       type="button"
                       className="icon-btn sm"
-                      title="Otwórz w nowej karcie"
+                      title={t('internal.openInNewTab')}
                       onClick={() => openNew(it.url)}
                     >
                       <ExternalLink size={14} />
@@ -474,7 +493,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
                     <button
                       type="button"
                       className="icon-btn sm"
-                      title="Usuń wpis"
+                      title={t('internal.historyRemoveEntry')}
                       onClick={() => void removeOne(it)}
                     >
                       <Trash2 size={14} />
@@ -508,7 +527,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
                 setCtx(null);
               }}
             >
-              Otwórz
+              {t('common.open')}
             </button>
             <button
               type="button"
@@ -517,7 +536,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
                 setCtx(null);
               }}
             >
-              Otwórz w nowej karcie
+              {t('internal.openInNewTab')}
             </button>
             <button
               type="button"
@@ -526,7 +545,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
                 setCtx(null);
               }}
             >
-              Kopiuj link
+              {t('chrome.copyLink')}
             </button>
             <hr />
             <button
@@ -536,7 +555,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
                 setCtx(null);
               }}
             >
-              Usuń
+              {t('common.delete')}
             </button>
             <button
               type="button"
@@ -545,7 +564,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
                 setCtx(null);
               }}
             >
-              Usuń wszystko z tej witryny
+              {t('internal.historyRemoveFromSite')}
               <Globe size={13} />
             </button>
           </div>

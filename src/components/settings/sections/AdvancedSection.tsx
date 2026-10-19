@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Input } from '../../ui/Input';
+import { useT } from '../../../i18n';
 import { useStore } from '../../../store';
 import { FieldRow, Row, SettingsGroup, Toggle } from '../SettingsControls';
 import { SoulLog } from './SoulLog';
@@ -20,6 +21,7 @@ export function AdvancedSection() {
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
   const resetSettings = useStore((s) => s.resetSettings);
+  const t = useT();
 
   const [devSyncOn, setDevSyncOn] = useState(false);
   const [devBusy, setDevBusy] = useState(false);
@@ -47,17 +49,17 @@ export function AdvancedSection() {
     const off = window.shell?.onUpdateStatus?.((p) => {
       if (p.status === 'downloaded') {
         setUpdReady(true);
-        setUpdMsg('Aktualizacja pobrana. Kliknij „Uruchom ponownie”, aby zainstalować.');
+        setUpdMsg(t('settings.advanced.updateDownloaded'));
       } else if (p.status === 'available') {
-        setUpdMsg('Znaleziono aktualizację — pobieranie w tle…');
+        setUpdMsg(t('settings.advanced.updateAvailable'));
       } else if (p.status === 'not-available') {
-        setUpdMsg('Brak nowszej wersji.');
+        setUpdMsg(t('settings.advanced.updateNotAvailable'));
       } else if (p.status === 'error') {
-        setUpdMsg(String(p.error || 'Błąd aktualizacji'));
+        setUpdMsg(String(p.error || t('settings.advanced.updateError')));
       }
     });
     return () => off?.();
-  }, []);
+  }, [t]);
 
   const onDevCheck = useCallback(async () => {
     setDevBusy(true);
@@ -74,12 +76,9 @@ export function AdvancedSection() {
   const onDevApply = useCallback(async () => {
     if (!devCheck?.canFastForward) return;
     const n = devCheck.behind || 0;
-    const authors = [...new Set((devCheck.commits || []).map((c) => c.author))].join(', ');
-    const ok = confirm(
-      `Pobrać ${n} commit(ów)${authors ? ` (autorzy: ${authors})` : ''}?\n\nZostanie wykonane: git pull --ff-only` +
-        (`, ewentualnie npm ci`) +
-        `, potem restart.`,
-    );
+    const authorsList = [...new Set((devCheck.commits || []).map((c) => c.author))].join(', ');
+    const authors = authorsList ? t('settings.advanced.devPullAuthors', { authors: authorsList }) : '';
+    const ok = confirm(t('settings.advanced.devPullConfirm', { n, authors }));
     if (!ok) return;
     setDevBusy(true);
     setDevMsg(null);
@@ -91,57 +90,53 @@ export function AdvancedSection() {
       setDevMsg(String((err as Error)?.message || err));
       setDevBusy(false);
     }
-  }, [devCheck]);
+  }, [devCheck, t]);
 
   const onUpdateCheck = useCallback(async () => {
     setUpdBusy(true);
     setUpdMsg(null);
     try {
       const r = await window.shell?.updateCheck?.();
-      if (!r?.ok) setUpdMsg(r?.error || 'Nie udało się sprawdzić aktualizacji.');
-      else if (r.status) setUpdMsg(`Status: ${r.status}`);
+      if (!r?.ok) setUpdMsg(r?.error || t('settings.advanced.updateCheckFail'));
+      else if (r.status) setUpdMsg(t('settings.advanced.updateStatus', { status: r.status }));
     } finally {
       setUpdBusy(false);
     }
-  }, []);
+  }, [t]);
 
   const onUpdateInstall = useCallback(async () => {
     setUpdBusy(true);
     try {
       const r = await window.shell?.updateInstall?.();
-      if (!r?.ok) setUpdMsg(r?.error || 'Instalacja nieudana.');
+      if (!r?.ok) setUpdMsg(r?.error || t('settings.advanced.updateInstallFail'));
     } finally {
       setUpdBusy(false);
     }
-  }, []);
+  }, [t]);
 
   return (
     <div className="settings-stack">
-      <SettingsGroup title="Status">
-        <FieldRow label="Aktualny silnik">
+      <SettingsGroup title={t('settings.advanced.status')}>
+        <FieldRow label={t('settings.advanced.currentEngine')}>
           <Input readOnly value={settings.searchEngine} />
         </FieldRow>
-        <FieldRow label="Proxy (normalne karty)">
-          <Input readOnly value="system — Tor tylko na kartach Tor" />
+        <FieldRow label={t('settings.advanced.proxyNormal')}>
+          <Input readOnly value={t('settings.advanced.proxyValue')} />
         </FieldRow>
-        <p className="snote">
-          Skróty: <code>Ctrl+,</code> ustawienia · <code>Ctrl+B</code> sidebar ·{' '}
-          <code>Ctrl+T</code> karta · <code>Ctrl+L</code> omnibox · <code>Shift+Esc</code>{' '}
-          menedżer zadań.
-        </p>
+        <p className="snote">{t('settings.advanced.shortcutsNote')}</p>
       </SettingsGroup>
-      <SettingsGroup title="Narzędzia deweloperskie">
+      <SettingsGroup title={t('settings.advanced.devtools')}>
         <Toggle
-          label="„Zbadaj element” w menu kontekstowym"
-          hint="F12 / Ctrl+Shift+I zawsze otwierają DevTools. Ten przełącznik steruje tylko pozycją „Zbadaj” w PPM."
+          label={t('settings.advanced.allowInspect')}
+          hint={t('settings.advanced.allowInspectHint')}
           on={settings.allowInspect}
           onChange={(v) => patchSettings({ allowInspect: v })}
         />
       </SettingsGroup>
-      <SettingsGroup title="Soul">
+      <SettingsGroup title={t('settings.advanced.soul')}>
         <Toggle
-          label="Pozwól Soul sterować przeglądarką"
-          hint="Lokalny serwer 127.0.0.1 dla asystenta Soul (tylko zwykłe karty; Tor, prywatne i strony wewnętrzne są niedostępne). Przy pierwszym połączeniu Vio zapyta o zgodę."
+          label={t('settings.advanced.automationEnabled')}
+          hint={t('settings.advanced.automationHint')}
           on={settings.automationEnabled}
           onChange={(v) => patchSettings({ automationEnabled: v })}
         />
@@ -149,14 +144,11 @@ export function AdvancedSection() {
       </SettingsGroup>
 
       {devSyncOn && (
-        <SettingsGroup title="Współpraca (tylko tryb deweloperski)">
-          <p className="snote">
-            Pobiera zmiany z Git (<code>fetch</code> / <code>pull --ff-only</code>). Ukryte w
-            zbudowanym .exe.
-          </p>
-          <Row label="Sprawdź remote i pokaż nowe commity">
+        <SettingsGroup title={t('settings.advanced.devCollab')}>
+          <p className="snote">{t('settings.advanced.devCollabNote')}</p>
+          <Row label={t('settings.advanced.checkRemote')}>
             <button type="button" className="sbtn" disabled={devBusy} onClick={() => void onDevCheck()}>
-              Sprawdź zmiany
+              {t('settings.advanced.checkChanges')}
             </button>
           </Row>
           {devCheck?.commits && devCheck.commits.length > 0 && (
@@ -168,53 +160,50 @@ export function AdvancedSection() {
               ))}
             </ul>
           )}
-          <Row label="Pobierz (ff-only) + ewentualnie npm ci + restart">
+          <Row label={t('settings.advanced.downloadChanges')}>
             <button
               type="button"
               className="sbtn"
               disabled={devBusy || !devCheck?.canFastForward}
               onClick={() => void onDevApply()}
             >
-              Pobierz zmiany
+              {t('settings.advanced.fetchChanges')}
             </button>
           </Row>
           {devMsg && <p className="snote">{devMsg}</p>}
         </SettingsGroup>
       )}
 
-      <SettingsGroup title="Aktualizacje aplikacji">
-        <p className="snote">
-          Zbudowany .exe sprawdza publiczne Releases (patrz docs/REPO.md). Pobranie w tle;
-          instalacja dopiero po „Uruchom ponownie”.
-        </p>
-        <Row label="Sprawdź dostępność nowej wersji">
+      <SettingsGroup title={t('settings.advanced.updates')}>
+        <p className="snote">{t('settings.advanced.updatesNote')}</p>
+        <Row label={t('settings.advanced.checkUpdates')}>
           <button type="button" className="sbtn" disabled={updBusy} onClick={() => void onUpdateCheck()}>
-            Sprawdź aktualizacje
+            {t('settings.advanced.checkUpdatesBtn')}
           </button>
         </Row>
-        <Row label="Zainstaluj pobraną aktualizację">
+        <Row label={t('settings.advanced.installUpdate')}>
           <button
             type="button"
             className="sbtn"
             disabled={updBusy || !updReady}
             onClick={() => void onUpdateInstall()}
           >
-            Uruchom ponownie
+            {t('settings.advanced.restartToInstall')}
           </button>
         </Row>
         {updMsg && <p className="snote">{updMsg}</p>}
       </SettingsGroup>
 
-      <SettingsGroup title="Reset">
-        <Row label="Przywraca fabryczne ustawienia, bangs i skróty">
+      <SettingsGroup title={t('settings.advanced.reset')}>
+        <Row label={t('settings.advanced.resetAllLabel')}>
           <button
             type="button"
             className="sbtn danger-text"
             onClick={() => {
-              if (confirm('Przywrócić wszystko do fabryki?')) resetSettings();
+              if (confirm(t('settings.advanced.resetAllConfirm'))) resetSettings();
             }}
           >
-            Reset wszystkiego
+            {t('settings.advanced.resetAll')}
           </button>
         </Row>
       </SettingsGroup>

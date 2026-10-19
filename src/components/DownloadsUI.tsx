@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { formatUrlPlain } from '../lib/url-display';
 import { isMotionOff, popupTransition } from '../lib/motionPresets';
+import { useT, useUiLocale } from '../i18n';
+import { t as tCore } from '../i18n/core';
 import { useStore } from '../store';
 import { Input } from './ui/Input';
 import { InternalPage } from './InternalPage';
@@ -64,8 +66,11 @@ function fmtEta(rec: DownloadRow) {
   return `${(sec / 3600).toFixed(1)} h`;
 }
 
-function fmtTime(ts: number) {
-  return new Date(ts).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+function fmtTime(ts: number, locale: string) {
+  return new Date(ts).toLocaleTimeString(locale === 'en' ? 'en-US' : 'pl-PL', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function dayKey(ts: number) {
@@ -73,14 +78,14 @@ function dayKey(ts: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function dayLabel(ts: number) {
+function dayLabel(ts: number, locale: string) {
   const d = new Date(ts);
   const today = new Date();
   const yday = new Date();
   yday.setDate(today.getDate() - 1);
-  if (dayKey(ts) === dayKey(today.getTime())) return 'Dzisiaj';
-  if (dayKey(ts) === dayKey(yday.getTime())) return 'Wczoraj';
-  return d.toLocaleDateString('pl-PL', {
+  if (dayKey(ts) === dayKey(today.getTime())) return tCore('internal.today');
+  if (dayKey(ts) === dayKey(yday.getTime())) return tCore('internal.yesterday');
+  return d.toLocaleDateString(locale === 'en' ? 'en-US' : 'pl-PL', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -145,13 +150,13 @@ function stateHint(rec: DownloadRow) {
     case 'progressing':
       return '';
     case 'paused':
-      return 'Wstrzymano';
+      return tCore('internal.dlPaused');
     case 'completed':
-      return rec.fileMissing ? 'Plik usunięty' : 'Ukończono';
+      return rec.fileMissing ? tCore('internal.dlFileMissing') : tCore('internal.dlCompleted');
     case 'cancelled':
-      return 'Anulowano';
+      return tCore('internal.dlCancelled');
     case 'interrupted':
-      return 'Pobieranie przerwane — spróbuj ponownie';
+      return tCore('internal.dlInterrupted');
     default:
       return rec.state;
   }
@@ -197,6 +202,7 @@ function canRetry(rec: DownloadRow) {
 }
 
 function RowActions({ rec, compact }: { rec: DownloadRow; compact?: boolean }) {
+  const t = useT();
   const busy = rec.state === 'progressing' || rec.state === 'paused';
   const done = rec.state === 'completed' && !rec.tor && !rec.fileMissing;
   const btn = compact ? 'icon-btn sm' : 'icon-btn sm';
@@ -207,7 +213,7 @@ function RowActions({ rec, compact }: { rec: DownloadRow; compact?: boolean }) {
         <button
           type="button"
           className={btn}
-          title="Wstrzymaj"
+          title={t('internal.dlPause')}
           onClick={() => void window.shell?.downloadsPause?.(rec.id)}
         >
           <Pause size={13} />
@@ -217,7 +223,7 @@ function RowActions({ rec, compact }: { rec: DownloadRow; compact?: boolean }) {
         <button
           type="button"
           className={btn}
-          title="Wznów"
+          title={t('internal.dlResume')}
           onClick={() => void window.shell?.downloadsResume?.(rec.id)}
         >
           <Play size={13} />
@@ -227,7 +233,7 @@ function RowActions({ rec, compact }: { rec: DownloadRow; compact?: boolean }) {
         <button
           type="button"
           className={btn}
-          title="Anuluj"
+          title={t('common.cancel')}
           onClick={() => void window.shell?.downloadsCancel?.(rec.id)}
         >
           <X size={13} />
@@ -237,7 +243,7 @@ function RowActions({ rec, compact }: { rec: DownloadRow; compact?: boolean }) {
         <button
           type="button"
           className={btn}
-          title="Ponów"
+          title={t('internal.dlRetry')}
           onClick={() => void window.shell?.downloadsResume?.(rec.id)}
         >
           <RotateCcw size={13} />
@@ -248,7 +254,7 @@ function RowActions({ rec, compact }: { rec: DownloadRow; compact?: boolean }) {
           <button
             type="button"
             className={btn}
-            title="Otwórz"
+            title={t('common.open')}
             onClick={() => void window.shell?.downloadsOpen?.(rec.id)}
           >
             <ExternalLink size={13} />
@@ -256,7 +262,7 @@ function RowActions({ rec, compact }: { rec: DownloadRow; compact?: boolean }) {
           <button
             type="button"
             className={btn}
-            title="Pokaż w folderze"
+            title={t('internal.dlShowInFolder')}
             onClick={() => void window.shell?.downloadsShow?.(rec.id)}
           >
             <FolderOpen size={13} />
@@ -267,7 +273,7 @@ function RowActions({ rec, compact }: { rec: DownloadRow; compact?: boolean }) {
         <button
           type="button"
           className={btn}
-          title="Pokaż w folderze"
+          title={t('internal.dlShowInFolder')}
           onClick={() => void window.shell?.downloadsShow?.(rec.id)}
         >
           <FolderOpen size={13} />
@@ -277,7 +283,7 @@ function RowActions({ rec, compact }: { rec: DownloadRow; compact?: boolean }) {
         <button
           type="button"
           className={btn}
-          title="Usuń z listy"
+          title={t('internal.dlRemoveFromList')}
           onClick={() => void window.shell?.downloadsRemove?.(rec.id)}
         >
           <Trash2 size={13} />
@@ -301,6 +307,7 @@ type ButtonProps = {
 };
 
 export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: ButtonProps) {
+  const t = useT();
   const [uncontrolled, setUncontrolled] = useState(false);
   const controlled = openProp !== undefined;
   const open = controlled ? Boolean(openProp) : uncontrolled;
@@ -356,7 +363,11 @@ export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: But
       <button
         type="button"
         className={`icon-btn dl-btn ${active.length ? 'busy' : ''} ${open ? 'on' : ''}`}
-        title={active.length ? `Pobrania (${active.length})` : 'Pobrania'}
+        title={
+          active.length
+            ? t('internal.dlTitleCount', { n: active.length })
+            : t('pages.downloads')
+        }
         aria-expanded={open}
         data-dl-menu-btn
         onClick={() => setOpen(!open)}
@@ -373,7 +384,7 @@ export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: But
           <motion.div
             className="dl-panel chrome-flyout motion-popup"
             role="dialog"
-            aria-label="Pobrania"
+            aria-label={t('pages.downloads')}
             initial={popMotion.initial}
             animate={popMotion.animate}
             exit={popMotion.exit}
@@ -383,7 +394,7 @@ export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: But
             <div className="chrome-flyout-head">
               <div className="chrome-flyout-head-label">
                 <Download size={14} strokeWidth={1.75} aria-hidden />
-                <strong>Pobrania</strong>
+                <strong>{t('pages.downloads')}</strong>
               </div>
               <button
                 type="button"
@@ -393,14 +404,14 @@ export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: But
                   onOpenAll();
                 }}
               >
-                Wszystkie
+                {t('internal.all')}
               </button>
             </div>
             {!recent.length ? (
               <div className="chrome-flyout-empty">
                 <Download size={22} strokeWidth={1.5} aria-hidden />
-                <p>Brak pobrań</p>
-                <span>Pliki pojawią się tutaj po starcie pobierania</span>
+                <p>{t('internal.downloadsEmpty')}</p>
+                <span>{t('internal.dlPanelEmptyHint')}</span>
               </div>
             ) : (
               <ul className="dl-panel-list">
@@ -444,6 +455,8 @@ export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: But
 }
 
 export function DownloadsPage() {
+  const t = useT();
+  const uiLocale = useUiLocale();
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<DownloadRow[]>([]);
 
@@ -483,25 +496,26 @@ export function DownloadsPage() {
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([key, items]) => ({
         key,
-        label: dayLabel(items[0].startedAt),
+        label: dayLabel(items[0].startedAt, uiLocale),
         items: items.sort((a, b) => b.startedAt - a.startedAt),
       }));
-  }, [filtered]);
+  }, [filtered, uiLocale]);
 
   const clearList = () => {
-    if (!window.confirm('Wyczyścić ukończone i anulowane pozycje z listy?')) return;
+    if (!window.confirm(t('internal.dlClearConfirm'))) return;
     void window.shell?.downloadsClear?.().then(reload);
   };
 
   return (
     <InternalPage
       className="dl-page"
-      title="Pobrane"
+      title={t('internal.downloads')}
       icon={<Download size={18} strokeWidth={1.75} />}
       subtitle={
         <span>
-          {rows.length} {rows.length === 1 ? 'pozycja' : 'pozycji'} · Tor nie jest zapisywany na
-          dysku
+          {t(rows.length === 1 ? 'internal.downloadsSubOne' : 'internal.downloadsSub', {
+            n: rows.length,
+          })}
         </span>
       }
       toolbar={
@@ -511,12 +525,12 @@ export function DownloadsPage() {
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Szukaj po nazwie lub źródle…"
+              placeholder={t('internal.searchDownloads')}
               spellCheck={false}
             />
           </label>
           <button type="button" className="history-sbtn secondary" onClick={clearList}>
-            Wyczyść listę
+            {t('internal.clearList')}
           </button>
         </>
       }
@@ -527,8 +541,8 @@ export function DownloadsPage() {
             <span className="ip-empty-ico" aria-hidden>
               <Download size={28} strokeWidth={1.5} />
             </span>
-            <p>Brak pobrań{q.trim() ? ' dla tego zapytania' : ''}</p>
-            <span className="muted">Pliki z kart normalnych pojawią się tutaj.</span>
+            <p>{q.trim() ? t('internal.downloadsEmptyQuery') : t('internal.downloadsEmpty')}</p>
+            <span className="muted">{t('internal.downloadsEmptyHint')}</span>
           </div>
         )}
         {groups.map((g) => (
@@ -558,7 +572,7 @@ export function DownloadsPage() {
                         >
                           {r.filename}
                         </span>
-                        {r.risky ? <em className="dl-risk">Ryzykowny</em> : null}
+                        {r.risky ? <em className="dl-risk">{t('internal.dlRisky')}</em> : null}
                       </div>
                       <div className="dl-row-meta muted">
                         <span>
@@ -568,7 +582,7 @@ export function DownloadsPage() {
                         <span className="dl-dot">·</span>
                         <span title={r.url}>{sourceLabel(r.url)}</span>
                         <span className="dl-dot">·</span>
-                        <span>{fmtTime(r.endedAt || r.startedAt)}</span>
+                        <span>{fmtTime(r.endedAt || r.startedAt, uiLocale)}</span>
                       </div>
                       {busy && (
                         <div className="dl-row-progress">
@@ -577,8 +591,10 @@ export function DownloadsPage() {
                           </div>
                           <span className="dl-progress-meta muted">
                             {pct}% · {fmtSpeed(r.speedBps)}
-                            {fmtEta(r) ? ` · pozostało ${fmtEta(r)}` : ''}
-                            {r.state === 'paused' ? ' · wstrzymano' : ''}
+                            {fmtEta(r)
+                              ? ` · ${t('internal.dlRemaining', { eta: fmtEta(r) })}`
+                              : ''}
+                            {r.state === 'paused' ? ` · ${t('internal.dlPaused').toLowerCase()}` : ''}
                           </span>
                         </div>
                       )}

@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
+import { useT } from '../../../i18n';
 import { useStore } from '../../../store';
 import { FieldRow, Row, SettingsDisclosure, SettingsGroup, Toggle } from '../SettingsControls';
 
 function SitePermissionsSection() {
+  const t = useT();
   const [list, setList] = useState<Record<string, Record<string, string>>>({});
 
   const refresh = () => {
@@ -20,9 +22,9 @@ function SitePermissionsSection() {
 
   const entries = Object.entries(list);
   return (
-    <SettingsGroup title="Uprawnienia stron">
+    <SettingsGroup title={t('settings.privacy.sitePermissions')}>
       {entries.length === 0 && (
-        <p className="snote">Brak zapisanych decyzji (kamera, mikrofon, lokalizacja…).</p>
+        <p className="snote">{t('settings.privacy.noStoredPermissions')}</p>
       )}
       {entries.map(([origin, perms]) => (
         <div key={origin} className="slist-row" style={{ flexWrap: 'wrap', gap: 8 }}>
@@ -39,14 +41,14 @@ function SitePermissionsSection() {
               void window.shell?.permissionsRevoke?.(origin).then(() => refresh());
             }}
           >
-            Cofnij
+            {t('settings.privacy.revoke')}
           </button>
         </div>
       ))}
       {entries.length > 0 && (
         <div className="slist-row" style={{ justifyContent: 'flex-end' }}>
           <button type="button" className="sbtn ghost" onClick={() => refresh()}>
-            Odśwież
+            {t('common.refresh')}
           </button>
         </div>
       )}
@@ -59,6 +61,7 @@ export function PrivacySection() {
   const patchSettings = useStore((s) => s.patchSettings);
   const clearHistory = useStore((s) => s.clearHistory);
   const resetSettings = useStore((s) => s.resetSettings);
+  const t = useT();
 
   const [queryCount, setQueryCount] = useState(0);
 
@@ -79,13 +82,13 @@ export function PrivacySection() {
 
   return (
     <div className="settings-stack">
-      <SettingsGroup title="Preset prywatności">
+      <SettingsGroup title={t('settings.privacy.preset')}>
         <div className="privacy-preset-seg" role="tablist">
           {(
             [
-              ['standard', 'Standardowa'],
-              ['strict', 'Ścisła'],
-              ['custom', 'Własna'],
+              ['standard', t('settings.privacy.presetStandard')],
+              ['strict', t('settings.privacy.presetStrict')],
+              ['custom', t('settings.privacy.presetCustom')],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -145,19 +148,17 @@ export function PrivacySection() {
           ))}
         </div>
         <p className="muted" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.45 }}>
-          Standardowa chroni przed reklamami i trackerami, ale zostawia SSO, YouTube,
-          płatności i captchę. Ścisła jest mocniejsza i może psuć logowanie / banki —
-          wtedy użyj tarczy lub wyjątków w ustawieniach Adblock.
+          {t('settings.privacy.presetHint')}
         </p>
       </SettingsGroup>
 
-      <SettingsGroup title="Ciasteczka i śledzenie">
+      <SettingsGroup title={t('settings.privacy.cookies')}>
         <FieldRow
-          label="Ciasteczka stron trzecich"
-          desc="Ścisła blokuje wszystkie — może psuć logowanie na niektórych stronach"
+          label={t('settings.privacy.thirdPartyCookies')}
+          desc={t('settings.privacy.thirdPartyCookiesDesc')}
         >
           <Select
-            aria-label="Ciasteczka stron trzecich"
+            aria-label={t('settings.privacy.thirdPartyCookies')}
             value={settings.privacyThirdPartyCookies}
             onChange={(v) =>
               patchSettings({
@@ -165,44 +166,44 @@ export function PrivacySection() {
               })
             }
             options={[
-              { value: 'trackers', label: 'Blokuj śledzące' },
-              { value: 'all', label: 'Blokuj wszystkie (może psuć logowanie)' },
-              { value: 'allow', label: 'Zezwalaj' },
+              { value: 'trackers', label: t('settings.privacy.cookieBlockTrackers') },
+              { value: 'all', label: t('settings.privacy.cookieBlockAll') },
+              { value: 'allow', label: t('settings.privacy.cookieAllow') },
             ]}
           />
         </FieldRow>
         <Toggle
-          label="Czyść parametry śledzące z adresu"
-          hint="Usuwa oznaczenia kampanii z linków; pomija banki i logowanie"
+          label={t('settings.privacy.stripTracking')}
+          hint={t('settings.privacy.stripTrackingHint')}
           on={settings.privacyStripTracking}
           onChange={(v) => patchSettings({ privacyStripTracking: v })}
         />
         <Toggle
-          label="Wysyłaj sygnał Global Privacy Control"
+          label={t('settings.privacy.secGpc')}
           on={settings.privacySecGpc}
           onChange={(v) => patchSettings({ privacySecGpc: v })}
         />
         <Toggle
-          label="Wysyłaj sygnał Do Not Track"
-          hint="W trybie Ścisła — większość serwisów i tak go ignoruje"
+          label={t('settings.privacy.dnt')}
+          hint={t('settings.privacy.dntHint')}
           on={settings.privacyDnt}
           onChange={(v) => patchSettings({ privacyDnt: v })}
         />
         <Toggle
-          label="Ograniczaj nagłówek Referer między stronami"
+          label={t('settings.privacy.referrerPolicy')}
           on={settings.privacyReferrerPolicy}
           onChange={(v) => patchSettings({ privacyReferrerPolicy: v })}
         />
         <Toggle
-          label="Czyść dane przy zamknięciu aplikacji"
-          hint="Domyślnie wyłączone"
+          label={t('settings.privacy.clearOnQuit')}
+          hint={t('settings.privacy.clearOnQuitHint')}
           on={settings.privacyClearOnQuit}
           onChange={(v) => patchSettings({ privacyClearOnQuit: v })}
         />
         {settings.privacyClearOnQuit && (
           <FieldRow
-            label="Wyjątki przy czyszczeniu"
-            desc="Domeny do zachowania (jedna na linię)"
+            label={t('settings.privacy.clearOnQuitKeep')}
+            desc={t('settings.privacy.clearOnQuitKeepDesc')}
           >
             <textarea
               className="stextarea"
@@ -223,13 +224,13 @@ export function PrivacySection() {
         )}
       </SettingsGroup>
 
-      <SettingsGroup title="Szyfrowanie i DNS">
+      <SettingsGroup title={t('settings.privacy.encryption')}>
         <FieldRow
-          label="Tylko HTTPS"
-          desc="W trybie Ścisła wymusza bezpieczne połączenie i ostrzega przy HTTP"
+          label={t('settings.privacy.httpsOnly')}
+          desc={t('settings.privacy.httpsOnlyDesc')}
         >
           <Select
-            aria-label="Tylko HTTPS"
+            aria-label={t('settings.privacy.httpsOnly')}
             value={settings.privacyHttpsOnly}
             onChange={(v) =>
               patchSettings({
@@ -237,18 +238,15 @@ export function PrivacySection() {
               })
             }
             options={[
-              { value: 'upgrade', label: 'Podnoś do HTTPS (cichy fallback)' },
-              { value: 'block', label: 'Wymagaj HTTPS (ostrzejsze)' },
-              { value: 'off', label: 'Wyłączone' },
+              { value: 'upgrade', label: t('settings.privacy.httpsUpgrade') },
+              { value: 'block', label: t('settings.privacy.httpsBlock') },
+              { value: 'off', label: t('settings.privacy.httpsOff') },
             ]}
           />
         </FieldRow>
-        <FieldRow
-          label="DNS przez HTTPS"
-          desc="W trybie Standardowa używa bezpiecznego DNS z zapasowym serwerem"
-        >
+        <FieldRow label={t('settings.privacy.doh')} desc={t('settings.privacy.dohDesc')}>
           <Select
-            aria-label="DNS przez HTTPS"
+            aria-label={t('settings.privacy.doh')}
             value={settings.privacyDoh}
             onChange={(v) =>
               patchSettings({
@@ -256,18 +254,18 @@ export function PrivacySection() {
               })
             }
             options={[
-              { value: 'automatic', label: 'Automatycznie (Quad9 i Cloudflare)' },
-              { value: 'quad9', label: 'Quad9' },
-              { value: 'cloudflare', label: 'Cloudflare' },
-              { value: 'mullvad', label: 'Mullvad' },
-              { value: 'nextdns', label: 'NextDNS' },
-              { value: 'custom', label: 'Własny' },
-              { value: 'off', label: 'Wyłączone' },
+              { value: 'automatic', label: t('settings.privacy.dohAutomatic') },
+              { value: 'quad9', label: t('settings.privacy.dohQuad9') },
+              { value: 'cloudflare', label: t('settings.privacy.dohCloudflare') },
+              { value: 'mullvad', label: t('settings.privacy.dohMullvad') },
+              { value: 'nextdns', label: t('settings.privacy.dohNextdns') },
+              { value: 'custom', label: t('settings.privacy.dohCustom') },
+              { value: 'off', label: t('settings.privacy.dohOff') },
             ]}
           />
         </FieldRow>
         {settings.privacyDoh === 'custom' && (
-          <FieldRow label="Własny adres DNS przez HTTPS">
+          <FieldRow label={t('settings.privacy.dohCustomUrl')}>
             <Input
               value={settings.privacyDohCustom}
               onChange={(e) => patchSettings({ privacyDohCustom: e.target.value })}
@@ -277,18 +275,15 @@ export function PrivacySection() {
         )}
       </SettingsGroup>
 
-      <SettingsGroup title="Fingerprinting i WebRTC">
+      <SettingsGroup title={t('settings.privacy.fingerprint')}>
         <Toggle
-          label="User-Agent jak Chrome (bez Electron/Vio)"
+          label={t('settings.privacy.chromeUa')}
           on={settings.privacyChromeUa}
           onChange={(v) => patchSettings({ privacyChromeUa: v })}
         />
-        <FieldRow
-          label="Obsługa adresu IP w WebRTC"
-          desc="Ogranicza wyciek lokalnego adresu przy połączeniach wideo"
-        >
+        <FieldRow label={t('settings.privacy.webRtc')} desc={t('settings.privacy.webRtcDesc')}>
           <Select
-            aria-label="Obsługa adresu IP w WebRTC"
+            aria-label={t('settings.privacy.webRtc')}
             value={settings.privacyWebRtc}
             onChange={(v) =>
               patchSettings({
@@ -296,35 +291,35 @@ export function PrivacySection() {
               })
             }
             options={[
-              { value: 'public_only', label: 'Tylko publiczny interfejs (Standardowa)' },
-              { value: 'disable_udp', label: 'Wyłącz UDP poza proxy (Ścisła)' },
-              { value: 'default', label: 'Domyślny Chromium' },
+              { value: 'public_only', label: t('settings.privacy.webRtcPublic') },
+              { value: 'disable_udp', label: t('settings.privacy.webRtcDisableUdp') },
+              { value: 'default', label: t('settings.privacy.webRtcDefault') },
             ]}
           />
         </FieldRow>
         <Toggle
-          label="Ochrona fingerprint (canvas, WebGL, CPU)"
-          hint="W trybie Ścisła — może psuć captchę i banki"
+          label={t('settings.privacy.fingerprintProtect')}
+          hint={t('settings.privacy.fingerprintHint')}
           on={settings.privacyFingerprint}
           onChange={(v) => patchSettings({ privacyFingerprint: v })}
         />
         <Toggle
-          label="Sugestie wyszukiwania (silnik)"
-          hint="W trybie Ścisła wyłączone — tylko lokalna historia"
+          label={t('settings.privacy.searchSuggest')}
+          hint={t('settings.privacy.searchSuggestHint')}
           on={settings.privacySearchSuggest}
           onChange={(v) => patchSettings({ privacySearchSuggest: v })}
         />
         <Toggle
-          label="Zezwalaj na aktualizacje list i sieć aplikacji"
+          label={t('settings.privacy.allowAppNetwork')}
           on={settings.privacyAllowAppNetwork}
           onChange={(v) => patchSettings({ privacyAllowAppNetwork: v })}
         />
       </SettingsGroup>
 
-      <SettingsGroup title="Wyjątki ochrony">
+      <SettingsGroup title={t('settings.privacy.exceptions')}>
         <SettingsDisclosure
-          title="Domeny bez tarczy"
-          summary="Wyłączone z popupu tarczy w omniboxie"
+          title={t('settings.privacy.exceptionsNoShield')}
+          summary={t('settings.privacy.exceptionsNoShieldSummary')}
           badge={settings.privacySiteExceptions?.length ?? 0}
           defaultOpen={(settings.privacySiteExceptions?.length ?? 0) > 0}
         >
@@ -335,7 +330,7 @@ export function PrivacySection() {
                 <button
                   type="button"
                   className="icon-btn sm"
-                  aria-label={`Usuń wyjątek ${d}`}
+                  aria-label={t('settings.privacy.removeExceptionAria', { domain: d })}
                   onClick={() => {
                     patchSettings({
                       privacySiteExceptions: settings.privacySiteExceptions.filter(
@@ -350,16 +345,16 @@ export function PrivacySection() {
               </div>
             ))}
             {!settings.privacySiteExceptions?.length ? (
-              <p className="snote">Brak — dodawane z tarczy przy stronie.</p>
+              <p className="snote">{t('settings.privacy.noExceptions')}</p>
             ) : null}
           </div>
         </SettingsDisclosure>
       </SettingsGroup>
 
-      <SettingsGroup title="Historia przeglądania">
-        <Row label="Retencja historii">
+      <SettingsGroup title={t('settings.privacy.history')}>
+        <Row label={t('settings.privacy.historyRetention')}>
           <Select
-            aria-label="Retencja historii"
+            aria-label={t('settings.privacy.historyRetention')}
             value={settings.historyRetention || '90'}
             onChange={(v) =>
               patchSettings({
@@ -367,18 +362,18 @@ export function PrivacySection() {
               })
             }
             options={[
-              { value: '7', label: '7 dni' },
-              { value: '30', label: '30 dni' },
-              { value: '90', label: '90 dni' },
-              { value: 'always', label: 'Zawsze' },
-              { value: 'off', label: 'Nie zapisuj' },
+              { value: '7', label: t('settings.privacy.retention7') },
+              { value: '30', label: t('settings.privacy.retention30') },
+              { value: '90', label: t('settings.privacy.retention90') },
+              { value: 'always', label: t('settings.privacy.retentionAlways') },
+              { value: 'off', label: t('settings.privacy.retentionOff') },
             ]}
           />
         </Row>
-        <Row label="Zapisane zapytania (omnibox)">
+        <Row label={t('settings.privacy.savedQueries')}>
           <span className="sr-value">{queryCount}</span>
         </Row>
-        <Row label="Otwórz historię">
+        <Row label={t('settings.privacy.openHistory')}>
           <button
             type="button"
             className="sbtn"
@@ -392,7 +387,7 @@ export function PrivacySection() {
               }
               st.updateTab(st.activeId, {
                 url: 'about:history',
-                title: 'Historia',
+                title: t('internal.history'),
               });
               st.setView('browser');
             }}
@@ -400,34 +395,33 @@ export function PrivacySection() {
             about:history (Ctrl+H)
           </button>
         </Row>
-        <Row label="Wyczyść dane">
+        <Row label={t('settings.privacy.clearDataRow')}>
           <button
             type="button"
             className="sbtn danger-text"
             onClick={() => {
-              if (!confirm('Wyczyścić historię przeglądania i zapytania?')) return;
+              if (!confirm(t('settings.privacy.clearHistoryConfirm'))) return;
               clearHistory();
               setQueryCount(0);
             }}
           >
-            Wyczyść historię
+            {t('settings.privacy.clearHistory')}
           </button>
         </Row>
       </SettingsGroup>
 
       <SitePermissionsSection />
 
-      <SettingsGroup title="Reset">
-        <Row label="Przywróć domyślne ustawienia, bangs i skróty">
+      <SettingsGroup title={t('settings.privacy.reset')}>
+        <Row label={t('settings.privacy.resetSettingsLabel')}>
           <button
             type="button"
             className="sbtn"
             onClick={() => {
-              if (confirm('Przywrócić domyślne ustawienia, bangs i skróty?'))
-                resetSettings();
+              if (confirm(t('settings.privacy.resetSettingsConfirm'))) resetSettings();
             }}
           >
-            Reset ustawień
+            {t('settings.privacy.resetSettings')}
           </button>
         </Row>
       </SettingsGroup>

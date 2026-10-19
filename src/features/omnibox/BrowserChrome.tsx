@@ -38,6 +38,7 @@ import {
 import type { TorStatusInfo } from '../../components/TorLanding';
 import type { PopupBlocked } from '../../hooks/useIpcEvents';
 import { useAppMenuActions } from '../../hooks/useAppMenuActions';
+import { useT } from '../../i18n';
 import type { WebviewEl } from '../tabs';
 
 const ShieldPanel = lazy(() =>
@@ -144,6 +145,7 @@ export function BrowserChrome({
   setQrOpen,
   setFindOpen,
 }: BrowserChromeProps) {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const bangs = useStore((s) => s.bangs);
   const shortcuts = useStore((s) => s.shortcuts);
@@ -182,7 +184,7 @@ export function BrowserChrome({
               type="button"
               className="icon-btn"
               onClick={toggleSidebar}
-              title="Pokaż sidebar (Ctrl+B)"
+              title={t('chrome.showSidebar')}
             >
               <PanelLeft size={16} strokeWidth={1.75} />
             </button>
@@ -192,7 +194,7 @@ export function BrowserChrome({
             className="icon-btn"
             disabled={isHome || isTorHome || isHistoryPage || !nav.back}
             onClick={() => currentView()?.goBack()}
-            title="Wstecz"
+            title={t('chrome.back')}
           >
             <ArrowLeft size={16} strokeWidth={1.75} />
           </button>
@@ -201,7 +203,7 @@ export function BrowserChrome({
             className="icon-btn"
             disabled={isHome || isTorHome || isHistoryPage || !nav.forward}
             onClick={() => currentView()?.goForward()}
-            title="Dalej"
+            title={t('chrome.forward')}
           >
             <ArrowRight size={16} strokeWidth={1.75} />
           </button>
@@ -210,7 +212,7 @@ export function BrowserChrome({
             className="icon-btn"
             disabled={isHome || isTorHome || isHistoryPage}
             onClick={() => currentView()?.reload()}
-            title="Odśwież"
+            title={t('chrome.reload')}
           >
             <RefreshCw size={16} strokeWidth={1.75} />
           </button>
@@ -224,21 +226,21 @@ export function BrowserChrome({
           }}
         >
           {activeIsTor ? (
-            <span className="omnibox-sec tor" title="Połączenie przez Tor">
+            <span className="omnibox-sec tor" title={t('chrome.connectionTor')}>
               <span aria-hidden style={{ fontSize: 13, lineHeight: 1 }}>
                 ◉
               </span>
             </span>
           ) : /^http:\/\//i.test(active?.url || '') ? (
-            <span className="omnibox-sec warn" title="Połączenie niezabezpieczone (HTTP)">
+            <span className="omnibox-sec warn" title={t('chrome.connectionHttp')}>
               <TriangleAlert size={16} strokeWidth={1.75} />
             </span>
           ) : /^https:\/\//i.test(active?.url || '') ? (
-            <span className="omnibox-sec ok" title="Połączenie zabezpieczone (HTTPS)">
+            <span className="omnibox-sec ok" title={t('chrome.connectionHttps')}>
               <Lock size={16} strokeWidth={1.75} />
             </span>
           ) : (
-            <span className="omnibox-sec" title="Strona startowa">
+            <span className="omnibox-sec" title={t('chrome.connectionHome')}>
               <Globe size={16} strokeWidth={1.75} />
             </span>
           )}
@@ -275,7 +277,9 @@ export function BrowserChrome({
               setOmniMenu({ x: e.clientX, y: e.clientY });
             }}
             torMode={activeIsTor}
-            placeholder={activeIsTor ? 'Adres przez Tor…' : settings.omniboxPlaceholder}
+            placeholder={
+              activeIsTor ? t('chrome.torOmniboxPlaceholder') : settings.omniboxPlaceholder
+            }
             bangs={bangs}
             shortcuts={shortcuts}
             tabs={tabs}
@@ -297,7 +301,7 @@ export function BrowserChrome({
               <button
                 type="button"
                 className="icon-btn on"
-                title={`Zablokowano wyskakujące okno — kliknij, aby pozwolić\n${popupBlocked.url}`}
+                title={t('chrome.popupBlockedAllow', { url: popupBlocked.url })}
                 onClick={() => {
                   const blocked = popupBlocked;
                   setPopupBlocked(null);
@@ -312,14 +316,14 @@ export function BrowserChrome({
               <button
                 type="button"
                 className="icon-btn"
-                title="Obraz w obrazie (Alt+P)"
+                title={t('chrome.pictureInPicture')}
                 onClick={() => togglePictureInPicture()}
               >
                 <PictureInPicture2 size={16} strokeWidth={1.75} />
               </button>
             ) : null}
             {(mediaFlags.mic || mediaFlags.cam) && (
-              <span className="media-use-badges" title="Strona ma dostęp do mediów">
+              <span className="media-use-badges" title={t('chrome.mediaAccess')}>
                 {mediaFlags.mic && <Mic size={14} strokeWidth={1.75} />}
                 {mediaFlags.cam && <Video size={14} strokeWidth={1.75} />}
               </span>
@@ -329,7 +333,11 @@ export function BrowserChrome({
                 ref={bookmarkStarRef}
                 type="button"
                 className={`icon-btn ${pageBookmarked ? 'on' : ''}`}
-                title={pageBookmarked ? 'Edytuj zakładkę (Ctrl+D)' : 'Dodaj zakładkę (Ctrl+D)'}
+                title={
+                  pageBookmarked
+                    ? t('chrome.bookmarkEditShortcut')
+                    : t('chrome.bookmarkAddShortcut')
+                }
                 disabled={!isBookmarkableUrl(active?.url)}
                 onClick={() => openBookmarkDialog()}
                 style={{ opacity: isBookmarkableUrl(active?.url) ? 1 : 0.35 }}
@@ -354,16 +362,16 @@ export function BrowserChrome({
         </form>
 
         {activeIsTor && (
-          <span className="tor-chip" title="Tryb Tor — izolowana sesja">
+          <span className="tor-chip" title={t('chrome.torModeChip')}>
             Tor
             {torInfo?.exitIp ? <em>{torInfo.exitIp}</em> : null}
             <button
               type="button"
               className="tor-chip-newid"
-              title="Nowa tożsamość (Ctrl+Shift+U)"
+              title={t('chrome.newIdentityTitle')}
               onClick={() => void requestNewIdentity()}
             >
-              Nowa tożsamość
+              {t('chrome.newIdentity')}
             </button>
           </span>
         )}
@@ -386,8 +394,8 @@ export function BrowserChrome({
                   type="button"
                   className={`icon-btn ${extMenuOpen ? 'on' : ''}`}
                   data-ext-menu-btn
-                  title="Rozszerzenia"
-                  aria-label="Rozszerzenia"
+                  title={t('chrome.extensions')}
+                  aria-label={t('chrome.extensions')}
                   aria-expanded={extMenuOpen}
                   onClick={() => {
                     setShieldOpen(false);
@@ -413,8 +421,8 @@ export function BrowserChrome({
               className={`icon-btn adblock-btn ${settings.adblockEnabled ? 'on' : ''}`}
               title={
                 settings.adblockEnabled
-                  ? `Ochrona · dziś ${blockedToday} — kliknij panel tarczy`
-                  : 'Ochrona wyłączona'
+                  ? t('chrome.shieldOnToday', { count: blockedToday })
+                  : t('chrome.shieldOff')
               }
               onClick={() => {
                 setExtMenuOpen(false);
@@ -543,7 +551,7 @@ export function BrowserChrome({
                 setOmniMenu(null);
               }}
             >
-              Wytnij
+              {t('menu.cut')}
               <kbd>Ctrl+X</kbd>
             </button>
             <button
@@ -553,19 +561,19 @@ export function BrowserChrome({
                 setOmniMenu(null);
               }}
             >
-              Kopiuj
+              {t('menu.copy')}
               <kbd>Ctrl+C</kbd>
             </button>
             <button
               type="button"
               onClick={async () => {
                 try {
-                  const t = await navigator.clipboard.readText();
+                  const clip = await navigator.clipboard.readText();
                   const el = document.getElementById('omnibox-input') as HTMLInputElement | null;
                   if (el) {
                     const start = el.selectionStart ?? el.value.length;
                     const end = el.selectionEnd ?? el.value.length;
-                    const next = el.value.slice(0, start) + t + el.value.slice(end);
+                    const next = el.value.slice(0, start) + clip + el.value.slice(end);
                     setDraft(next);
                   }
                 } catch {
@@ -574,22 +582,22 @@ export function BrowserChrome({
                 setOmniMenu(null);
               }}
             >
-              Wklej
+              {t('chrome.paste')}
               <kbd>Ctrl+V</kbd>
             </button>
             <button
               type="button"
               onClick={async () => {
                 try {
-                  const t = (await navigator.clipboard.readText()).trim();
-                  if (t) go(t, { typed: true });
+                  const clip = (await navigator.clipboard.readText()).trim();
+                  if (clip) go(clip, { typed: true });
                 } catch {
                   /* */
                 }
                 setOmniMenu(null);
               }}
             >
-              Wklej i przejdź
+              {t('chrome.pasteAndGo')}
             </button>
             <hr />
             <button
@@ -600,7 +608,7 @@ export function BrowserChrome({
                 setOmniMenu(null);
               }}
             >
-              Zaznacz wszystko
+              {t('chrome.selectAll')}
               <kbd>Ctrl+A</kbd>
             </button>
           </div>

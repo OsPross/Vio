@@ -3,12 +3,14 @@ import { Search } from 'lucide-react';
 import {
   fuzzyHighlight,
   fuzzyScore,
+  getCommandTitle,
   getCommands,
   getRecentCommandIds,
   pushRecentCommand,
   type CommandContext,
   type CommandDef,
 } from '../lib/commands';
+import { useT } from '../i18n';
 import { useStore, isTorTab, type Tab } from '../store';
 
 type Result =
@@ -27,6 +29,7 @@ type Props = {
 };
 
 export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBang }: Props) {
+  const t = useT();
   const tabs = useStore((s) => s.tabs);
   const activeId = useStore((s) => s.activeId);
   const bangs = useStore((s) => s.bangs);
@@ -123,7 +126,7 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
     if (mode === 'all' || mode === 'commands') {
       for (const cmd of getCommands()) {
         if (cmd.when && !cmd.when(ctx)) continue;
-        const hay = `${cmd.title} ${(cmd.keywords || []).join(' ')}`;
+        const hay = `${getCommandTitle(cmd)} ${(cmd.keywords || []).join(' ')}`;
         const score = query
           ? fuzzyScore(query, hay)
           : out.some((r) => r.kind === 'command' && r.cmd.id === cmd.id)
@@ -180,7 +183,7 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
         deduped.push(r);
       });
     return deduped.slice(0, 12);
-  }, [body, mode, tor, tabs, hist, bangs, ctx, prefix, q]);
+  }, [body, mode, tor, tabs, hist, bangs, ctx, prefix, q, settings.uiLocale]);
 
   useEffect(() => setIdx(0), [q]);
 
@@ -223,13 +226,13 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
     const recentItems = results
       .map((r, i) => ({ r, i }))
       .filter((x) => x.r.kind === 'command' && getRecentCommandIds().includes(x.r.cmd.id));
-    if (recentItems.length) groups.push({ label: 'Ostatnie', items: recentItems });
+    if (recentItems.length) groups.push({ label: t('chrome.cmdGroupRecent'), items: recentItems });
   }
-  pushGroup('Karty', 'tab');
-  pushGroup('Historia', 'history');
-  pushGroup('Bangs', 'bang');
-  pushGroup('Polecenia', 'command');
-  pushGroup('Szukaj', 'search');
+  pushGroup(t('chrome.cmdGroupTabs'), 'tab');
+  pushGroup(t('chrome.cmdGroupHistory'), 'history');
+  pushGroup(t('chrome.cmdGroupBangs'), 'bang');
+  pushGroup(t('chrome.cmdGroupCommands'), 'command');
+  pushGroup(t('chrome.cmdGroupSearch'), 'search');
 
   return (
     <div className="cmdk-root" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -240,7 +243,7 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Szukaj kart, historii, poleceń…  (> @ # ! ?)"
+            placeholder={t('chrome.cmdPalettePlaceholder')}
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -256,7 +259,9 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
           />
         </div>
         <div className="cmdk-list">
-          {!results.length && <p className="muted cmdk-empty">Brak wyników</p>}
+          {!results.length && (
+            <p className="muted cmdk-empty">{t('chrome.cmdPaletteEmpty')}</p>
+          )}
           {groups.map((g) => (
             <div key={g.label} className="cmdk-group">
               <div className="cmdk-group-label">{g.label}</div>
@@ -264,14 +269,14 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
                 const activeRow = i === idx;
                 const title =
                   r.kind === 'command'
-                    ? r.cmd.title
+                    ? getCommandTitle(r.cmd)
                     : r.kind === 'tab'
                       ? r.tab.title
                       : r.kind === 'history'
                         ? r.title
                         : r.kind === 'bang'
                           ? `!${r.key}`
-                          : `Szukaj „${r.q}”`;
+                          : t('chrome.cmdSearchFor', { q: r.q });
                 const sub =
                   r.kind === 'command'
                     ? r.cmd.shortcut || ''

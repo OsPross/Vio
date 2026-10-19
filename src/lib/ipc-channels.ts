@@ -151,6 +151,7 @@ export const IpcChannels = {
   SET_NATIVE_THEME: 'shell:set-native-theme',
   SET_SHORTCUT_TRAP: 'shell:set-shortcut-trap',
   SET_TITLEBAR: 'shell:set-titlebar',
+  SET_UI_LOCALE: 'shell:set-ui-locale',
   SHORTCUT: 'shell:shortcut',
   SPELLCHECK_CONFIG: 'shell:spellcheck-config',
   TOR_BRIDGES: 'shell:tor-bridges',

@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { useT } from '../i18n';
 
 type Props = {
   query: string;
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export function FindBar({ query, activeMatch, matchCount, onQueryChange, onClose, onNext }: Props) {
+  const t = useT();
   const counter = matchCount > 0 ? `${activeMatch}/${matchCount}` : query.trim() ? '0/0' : '—';
 
   return (
@@ -18,8 +20,8 @@ export function FindBar({ query, activeMatch, matchCount, onQueryChange, onClose
         autoFocus
         id="find-in-page-input"
         value={query}
-        placeholder="Znajdź na stronie…"
-        aria-label="Znajdź na stronie"
+        placeholder={t('chrome.findPlaceholder')}
+        aria-label={t('chrome.find')}
         onChange={(e) => onQueryChange(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
@@ -39,7 +41,7 @@ export function FindBar({ query, activeMatch, matchCount, onQueryChange, onClose
       <button
         type="button"
         className="icon-btn sm"
-        title="Poprzednie (Shift+Enter)"
+        title={t('chrome.findPrev')}
         disabled={!query.trim()}
         onClick={() => onNext(true)}
       >
@@ -48,13 +50,13 @@ export function FindBar({ query, activeMatch, matchCount, onQueryChange, onClose
       <button
         type="button"
         className="icon-btn sm"
-        title="Następne (Enter)"
+        title={t('chrome.findNext')}
         disabled={!query.trim()}
         onClick={() => onNext(false)}
       >
         <ChevronDown size={14} />
       </button>
-      <button type="button" className="icon-btn sm" title="Zamknij (Esc)" onClick={onClose}>
+      <button type="button" className="icon-btn sm" title={t('chrome.findCloseEsc')} onClick={onClose}>
         <X size={14} />
       </button>
     </div>

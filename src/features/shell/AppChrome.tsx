@@ -29,6 +29,7 @@ import type {
   PopupBlocked,
 } from '../../hooks/useIpcEvents';
 import { TabStrip, type NewTabMenuState, type TabMenuState, type SaveOffer, type WebviewEl } from '../tabs';
+import { useT } from '../../i18n';
 import { HOME_URL, TOR_HOME_URL, isBookmarkableUrl, useStore, type Tab } from '../../store';
 
 const AppSidebar = lazy(() =>
@@ -224,6 +225,7 @@ export function AppChrome({
   httpsWarn,
   setHttpsWarn,
 }: AppChromeProps) {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const bookmarks = useStore((s) => s.bookmarks);
   const newTab = useStore((s) => s.newTab);
@@ -442,9 +444,7 @@ export function AppChrome({
         >
           {(windowMode === 'private' || windowMode === 'tor') && (
             <div className={`window-mode-banner ${windowMode}`} role="status">
-              {windowMode === 'private'
-                ? 'Okno prywatne — historia i sesja kart nie są zapisywane. Pobrane pliki zostają na dysku, ale nie w liście.'
-                : 'Okno Tor — ruch przez sieć Tor. Sesja tego okna jest izolowana (logika demona Tor bez zmian).'}
+              {windowMode === 'private' ? t('chrome.privateBanner') : t('chrome.torBanner')}
             </div>
           )}
           <CrashRestoreOffer
@@ -473,7 +473,7 @@ export function AppChrome({
                     setSidebarMenu(null);
                   }}
                 >
-                  Nowa karta
+                  {t('chrome.newTab')}
                   <kbd>Ctrl+T</kbd>
                 </button>
                 <button
@@ -483,7 +483,7 @@ export function AppChrome({
                     setSidebarMenu(null);
                   }}
                 >
-                  Strona startowa
+                  {t('chrome.home')}
                 </button>
                 <button
                   type="button"
@@ -492,7 +492,7 @@ export function AppChrome({
                     setSidebarMenu(null);
                   }}
                 >
-                  Ustawienia
+                  {t('chrome.settings')}
                 </button>
                 <hr />
                 <button
@@ -502,7 +502,7 @@ export function AppChrome({
                     setSidebarMenu(null);
                   }}
                 >
-                  Ukryj pasek boczny
+                  {t('chrome.hideSidebarBar')}
                   <kbd>Ctrl+B</kbd>
                 </button>
               </div>
@@ -525,7 +525,7 @@ export function AppChrome({
                 type="button"
                 className="icon-btn sm"
                 onClick={() => setTorError(null)}
-                title="Zamknij"
+                title={t('common.close')}
               >
                 <X size={14} />
               </button>

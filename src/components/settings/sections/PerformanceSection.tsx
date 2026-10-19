@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { applyPerfPreset, useStore, type PerfMode } from '../../../store';
 import { Select } from '../../ui/Select';
+import { useT } from '../../../i18n';
 import { Row, SettingsGroup, SliderRow, Toggle } from '../SettingsControls';
 
 export function PerformanceSection() {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
   const [mem, setMem] = useState<{ workingSetMb: number; processes: number } | null>(null);
@@ -18,26 +20,29 @@ export function PerformanceSection() {
       });
     };
     pull();
-    const t = setInterval(pull, 4000);
+    const id = setInterval(pull, 4000);
     return () => {
       alive = false;
-      clearInterval(t);
+      clearInterval(id);
     };
   }, []);
 
   return (
     <div className="settings-stack">
-      <SettingsGroup title="Profil i status">
+      <SettingsGroup title={t('settings.perf.profileStatus')}>
         {mem && (
-          <Row label="Pamięć robocza">
+          <Row label={t('settings.perf.workingSet')}>
             <span className="sr-value">
-              {mem.workingSetMb} MB, {mem.processes} procesów
+              {t('settings.perf.workingSetValue', {
+                mb: mem.workingSetMb,
+                processes: mem.processes,
+              })}
             </span>
           </Row>
         )}
-        <Row label="Profil">
+        <Row label={t('settings.perf.profile')}>
           <Select
-            aria-label="Profil wydajności"
+            aria-label={t('settings.perf.profileAria')}
             value={settings.perfMode}
             onChange={(v) => {
               const mode = v as PerfMode;
@@ -45,29 +50,29 @@ export function PerformanceSection() {
               setRestartHint(true);
             }}
             options={[
-              { value: 'saver', label: 'Oszczędzanie' },
-              { value: 'balanced', label: 'Zrównoważony' },
-              { value: 'performance', label: 'Wydajność' },
+              { value: 'saver', label: t('settings.perf.modeSaver') },
+              { value: 'balanced', label: t('settings.perf.modeBalanced') },
+              { value: 'performance', label: t('settings.perf.modePerformance') },
             ]}
           />
         </Row>
       </SettingsGroup>
 
-      <SettingsGroup title="Pamięć i karty">
+      <SettingsGroup title={t('settings.perf.memoryTabs')}>
         <Toggle
-          label="Leniwe ładowanie kart"
-          hint="Przy starcie nieaktywne karty sesji śpią do pierwszego kliknięcia. Link otwarty w tle ładuje się od razu; po odwiedzeniu karta zostaje żywa (jak Chrome)."
+          label={t('settings.perf.lazyTabs')}
+          hint={t('settings.perf.lazyTabsHint')}
           on={settings.perfLazyTabs}
           onChange={(v) => patchSettings({ perfLazyTabs: v })}
         />
         <Toggle
-          label="Wyrzucaj nieaktywne karty"
-          hint="Odmontowuje kartę po czasie bezczynności (nigdy przy audio/PiP/formularzu)"
+          label={t('settings.perf.discardTabs')}
+          hint={t('settings.perf.discardTabsHint')}
           on={settings.perfDiscardTabs}
           onChange={(v) => patchSettings({ perfDiscardTabs: v })}
         />
         <SliderRow
-          label="Wyrzuć po"
+          label={t('settings.perf.discardAfter')}
           value={`${settings.perfDiscardMinutes} min`}
           min={2}
           max={60}
@@ -76,7 +81,7 @@ export function PerformanceSection() {
           onChange={(n) => patchSettings({ perfDiscardMinutes: n })}
         />
         <SliderRow
-          label="Limit cache"
+          label={t('settings.perf.cacheLimit')}
           value={`${settings.perfCacheMb} MB`}
           min={64}
           max={1024}
@@ -89,10 +94,10 @@ export function PerformanceSection() {
         />
       </SettingsGroup>
 
-      <SettingsGroup title="CPU / render">
+      <SettingsGroup title={t('settings.perf.cpuRender')}>
         <Toggle
-          label="Przyspieszanie sprzętowe (GPU)"
-          hint="Zmiana wymaga restartu"
+          label={t('settings.perf.hwAccel')}
+          hint={t('settings.perf.hwAccelHint')}
           on={settings.perfHardwareAcceleration}
           onChange={(v) => {
             patchSettings({ perfHardwareAcceleration: v });
@@ -101,8 +106,8 @@ export function PerformanceSection() {
           }}
         />
         <Toggle
-          label="Throttling w tle"
-          hint="Spowalnia karty gdy okno jest zminimowane / przykryte"
+          label={t('settings.perf.bgThrottle')}
+          hint={t('settings.perf.bgThrottleHint')}
           on={settings.perfBackgroundThrottling}
           onChange={(v) => {
             patchSettings({ perfBackgroundThrottling: v });
@@ -111,8 +116,8 @@ export function PerformanceSection() {
           }}
         />
         <Toggle
-          label="Płynne przewijanie"
-          hint="Wyłącz przy słabszym CPU (restart)"
+          label={t('settings.perf.smoothScroll')}
+          hint={t('settings.perf.smoothScrollHint')}
           on={settings.perfSmoothScrolling}
           onChange={(v) => {
             patchSettings({ perfSmoothScrolling: v });
@@ -121,46 +126,46 @@ export function PerformanceSection() {
           }}
         />
         <Toggle
-          label="Ogranicz animacje UI"
+          label={t('settings.perf.reduceAnim')}
           on={settings.perfReduceMotion}
           onChange={(v) => patchSettings({ perfReduceMotion: v, uiMotion: !v })}
         />
         <Toggle
-          label="Oszczędny zegar na home"
-          hint="Aktualizacja co 30 s + pauza gdy okno ukryte"
+          label={t('settings.perf.lowPowerClock')}
+          hint={t('settings.perf.lowPowerClockHint')}
           on={settings.perfLowPowerClock}
           onChange={(v) => patchSettings({ perfLowPowerClock: v })}
         />
         <Toggle
-          label="Blokuj ciężkie media w tle (eksperymentalne)"
-          hint="Mniej autoplay / ciężkich zasobów w UI"
+          label={t('settings.perf.blockHeavyMedia')}
+          hint={t('settings.perf.blockHeavyMediaHint')}
           on={settings.perfBlockHeavyMedia}
           onChange={(v) => patchSettings({ perfBlockHeavyMedia: v })}
         />
         <Toggle
-          label="Sprawdzanie pisowni"
-          hint="pl + en-US (wyłączone w oknach Tor — słowniki nie pobierają się poza siecią Tor)"
+          label={t('settings.perf.spellcheck')}
+          hint={t('settings.perf.spellcheckHint')}
           on={settings.perfSpellcheck}
           onChange={(v) => patchSettings({ perfSpellcheck: v })}
         />
       </SettingsGroup>
 
-      <SettingsGroup title="Narzędzia">
-        <Row label="Cache sesji">
+      <SettingsGroup title={t('settings.perf.tools')}>
+        <Row label={t('settings.perf.sessionCache')}>
           <button
             type="button"
             className="sbtn"
             onClick={() => {
               void window.shell?.perfClearCache?.().then(() => {
-                setCacheMsg('Cache wyczyszczony');
+                setCacheMsg(t('settings.perf.cacheCleared'));
                 setTimeout(() => setCacheMsg(''), 2500);
               });
             }}
           >
-            Wyczyść cache
+            {t('settings.perf.clearCache')}
           </button>
         </Row>
-        <Row label="Pamięć">
+        <Row label={t('settings.perf.memory')}>
           <button
             type="button"
             className="sbtn text"
@@ -170,15 +175,11 @@ export function PerformanceSection() {
               });
             }}
           >
-            Odśwież RAM
+            {t('settings.perf.refreshRam')}
           </button>
         </Row>
         {cacheMsg && <p className="snote">{cacheMsg}</p>}
-        {restartHint && (
-          <p className="snote warn">
-            Niektóre zmiany (GPU, scroll, limity procesów) wymagają pełnego restartu aplikacji.
-          </p>
-        )}
+        {restartHint && <p className="snote warn">{t('settings.perf.restartHint')}</p>}
       </SettingsGroup>
     </div>
   );

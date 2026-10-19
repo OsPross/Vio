@@ -1,23 +1,19 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Check } from 'lucide-react';
 import { Segmented } from '../ui';
 import { DURATION, EASE_OUT, popupTransition, sectionTransition } from '../../lib/motionPresets';
+import { useT } from '../../i18n';
 import { HomeLivePreview } from './HomeLivePreview';
 import { LookTab } from './tabs/LookTab';
 import { LayoutTab } from './tabs/LayoutTab';
 import { WidgetsTab } from './tabs/WidgetsTab';
 import { ClockSearchTab } from './tabs/ClockSearchTab';
 
-const TABS = [
-  { id: 'look', label: 'Wygląd' },
-  { id: 'layout', label: 'Układ' },
-  { id: 'widgets', label: 'Widżety' },
-  { id: 'clock', label: 'Zegar i wyszukiwarka' },
-] as const;
+const TAB_IDS = ['look', 'layout', 'widgets', 'clock'] as const;
 
-type TabId = (typeof TABS)[number]['id'];
+type TabId = (typeof TAB_IDS)[number];
 
 export function PersonalizeSheet({
   open,
@@ -30,10 +26,21 @@ export function PersonalizeSheet({
   onEditOnPage: () => void;
   reduced: boolean;
 }) {
+  const t = useT();
   const [tab, setTab] = useState('look' as TabId);
   const popMotion = popupTransition(reduced);
   const sectionMotion = sectionTransition(reduced);
   const scrimDur = reduced ? 0.08 : DURATION.popup;
+
+  const tabOptions = useMemo(
+    () => [
+      { id: 'look' as const, label: t('home.personalize.tabLook') },
+      { id: 'layout' as const, label: t('home.personalize.tabLayout') },
+      { id: 'widgets' as const, label: t('home.personalize.tabWidgets') },
+      { id: 'clock' as const, label: t('home.personalize.tabClock') },
+    ],
+    [t],
+  );
 
   return createPortal(
     <AnimatePresence>
@@ -42,7 +49,7 @@ export function PersonalizeSheet({
           <motion.button
             type="button"
             className="pz-sheet-scrim"
-            aria-label="Zamknij personalizację"
+            aria-label={t('home.personalize.closeAria')}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: reduced ? 0.06 : DURATION.popupOut } }}
@@ -62,12 +69,12 @@ export function PersonalizeSheet({
           >
             <header className="pz-sheet-head">
               <div>
-                <h2 id="pz-sheet-title">Personalizacja</h2>
-                <p>Strona startowa</p>
+                <h2 id="pz-sheet-title">{t('home.personalize.title')}</h2>
+                <p>{t('home.personalize.subtitle')}</p>
               </div>
               <button type="button" className="pz-done" onClick={onClose}>
                 <Check size={14} strokeWidth={2} />
-                Gotowe
+                {t('common.done')}
               </button>
             </header>
 
@@ -79,9 +86,9 @@ export function PersonalizeSheet({
                 <div className="pz-sheet-tabs">
                   <Segmented
                     value={tab}
-                    options={TABS.map((t) => ({ id: t.id, label: t.label }))}
+                    options={tabOptions}
                     onChange={(id) => setTab(id as TabId)}
-                    aria-label="Sekcja personalizacji"
+                    aria-label={t('home.personalize.sectionAria')}
                   />
                 </div>
                 <div className="pz-sheet-scroll">

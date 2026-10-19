@@ -141,6 +141,7 @@ contextBridge.exposeInMainWorld('shell', {
   perfMemory: () => ipcRenderer.invoke('shell:perf-memory'),
   setTitleBar: (opts) => ipcRenderer.invoke('shell:set-titlebar', opts),
   setNativeTheme: (source) => ipcRenderer.invoke('shell:set-native-theme', source),
+  setUiLocale: (locale) => ipcRenderer.invoke('shell:set-ui-locale', locale),
   passwordsStatus: () => ipcRenderer.invoke('shell:passwords-status'),
   passwordsSetup: (master, remember) => ipcRenderer.invoke('shell:passwords-setup', master, remember),
   passwordsUnlock: (master, remember) => ipcRenderer.invoke('shell:passwords-unlock', master, remember),

@@ -13,6 +13,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useStore } from '../store';
+import { useT } from '../i18n';
 import { Input } from './ui/Input';
 import { Switch } from './ui/Switch';
 
@@ -80,6 +81,7 @@ function SettingsRow({
 }
 
 export function PasswordsPanel() {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
 
@@ -137,7 +139,7 @@ export function PasswordsPanel() {
       if (st && typeof st === 'object' && 'ok' in st && (st as { ok?: boolean }).ok === false) {
         setStatus(null);
         setLoadError(
-          String((st as { error?: string }).error || 'Nie udało się odczytać statusu sejfu'),
+          String((st as { error?: string }).error || t('settings.passwords.statusReadFailed')),
         );
         return;
       }
@@ -146,12 +148,12 @@ export function PasswordsPanel() {
         return;
       }
       setStatus(null);
-      setLoadError('Brak odpowiedzi statusu sejfu');
+      setLoadError(t('settings.passwords.statusNoResponse'));
     } catch (err) {
       setStatus(null);
-      setLoadError(String((err as Error)?.message || err || 'Błąd IPC sejfu'));
+      setLoadError(String((err as Error)?.message || err || t('settings.passwords.statusIpcError')));
     }
-  }, []);
+  }, [t]);
 
   const refreshList = useCallback(async () => {
     const list = await window.shell?.passwordsList?.(query);
@@ -201,9 +203,9 @@ export function PasswordsPanel() {
     }
     let alive = true;
     const tick = async () => {
-      const t = await window.shell?.passwordsTotp?.(detail!.id);
+      const totpRes = await window.shell?.passwordsTotp?.(detail!.id);
       if (!alive) return;
-      if (t && 'code' in t) setTotp(t);
+      if (totpRes && 'code' in totpRes) setTotp(totpRes);
     };
     void tick();
     const id = window.setInterval(() => void tick(), 1000);
@@ -216,7 +218,7 @@ export function PasswordsPanel() {
   const onSetup = async () => {
     setError('');
     if (master !== master2) {
-      setError('Hasła nie są takie same');
+      setError(t('settings.passwords.mismatch'));
       return;
     }
     setBusy(true);
@@ -277,7 +279,7 @@ export function PasswordsPanel() {
     setError('');
     const res = await window.shell?.passwordsExport?.(exportMaster);
     if (!res?.ok || !res.csv) {
-      setError(res?.error || 'Eksport nieudany');
+      setError(res?.error || t('settings.passwords.exportFailed'));
       return;
     }
     const blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8' });
@@ -295,7 +297,7 @@ export function PasswordsPanel() {
     const text = await file.text();
     const res = await window.shell?.passwordsImport?.(text, 'chrome');
     if (!res?.ok) {
-      setError(res?.error || 'Import nieudany');
+      setError(res?.error || t('settings.passwords.importFailed'));
       return;
     }
     await refreshList();
@@ -307,7 +309,8 @@ export function PasswordsPanel() {
     const res = await window.shell?.passwordsAdd?.(draft);
     if (!res || ('ok' in res && res.ok === false)) {
       setError(
-        ('error' in (res || {}) && (res as { error?: string }).error) || 'Nie udało się dodać',
+        ('error' in (res || {}) && (res as { error?: string }).error) ||
+          t('settings.passwords.addFailed'),
       );
       return;
     }
@@ -319,19 +322,20 @@ export function PasswordsPanel() {
 
   const idleOptions = useMemo(
     () => [
-      { id: 5, label: '5 min' },
-      { id: 15, label: '15 min' },
-      { id: 30, label: '30 min' },
-      { id: 60, label: '60 min' },
+      { id: 5, label: t('settings.passwords.idleMin', { n: 5 }) },
+      { id: 15, label: t('settings.passwords.idleMin', { n: 15 }) },
+      { id: 30, label: t('settings.passwords.idleMin', { n: 30 }) },
+      { id: 60, label: t('settings.passwords.idleMin', { n: 60 }) },
     ],
-    [],
+    [t],
   );
 
   if (shellMissing) {
     return (
       <p className="snote">
-        Menedżer haseł działa tylko w oknie Electron (IPC). Otwórz aplikację przez{' '}
-        <code>npm run electron:dev</code>, nie sam Vite w przeglądarce.
+        {t('settings.passwords.shellMissingBefore')}{' '}
+        <code>npm run electron:dev</code>
+        {t('settings.passwords.shellMissingAfter')}
       </p>
     );
   }
@@ -341,23 +345,23 @@ export function PasswordsPanel() {
       <div className="snote" style={{ display: 'grid', gap: 10, maxWidth: 420 }}>
         <span>{loadError}</span>
         <button type="button" className="sbtn" onClick={() => void refreshStatus()}>
-          Spróbuj ponownie
+          {t('errors.tryAgain')}
         </button>
       </div>
     );
   }
 
   if (!status) {
-    return <p className="snote">Ładowanie menedżera haseł…</p>;
+    return <p className="snote">{t('settings.passwords.loading')}</p>;
   }
 
   if (!status.setup) {
     return (
       <>
-        <SettingsGroup title="Utwórz sejf">
+        <SettingsGroup title={t('settings.passwords.createVault')}>
           <SettingsRow
-            label="Hasło główne"
-            hint="Minimum 8 znaków. Nie da się odzyskać — zapamiętaj je."
+            label={t('settings.passwords.masterPassword')}
+            hint={t('settings.passwords.masterHint')}
           >
             <Input
               type="password"
@@ -366,7 +370,7 @@ export function PasswordsPanel() {
               onChange={(e) => setMaster(e.target.value)}
             />
           </SettingsRow>
-          <SettingsRow label="Powtórz hasło">
+          <SettingsRow label={t('settings.passwords.repeatPassword')}>
             <Input
               type="password"
               autoComplete="new-password"
@@ -375,14 +379,14 @@ export function PasswordsPanel() {
             />
           </SettingsRow>
           <SettingsRow
-            label="Zapamiętaj na tym urządzeniu"
-            hint="Klucz chroniony przez Windows DPAPI (safeStorage). Każdy z dostępem do tego konta Windows może wtedy otworzyć sejf bez hasła głównego."
+            label={t('settings.passwords.rememberDevice')}
+            hint={t('settings.passwords.rememberHintSetup')}
           >
             <Switch
               on={remember && !!status.rememberAvailable}
               disabled={!status.rememberAvailable}
               onChange={(v) => setRemember(v)}
-              aria-label="Zapamiętaj"
+              aria-label={t('settings.passwords.rememberAria')}
             />
           </SettingsRow>
           {error ? (
@@ -397,7 +401,7 @@ export function PasswordsPanel() {
               disabled={busy || master.length < 8}
               onClick={() => void onSetup()}
             >
-              Utwórz sejf
+              {t('settings.passwords.createVault')}
             </button>
           </div>
         </SettingsGroup>
@@ -408,8 +412,11 @@ export function PasswordsPanel() {
   if (!unlocked) {
     return (
       <>
-        <SettingsGroup title="Odblokuj sejf">
-          <SettingsRow label="Hasło główne" hint={`${status.entryCount} zapisanych kont`}>
+        <SettingsGroup title={t('settings.passwords.unlockVault')}>
+          <SettingsRow
+            label={t('settings.passwords.masterPassword')}
+            hint={t('settings.passwords.savedAccounts', { count: status.entryCount })}
+          >
             <Input
               type="password"
               autoComplete="current-password"
@@ -421,14 +428,14 @@ export function PasswordsPanel() {
             />
           </SettingsRow>
           <SettingsRow
-            label="Zapamiętaj na tym urządzeniu"
-            hint="DPAPI — każdy z dostępem do konta Windows może otworzyć sejf."
+            label={t('settings.passwords.rememberDevice')}
+            hint={t('settings.passwords.rememberHintUnlock')}
           >
             <Switch
               on={remember && !!status.rememberAvailable}
               disabled={!status.rememberAvailable}
               onChange={(v) => setRemember(v)}
-              aria-label="Zapamiętaj"
+              aria-label={t('settings.passwords.rememberAria')}
             />
           </SettingsRow>
           {error ? (
@@ -443,7 +450,7 @@ export function PasswordsPanel() {
               disabled={busy || !master}
               onClick={() => void onUnlock()}
             >
-              <Lock size={14} strokeWidth={1.75} /> Odblokuj
+              <Lock size={14} strokeWidth={1.75} /> {t('settings.passwords.unlock')}
             </button>
           </div>
         </SettingsGroup>
@@ -453,32 +460,41 @@ export function PasswordsPanel() {
 
   return (
     <>
-      <SettingsGroup title="Preferencje">
-        <SettingsRow label="Menedżer haseł" hint="Wykrywanie logowań i ikona w omniboxie.">
+      <SettingsGroup title={t('settings.passwords.prefs')}>
+        <SettingsRow
+          label={t('settings.passwords.manager')}
+          hint={t('settings.passwords.managerHint')}
+        >
           <Switch
             on={!!settings.passwordsEnabled}
             onChange={(v) => patchSettings({ passwordsEnabled: v })}
-            aria-label="Menedżer haseł"
+            aria-label={t('settings.passwords.manager')}
           />
         </SettingsRow>
         <SettingsRow
-          label="Autouzupełnianie"
-          hint="Tylko HTTPS, ścisły origin, bez cross-origin iframe."
+          label={t('settings.passwords.autofill')}
+          hint={t('settings.passwords.autofillHint')}
         >
           <Switch
             on={!!settings.passwordsAutofill}
             onChange={(v) => patchSettings({ passwordsAutofill: v })}
-            aria-label="Autouzupełnianie"
+            aria-label={t('settings.passwords.autofill')}
           />
         </SettingsRow>
-        <SettingsRow label="Proponuj zapis" hint="Pasek po wysłaniu formularza logowania.">
+        <SettingsRow
+          label={t('settings.passwords.offerSave')}
+          hint={t('settings.passwords.offerSaveHint')}
+        >
           <Switch
             on={!!settings.passwordsOfferSave}
             onChange={(v) => patchSettings({ passwordsOfferSave: v })}
-            aria-label="Proponuj zapis"
+            aria-label={t('settings.passwords.offerSave')}
           />
         </SettingsRow>
-        <SettingsRow label="Auto-blokada" hint="Po bezczynności i przy uśpieniu systemu.">
+        <SettingsRow
+          label={t('settings.passwords.autoLock')}
+          hint={t('settings.passwords.autoLockHint')}
+        >
           <div className="sseg">
             {idleOptions.map((o) => (
               <button
@@ -497,7 +513,7 @@ export function PasswordsPanel() {
         </SettingsRow>
         <div className="slist-row" style={{ justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" className="sbtn ghost" onClick={() => void onLock()}>
-            Zablokuj teraz
+            {t('settings.passwords.lockNow')}
           </button>
         </div>
       </SettingsGroup>
@@ -505,12 +521,12 @@ export function PasswordsPanel() {
       <div className="pw-tabs">
         {(
           [
-            ['list', 'Konta'],
-            ['generator', 'Generator'],
-            ['audit', 'Audyt'],
-            ['import', 'Import / eksport'],
+            ['list', 'tabAccounts'],
+            ['generator', 'tabGenerator'],
+            ['audit', 'tabAudit'],
+            ['import', 'tabImport'],
           ] as const
-        ).map(([id, label]) => (
+        ).map(([id, key]) => (
           <button
             key={id}
             type="button"
@@ -525,24 +541,24 @@ export function PasswordsPanel() {
               }
             }}
           >
-            {label}
+            {t(`settings.passwords.${key}`)}
           </button>
         ))}
       </div>
 
       {panel === 'list' && (
         <>
-          <SettingsGroup title="Zapisane konta">
+          <SettingsGroup title={t('settings.passwords.savedAccountsTitle')}>
             <div className="pw-search">
               <Search size={14} strokeWidth={1.75} />
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Szukaj domeny lub loginu…"
+                placeholder={t('settings.passwords.searchPlaceholder')}
               />
             </div>
             <div className="pw-list">
-              {entries.length === 0 && <p className="snote">Brak wpisów.</p>}
+              {entries.length === 0 && <p className="snote">{t('settings.passwords.empty')}</p>}
               {entries.map((e) => (
                 <button
                   key={e.id}
@@ -567,28 +583,28 @@ export function PasswordsPanel() {
           </SettingsGroup>
 
           {detail && (
-            <SettingsGroup title="Szczegóły">
-              <SettingsRow label="Strona">
+            <SettingsGroup title={t('settings.passwords.details')}>
+              <SettingsRow label={t('settings.passwords.site')}>
                 <span className="sr-value">{detail.origin}</span>
               </SettingsRow>
-              <SettingsRow label="Login">
+              <SettingsRow label={t('settings.passwords.username')}>
                 <span className="sr-value">{detail.username || '—'}</span>
               </SettingsRow>
-              <SettingsRow label="Hasło">
+              <SettingsRow label={t('settings.passwords.password')}>
                 <div className="pw-inline">
                   <code>{showPw ? detail.password : '••••••••••••'}</code>
                   <button
                     type="button"
                     className="sbtn ghost"
                     onClick={() => setShowPw((v) => !v)}
-                    title="Pokaż"
+                    title={t('settings.passwords.show')}
                   >
                     {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                   <button
                     type="button"
                     className="sbtn ghost"
-                    title="Kopiuj (wyczyść po 30 s)"
+                    title={t('settings.passwords.copyClear')}
                     onClick={() => void window.shell?.passwordsCopy?.(detail.id)}
                   >
                     <Copy size={14} />
@@ -596,12 +612,15 @@ export function PasswordsPanel() {
                 </div>
               </SettingsRow>
               {totp && (
-                <SettingsRow label="Kod 2FA" hint={`Odświeżenie za ${totp.remaining}s`}>
+                <SettingsRow
+                  label={t('settings.passwords.totpCode')}
+                  hint={t('settings.passwords.totpRefresh', { s: totp.remaining })}
+                >
                   <code className="sr-value">{totp.code}</code>
                 </SettingsRow>
               )}
               {detail.note ? (
-                <SettingsRow label="Notatka">
+                <SettingsRow label={t('settings.passwords.note')}>
                   <span className="sr-value">{detail.note}</span>
                 </SettingsRow>
               ) : null}
@@ -610,7 +629,7 @@ export function PasswordsPanel() {
                   type="button"
                   className="sbtn danger-text"
                   onClick={() => {
-                    if (!confirm('Usunąć ten wpis?')) return;
+                    if (!confirm(t('settings.passwords.removeConfirm'))) return;
                     void window.shell?.passwordsRemove?.(detail.id).then(() => {
                       setSelected(null);
                       setDetail(null);
@@ -618,40 +637,43 @@ export function PasswordsPanel() {
                     });
                   }}
                 >
-                  <Trash2 size={14} /> Usuń
+                  <Trash2 size={14} /> {t('common.delete')}
                 </button>
               </div>
             </SettingsGroup>
           )}
 
-          <SettingsGroup title="Dodaj ręcznie">
-            <SettingsRow label="Origin (https://…)">
+          <SettingsGroup title={t('settings.passwords.addManual')}>
+            <SettingsRow label={t('settings.passwords.origin')}>
               <Input
                 value={draft.origin}
                 onChange={(e) => setDraft((d) => ({ ...d, origin: e.target.value }))}
                 placeholder="https://example.com"
               />
             </SettingsRow>
-            <SettingsRow label="Login">
+            <SettingsRow label={t('settings.passwords.username')}>
               <Input
                 value={draft.username}
                 onChange={(e) => setDraft((d) => ({ ...d, username: e.target.value }))}
               />
             </SettingsRow>
-            <SettingsRow label="Hasło">
+            <SettingsRow label={t('settings.passwords.password')}>
               <Input
                 type="password"
                 value={draft.password}
                 onChange={(e) => setDraft((d) => ({ ...d, password: e.target.value }))}
               />
             </SettingsRow>
-            <SettingsRow label="Notatka">
+            <SettingsRow label={t('settings.passwords.note')}>
               <Input
                 value={draft.note}
                 onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))}
               />
             </SettingsRow>
-            <SettingsRow label="TOTP (opcjonalnie)" hint="Sekret base32">
+            <SettingsRow
+              label={t('settings.passwords.totpOptional')}
+              hint={t('settings.passwords.totpSecretHint')}
+            >
               <Input
                 value={draft.totpSecret}
                 onChange={(e) => setDraft((d) => ({ ...d, totpSecret: e.target.value }))}
@@ -664,7 +686,7 @@ export function PasswordsPanel() {
             ) : null}
             <div className="slist-row" style={{ justifyContent: 'flex-end' }}>
               <button type="button" className="sbtn" onClick={() => void saveDraft()}>
-                <Plus size={14} /> Dodaj
+                <Plus size={14} /> {t('common.add')}
               </button>
             </div>
           </SettingsGroup>
@@ -672,13 +694,20 @@ export function PasswordsPanel() {
       )}
 
       {panel === 'generator' && (
-        <SettingsGroup title="Generator">
-          <SettingsRow label="Fraza słowna">
-            <Switch on={genPassphrase} onChange={setGenPassphrase} aria-label="Fraza słowna" />
+        <SettingsGroup title={t('settings.passwords.generator')}>
+          <SettingsRow label={t('settings.passwords.passphrase')}>
+            <Switch
+              on={genPassphrase}
+              onChange={setGenPassphrase}
+              aria-label={t('settings.passwords.passphrase')}
+            />
           </SettingsRow>
           {!genPassphrase && (
             <>
-              <SettingsRow label="Długość" hint={`${genLen} znaków`}>
+              <SettingsRow
+                label={t('settings.passwords.length')}
+                hint={t('settings.passwords.chars', { n: genLen })}
+              >
                 <div className="sslider">
                   <input
                     type="range"
@@ -690,14 +719,18 @@ export function PasswordsPanel() {
                   <span className="sslider-val">{genLen}</span>
                 </div>
               </SettingsRow>
-              <SettingsRow label="Symbole">
-                <Switch on={genSymbols} onChange={setGenSymbols} aria-label="Symbole" />
+              <SettingsRow label={t('settings.passwords.symbols')}>
+                <Switch
+                  on={genSymbols}
+                  onChange={setGenSymbols}
+                  aria-label={t('settings.passwords.symbols')}
+                />
               </SettingsRow>
             </>
           )}
           <div className="slist-row" style={{ gap: 8 }}>
             <button type="button" className="sbtn" onClick={() => void onGenerate()}>
-              <RefreshCw size={14} /> Generuj
+              <RefreshCw size={14} /> {t('settings.passwords.generate')}
             </button>
             {genOut ? (
               <button
@@ -705,7 +738,7 @@ export function PasswordsPanel() {
                 className="sbtn ghost"
                 onClick={() => void navigator.clipboard.writeText(genOut)}
               >
-                <Copy size={14} /> Kopiuj
+                <Copy size={14} /> {t('common.copy')}
               </button>
             ) : null}
           </div>
@@ -719,24 +752,27 @@ export function PasswordsPanel() {
       )}
 
       {panel === 'audit' && (
-        <SettingsGroup title="Audyt bezpieczeństwa">
-          <SettingsRow label="Wszystkie wpisy">
+        <SettingsGroup title={t('settings.passwords.auditTitle')}>
+          <SettingsRow label={t('settings.passwords.allEntries')}>
             <span className="sr-value">{audit?.total ?? '—'}</span>
           </SettingsRow>
-          <SettingsRow label="Słabe" hint="Niska entropia / krótkie">
+          <SettingsRow
+            label={t('settings.passwords.weak')}
+            hint={t('settings.passwords.weakHint')}
+          >
             <span className="sr-value">{audit?.weak.length ?? 0}</span>
           </SettingsRow>
-          <SettingsRow label="Powtórzone">
+          <SettingsRow label={t('settings.passwords.reused')}>
             <span className="sr-value">{audit?.reused.length ?? 0}</span>
           </SettingsRow>
-          <SettingsRow label="Starsze niż rok">
+          <SettingsRow label={t('settings.passwords.olderThanYear')}>
             <span className="sr-value">{audit?.old.length ?? 0}</span>
           </SettingsRow>
           {(audit?.weak.length || 0) > 0 && (
             <div className="pw-audit-list">
               <div className="sg-title" style={{ margin: '12px 16px 8px' }}>
                 <ShieldAlert size={12} style={{ display: 'inline', marginRight: 6 }} />
-                Słabe hasła
+                {t('settings.passwords.weakPasswords')}
               </div>
               {audit!.weak.slice(0, 12).map((e) => (
                 <button
@@ -765,7 +801,7 @@ export function PasswordsPanel() {
           )}
           <div className="slist-row" style={{ justifyContent: 'flex-end' }}>
             <button type="button" className="sbtn ghost" onClick={() => void onAudit()}>
-              Odśwież audyt
+              {t('settings.passwords.refreshAudit')}
             </button>
           </div>
         </SettingsGroup>
@@ -773,13 +809,11 @@ export function PasswordsPanel() {
 
       {panel === 'import' && (
         <>
-          <SettingsGroup title="Import CSV">
-            <p className="snote">
-              Chrome / Edge / Firefox / Bitwarden — kolumny url, username, password.
-            </p>
+          <SettingsGroup title={t('settings.passwords.importCsv')}>
+            <p className="snote">{t('settings.passwords.importHint')}</p>
             <div className="slist-row">
               <label className="sbtn">
-                <Upload size={14} /> Wybierz plik
+                <Upload size={14} /> {t('settings.passwords.chooseFile')}
                 <input
                   type="file"
                   accept=".csv,text/csv"
@@ -793,8 +827,11 @@ export function PasswordsPanel() {
               </label>
             </div>
           </SettingsGroup>
-          <SettingsGroup title="Eksport CSV">
-            <SettingsRow label="Potwierdź hasłem głównym" hint="Wymagane przed eksportem.">
+          <SettingsGroup title={t('settings.passwords.exportCsv')}>
+            <SettingsRow
+              label={t('settings.passwords.confirmMaster')}
+              hint={t('settings.passwords.confirmMasterHint')}
+            >
               <Input
                 type="password"
                 value={exportMaster}
@@ -813,12 +850,12 @@ export function PasswordsPanel() {
                 disabled={!exportMaster}
                 onClick={() => void onExport()}
               >
-                <Download size={14} /> Eksportuj
+                <Download size={14} /> {t('settings.passwords.export')}
               </button>
             </div>
           </SettingsGroup>
           {neverList.length > 0 && (
-            <SettingsGroup title="Nigdy nie zapisuj">
+            <SettingsGroup title={t('settings.passwords.neverSave')}>
               {neverList.map((o) => (
                 <div key={o} className="slist-row">
                   <span className="grow mono">{o}</span>
@@ -831,7 +868,7 @@ export function PasswordsPanel() {
                       })
                     }
                   >
-                    Usuń
+                    {t('common.delete')}
                   </button>
                 </div>
               ))}

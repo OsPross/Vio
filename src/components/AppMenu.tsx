@@ -3,6 +3,7 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -41,6 +42,7 @@ import {
 import { acceleratorForMenuId } from '../lib/shortcutsRegistry';
 import { isMotionOff, popupTransition } from '../lib/motionPresets';
 import { useStore } from '../store';
+import { useT } from '../i18n';
 
 export type SidebarMode = 'on' | 'auto' | 'off';
 
@@ -126,6 +128,7 @@ export function AppMenu({ actions }: Props) {
   const settings = useStore((s) => s.settings);
   const motionOff = isMotionOff(settings);
   const popMotion = popupTransition(motionOff);
+  const t = useT();
 
   const clearHoverTimer = () => {
     if (hoverTimer.current) {
@@ -140,224 +143,229 @@ export function AppMenu({ actions }: Props) {
     }
   };
 
-  const items: Item[] = [
-    {
-      kind: 'action',
-      id: 'new-tab',
-      label: 'Nowa karta',
-      shortcut: acceleratorForMenuId('new-tab'),
-      icon: <Plus size={16} strokeWidth={1.75} />,
-      run: () => actions.newTab(),
-    },
-    {
-      kind: 'action',
-      id: 'new-win',
-      label: 'Nowe okno',
-      shortcut: acceleratorForMenuId('new-win'),
-      icon: <ExternalLink size={16} strokeWidth={1.75} />,
-      run: () => actions.newWindow(),
-    },
-    {
-      kind: 'action',
-      id: 'new-priv',
-      label: 'Nowe okno prywatne',
-      shortcut: acceleratorForMenuId('new-priv'),
-      icon: <Eye size={16} strokeWidth={1.75} />,
-      run: () => actions.newPrivateWindow(),
-    },
-    {
-      kind: 'action',
-      id: 'new-tor',
-      label: 'Nowe okno Tor',
-      shortcut: acceleratorForMenuId('new-tor'),
-      icon: <Shield size={16} strokeWidth={1.75} />,
-      run: () => actions.newTorWindow(),
-    },
-    { kind: 'sep' },
-    { kind: 'sidebar' },
-    { kind: 'sep' },
-    {
-      kind: 'action',
-      id: 'passwords',
-      label: 'Hasła',
-      shortcut: acceleratorForMenuId('passwords'),
-      icon: <KeyRound size={16} strokeWidth={1.75} />,
-      run: () => actions.openPasswords(),
-    },
-    {
-      kind: 'action',
-      id: 'permissions',
-      label: 'Uprawnienia stron',
-      icon: <Fingerprint size={16} strokeWidth={1.75} />,
-      run: () => actions.openSitePermissions(),
-    },
-    {
-      kind: 'action',
-      id: 'history',
-      label: 'Historia',
-      shortcut: acceleratorForMenuId('history'),
-      icon: <History size={16} strokeWidth={1.75} />,
-      run: () => actions.openHistory(),
-    },
-    {
-      kind: 'action',
-      id: 'bookmarks',
-      label: 'Zakładki',
-      shortcut: acceleratorForMenuId('bookmarks'),
-      icon: <Bookmark size={16} strokeWidth={1.75} />,
-      run: () => actions.openBookmarks(),
-    },
-    {
-      kind: 'action',
-      id: 'downloads',
-      label: 'Pobrane',
-      shortcut: acceleratorForMenuId('downloads'),
-      icon: <Download size={16} strokeWidth={1.75} />,
-      run: () => actions.openDownloads(),
-    },
-    {
-      kind: 'action',
-      id: 'extensions',
-      label: 'Rozszerzenia',
-      icon: <Puzzle size={16} strokeWidth={1.75} />,
-      run: () => actions.openExtensions(),
-    },
-    {
-      kind: 'action',
-      id: 'clear',
-      label: 'Usuń dane przeglądania…',
-      shortcut: acceleratorForMenuId('clear'),
-      icon: <Trash2 size={16} strokeWidth={1.75} />,
-      run: () => actions.clearBrowsingData(),
-    },
-    { kind: 'sep' },
-    { kind: 'zoom' },
-    {
-      kind: 'action',
-      id: 'fs',
-      label: 'Pełny ekran',
-      shortcut: acceleratorForMenuId('fs'),
-      icon: <Fullscreen size={16} strokeWidth={1.75} />,
-      run: () => actions.toggleFullscreen(),
-    },
-    { kind: 'sep' },
-    {
-      kind: 'action',
-      id: 'print',
-      label: 'Drukuj…',
-      shortcut: acceleratorForMenuId('print'),
-      icon: <Printer size={16} strokeWidth={1.75} />,
-      disabled: !hasPage,
-      hint: hasPage ? undefined : 'Niedostępne na stronie startowej',
-      run: () => actions.print(),
-    },
-    {
-      kind: 'action',
-      id: 'find',
-      label: 'Znajdź na stronie',
-      shortcut: acceleratorForMenuId('find'),
-      icon: <Search size={16} strokeWidth={1.75} />,
-      disabled: !hasPage,
-      hint: hasPage ? undefined : 'Niedostępne na stronie startowej',
-      run: () => actions.findInPage(),
-    },
-    {
-      kind: 'action',
-      id: 'save',
-      label: 'Zapisz stronę jako…',
-      shortcut: acceleratorForMenuId('save'),
-      icon: <FileText size={16} strokeWidth={1.75} />,
-      disabled: !hasPage,
-      hint: hasPage ? undefined : 'Niedostępne na stronie startowej',
-      run: () => actions.savePage(),
-    },
-    {
-      kind: 'action',
-      id: 'save-pdf',
-      label: 'Zapisz jako PDF…',
-      icon: <FileDown size={16} strokeWidth={1.75} />,
-      disabled: !hasPage || !actions.savePdf,
-      hint: hasPage ? undefined : 'Niedostępne na stronie startowej',
-      run: () => actions.savePdf?.(),
-    },
-    {
-      kind: 'action',
-      id: 'copy',
-      label: 'Kopiuj link',
-      icon: <ClipboardCopy size={16} strokeWidth={1.75} />,
-      disabled: !hasPage,
-      hint: hasPage ? undefined : 'Niedostępne na stronie startowej',
-      run: () => actions.copyLink(),
-    },
-    {
-      kind: 'action',
-      id: 'qr',
-      label: 'Utwórz kod QR',
-      icon: <QrCode size={16} strokeWidth={1.75} />,
-      disabled: !hasPage,
-      hint: hasPage ? undefined : 'Niedostępne na stronie startowej',
-      run: () => actions.showQr(),
-    },
-    { kind: 'sep' },
-    {
-      kind: 'submenu',
-      id: 'more',
-      label: 'Więcej narzędzi',
-      icon: <Wrench size={16} strokeWidth={1.75} />,
-      children: [
-        {
-          kind: 'action',
-          id: 'task',
-          label: 'Menedżer zadań',
-          shortcut: acceleratorForMenuId('task'),
-          icon: <TerminalSquare size={16} strokeWidth={1.75} />,
-          run: () => actions.openTaskManager(),
-        },
-        {
-          kind: 'action',
-          id: 'devtools',
-          label: 'Narzędzia deweloperskie',
-          shortcut: acceleratorForMenuId('devtools'),
-          icon: <Code2 size={16} strokeWidth={1.75} />,
-          run: () => actions.openDevtools(),
-        },
-        {
-          kind: 'action',
-          id: 'source',
-          label: 'Wyświetl źródło strony',
-          shortcut: acceleratorForMenuId('source'),
-          icon: <Code2 size={16} strokeWidth={1.75} />,
-          disabled: !hasPage,
-          hint: hasPage ? undefined : 'Niedostępne na stronie startowej',
-          run: () => actions.viewSource(),
-        },
-      ],
-    },
-    { kind: 'sep' },
-    {
-      kind: 'action',
-      id: 'about',
-      label: 'Pomoc / O Vio',
-      icon: <Info size={16} strokeWidth={1.75} />,
-      run: () => actions.openAbout(),
-    },
-    {
-      kind: 'action',
-      id: 'settings',
-      label: 'Ustawienia',
-      shortcut: acceleratorForMenuId('settings'),
-      icon: <Settings2 size={16} strokeWidth={1.75} />,
-      run: () => actions.openSettings(),
-    },
-    {
-      kind: 'action',
-      id: 'quit',
-      label: 'Zakończ',
-      shortcut: acceleratorForMenuId('quit'),
-      icon: <Minus size={16} strokeWidth={1.75} />,
-      run: () => actions.quit(),
-    },
-  ];
+  const homeHint = t('chrome.unavailableOnHome');
+
+  const items: Item[] = useMemo(
+    () => [
+      {
+        kind: 'action',
+        id: 'new-tab',
+        label: t('chrome.newTab'),
+        shortcut: acceleratorForMenuId('new-tab'),
+        icon: <Plus size={16} strokeWidth={1.75} />,
+        run: () => actions.newTab(),
+      },
+      {
+        kind: 'action',
+        id: 'new-win',
+        label: t('chrome.newWindow'),
+        shortcut: acceleratorForMenuId('new-win'),
+        icon: <ExternalLink size={16} strokeWidth={1.75} />,
+        run: () => actions.newWindow(),
+      },
+      {
+        kind: 'action',
+        id: 'new-priv',
+        label: t('chrome.newPrivate'),
+        shortcut: acceleratorForMenuId('new-priv'),
+        icon: <Eye size={16} strokeWidth={1.75} />,
+        run: () => actions.newPrivateWindow(),
+      },
+      {
+        kind: 'action',
+        id: 'new-tor',
+        label: t('chrome.newTorWindow'),
+        shortcut: acceleratorForMenuId('new-tor'),
+        icon: <Shield size={16} strokeWidth={1.75} />,
+        run: () => actions.newTorWindow(),
+      },
+      { kind: 'sep' },
+      { kind: 'sidebar' },
+      { kind: 'sep' },
+      {
+        kind: 'action',
+        id: 'passwords',
+        label: t('chrome.passwords'),
+        shortcut: acceleratorForMenuId('passwords'),
+        icon: <KeyRound size={16} strokeWidth={1.75} />,
+        run: () => actions.openPasswords(),
+      },
+      {
+        kind: 'action',
+        id: 'permissions',
+        label: t('chrome.sitePermissions'),
+        icon: <Fingerprint size={16} strokeWidth={1.75} />,
+        run: () => actions.openSitePermissions(),
+      },
+      {
+        kind: 'action',
+        id: 'history',
+        label: t('chrome.history'),
+        shortcut: acceleratorForMenuId('history'),
+        icon: <History size={16} strokeWidth={1.75} />,
+        run: () => actions.openHistory(),
+      },
+      {
+        kind: 'action',
+        id: 'bookmarks',
+        label: t('chrome.bookmarks'),
+        shortcut: acceleratorForMenuId('bookmarks'),
+        icon: <Bookmark size={16} strokeWidth={1.75} />,
+        run: () => actions.openBookmarks(),
+      },
+      {
+        kind: 'action',
+        id: 'downloads',
+        label: t('chrome.downloads'),
+        shortcut: acceleratorForMenuId('downloads'),
+        icon: <Download size={16} strokeWidth={1.75} />,
+        run: () => actions.openDownloads(),
+      },
+      {
+        kind: 'action',
+        id: 'extensions',
+        label: t('chrome.extensions'),
+        icon: <Puzzle size={16} strokeWidth={1.75} />,
+        run: () => actions.openExtensions(),
+      },
+      {
+        kind: 'action',
+        id: 'clear',
+        label: t('chrome.clearBrowsingData'),
+        shortcut: acceleratorForMenuId('clear'),
+        icon: <Trash2 size={16} strokeWidth={1.75} />,
+        run: () => actions.clearBrowsingData(),
+      },
+      { kind: 'sep' },
+      { kind: 'zoom' },
+      {
+        kind: 'action',
+        id: 'fs',
+        label: t('chrome.fullscreen'),
+        shortcut: acceleratorForMenuId('fs'),
+        icon: <Fullscreen size={16} strokeWidth={1.75} />,
+        run: () => actions.toggleFullscreen(),
+      },
+      { kind: 'sep' },
+      {
+        kind: 'action',
+        id: 'print',
+        label: t('menu.print'),
+        shortcut: acceleratorForMenuId('print'),
+        icon: <Printer size={16} strokeWidth={1.75} />,
+        disabled: !hasPage,
+        hint: hasPage ? undefined : homeHint,
+        run: () => actions.print(),
+      },
+      {
+        kind: 'action',
+        id: 'find',
+        label: t('chrome.find'),
+        shortcut: acceleratorForMenuId('find'),
+        icon: <Search size={16} strokeWidth={1.75} />,
+        disabled: !hasPage,
+        hint: hasPage ? undefined : homeHint,
+        run: () => actions.findInPage(),
+      },
+      {
+        kind: 'action',
+        id: 'save',
+        label: t('menu.savePageAs'),
+        shortcut: acceleratorForMenuId('save'),
+        icon: <FileText size={16} strokeWidth={1.75} />,
+        disabled: !hasPage,
+        hint: hasPage ? undefined : homeHint,
+        run: () => actions.savePage(),
+      },
+      {
+        kind: 'action',
+        id: 'save-pdf',
+        label: t('chrome.savePdfAs'),
+        icon: <FileDown size={16} strokeWidth={1.75} />,
+        disabled: !hasPage || !actions.savePdf,
+        hint: hasPage ? undefined : homeHint,
+        run: () => actions.savePdf?.(),
+      },
+      {
+        kind: 'action',
+        id: 'copy',
+        label: t('chrome.copyLink'),
+        icon: <ClipboardCopy size={16} strokeWidth={1.75} />,
+        disabled: !hasPage,
+        hint: hasPage ? undefined : homeHint,
+        run: () => actions.copyLink(),
+      },
+      {
+        kind: 'action',
+        id: 'qr',
+        label: t('chrome.createQrCode'),
+        icon: <QrCode size={16} strokeWidth={1.75} />,
+        disabled: !hasPage,
+        hint: hasPage ? undefined : homeHint,
+        run: () => actions.showQr(),
+      },
+      { kind: 'sep' },
+      {
+        kind: 'submenu',
+        id: 'more',
+        label: t('chrome.moreTools'),
+        icon: <Wrench size={16} strokeWidth={1.75} />,
+        children: [
+          {
+            kind: 'action',
+            id: 'task',
+            label: t('chrome.taskManager'),
+            shortcut: acceleratorForMenuId('task'),
+            icon: <TerminalSquare size={16} strokeWidth={1.75} />,
+            run: () => actions.openTaskManager(),
+          },
+          {
+            kind: 'action',
+            id: 'devtools',
+            label: t('chrome.devtools'),
+            shortcut: acceleratorForMenuId('devtools'),
+            icon: <Code2 size={16} strokeWidth={1.75} />,
+            run: () => actions.openDevtools(),
+          },
+          {
+            kind: 'action',
+            id: 'source',
+            label: t('menu.viewPageSource'),
+            shortcut: acceleratorForMenuId('source'),
+            icon: <Code2 size={16} strokeWidth={1.75} />,
+            disabled: !hasPage,
+            hint: hasPage ? undefined : homeHint,
+            run: () => actions.viewSource(),
+          },
+        ],
+      },
+      { kind: 'sep' },
+      {
+        kind: 'action',
+        id: 'about',
+        label: t('chrome.helpAbout'),
+        icon: <Info size={16} strokeWidth={1.75} />,
+        run: () => actions.openAbout(),
+      },
+      {
+        kind: 'action',
+        id: 'settings',
+        label: t('chrome.settings'),
+        shortcut: acceleratorForMenuId('settings'),
+        icon: <Settings2 size={16} strokeWidth={1.75} />,
+        run: () => actions.openSettings(),
+      },
+      {
+        kind: 'action',
+        id: 'quit',
+        label: t('chrome.quit'),
+        shortcut: acceleratorForMenuId('quit'),
+        icon: <Minus size={16} strokeWidth={1.75} />,
+        run: () => actions.quit(),
+      },
+    ],
+    [t, actions, hasPage, homeHint],
+  );
 
   const focusables = items.map((it, i) => ({ it, i })).filter(({ it }) => it.kind !== 'sep');
 
@@ -528,7 +536,7 @@ export function AppMenu({ actions }: Props) {
       <button
         type="button"
         className={`icon-btn app-menu-trigger ${open ? 'on' : ''}`}
-        title="Menu aplikacji"
+        title={t('chrome.appMenu')}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
@@ -561,7 +569,7 @@ export function AppMenu({ actions }: Props) {
                   key="sidebar"
                   className={`app-menu-sidebar ${focused ? 'focused' : ''}`}
                   role="group"
-                  aria-label="Pasek boczny"
+                  aria-label={t('chrome.sidebarBar')}
                   onMouseEnter={() => {
                     setFocusIdx(fIdx);
                     closeSubNow();
@@ -571,14 +579,14 @@ export function AppMenu({ actions }: Props) {
                     <Ico>
                       <PanelLeft size={16} strokeWidth={1.75} />
                     </Ico>
-                    <span>Pasek boczny</span>
+                    <span>{t('chrome.sidebarBar')}</span>
                   </div>
                   <div className="app-menu-seg">
                     {(
                       [
-                        ['on', 'Włączony'],
-                        ['auto', 'Auto'],
-                        ['off', 'Wyłączony'],
+                        ['on', t('chrome.sidebarModeOn')],
+                        ['auto', t('chrome.sidebarModeAuto')],
+                        ['off', t('chrome.sidebarModeOff')],
                       ] as const
                     ).map(([mode, label]) => (
                       <button
@@ -608,15 +616,23 @@ export function AppMenu({ actions }: Props) {
                   <Ico>
                     <ZoomIn size={16} strokeWidth={1.75} />
                   </Ico>
-                  <span className="app-menu-label">Powiększenie</span>
+                  <span className="app-menu-label">{t('chrome.zoom')}</span>
                   <div className="app-menu-zoom">
-                    <button type="button" onClick={() => actions.zoomOut()} aria-label="Pomniejsz">
+                    <button
+                      type="button"
+                      onClick={() => actions.zoomOut()}
+                      aria-label={t('chrome.zoomOut')}
+                    >
                       −
                     </button>
                     <button type="button" className="zoom-pct" onClick={() => actions.zoomReset()}>
                       {Math.round(actions.zoomPercent)}%
                     </button>
-                    <button type="button" onClick={() => actions.zoomIn()} aria-label="Powiększ">
+                    <button
+                      type="button"
+                      onClick={() => actions.zoomIn()}
+                      aria-label={t('chrome.zoomIn')}
+                    >
                       +
                     </button>
                   </div>

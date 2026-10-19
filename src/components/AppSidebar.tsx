@@ -11,6 +11,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
+import { useT } from '../i18n';
 import { useStore, type SideApp } from '../store';
 
 const PANEL_W_MIN = 280;
@@ -83,10 +84,12 @@ function SideWebview({
   app,
   active,
   webRef,
+  loadingLabel,
 }: {
   app: SideApp;
   active: boolean;
   webRef: (el: WebviewEl | null) => void;
+  loadingLabel: string;
 }) {
   const local = useRef<WebviewEl | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -116,7 +119,7 @@ function SideWebview({
 
   return (
     <div className={`side-webview-wrap ${active ? 'on' : ''}`}>
-      {!loaded && active && <div className="side-webview-loading">Ładowanie {app.label}…</div>}
+      {!loaded && active && <div className="side-webview-loading">{loadingLabel}</div>}
       <webview
         ref={(node) => {
           local.current = node as unknown as WebviewEl | null;
@@ -140,6 +143,7 @@ export function AppSidebar({
   onHome: () => void;
   onOpenTab: (url: string) => void;
 }) {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const sideApps = useStore((s) => s.sideApps);
   const openSideApp = useStore((s) => s.openSideApp);
@@ -223,12 +227,12 @@ export function AppSidebar({
     >
       <aside className="side-rail">
         <LayoutGroup id="side-rail">
-          <div className="side-rail-group" role="group" aria-label="Nawigacja">
+          <div className="side-rail-group" role="group" aria-label={t('sidebar.navGroup')}>
             <button
               type="button"
               className="side-rail-btn"
-              data-tip="Strona startowa"
-              title="Strona startowa"
+              data-tip={t('sidebar.home')}
+              title={t('sidebar.home')}
               onClick={onHome}
             >
               <Home size={18} strokeWidth={1.75} />
@@ -236,8 +240,8 @@ export function AppSidebar({
             <button
               type="button"
               className="side-rail-btn"
-              data-tip="Szukaj"
-              title="Szukaj"
+              data-tip={t('sidebar.search')}
+              title={t('sidebar.search')}
               onClick={onHome}
             >
               <Search size={18} strokeWidth={1.75} />
@@ -269,7 +273,7 @@ export function AppSidebar({
 
           <div className="side-rail-sep" aria-hidden />
 
-          <div className="side-rail-group side-rail-apps" role="group" aria-label="Aplikacje">
+          <div className="side-rail-group side-rail-apps" role="group" aria-label={t('sidebar.appsGroup')}>
             {otherApps.map((app) => {
               const on = panelOpen && active?.id === app.id;
               return (
@@ -303,8 +307,14 @@ export function AppSidebar({
             <button
               type="button"
               className="side-rail-btn"
-              data-tip={settings.sidebarMode === 'auto' ? 'Zamknij panel' : 'Ukryj sidebar'}
-              title={settings.sidebarMode === 'auto' ? 'Zamknij panel' : 'Ukryj sidebar (Ctrl+B)'}
+              data-tip={
+                settings.sidebarMode === 'auto' ? t('sidebar.closePanel') : t('sidebar.hideSidebar')
+              }
+              title={
+                settings.sidebarMode === 'auto'
+                  ? t('sidebar.closePanel')
+                  : t('sidebar.hideSidebarShortcut')
+              }
               onClick={() => {
                 if (settings.sidebarMode === 'auto') {
                   closeSidePanel();
@@ -318,8 +328,8 @@ export function AppSidebar({
             <button
               type="button"
               className="side-rail-btn"
-              data-tip="Ustawienia"
-              title="Ustawienia"
+              data-tip={t('sidebar.settings')}
+              title={t('sidebar.settings')}
               onClick={() => setSettingsTab('general')}
             >
               <Settings2 size={18} strokeWidth={1.75} />
@@ -340,7 +350,7 @@ export function AppSidebar({
                 <button
                   type="button"
                   className="icon-btn sm"
-                  title="Odśwież"
+                  title={t('common.refresh')}
                   onClick={() => {
                     try {
                       views.current[active.id]?.reload();
@@ -354,7 +364,7 @@ export function AppSidebar({
                 <button
                   type="button"
                   className="icon-btn sm"
-                  title="Otwórz w karcie"
+                  title={t('sidebar.openInTab')}
                   onClick={() => onOpenTab(active.url)}
                 >
                   <ExternalLink size={14} strokeWidth={1.75} />
@@ -362,7 +372,7 @@ export function AppSidebar({
                 <button
                   type="button"
                   className="icon-btn sm"
-                  title="Zamknij panel"
+                  title={t('sidebar.closePanel')}
                   onClick={closeSidePanel}
                 >
                   <X size={14} />
@@ -377,6 +387,7 @@ export function AppSidebar({
                     key={wantsCompactSideUa(app) ? `${app.id}-compact` : app.id}
                     app={app}
                     active={panelOpen && app.id === active.id}
+                    loadingLabel={t('sidebar.loadingApp', { label: app.label })}
                     webRef={(el) => {
                       views.current[app.id] = el;
                     }}
@@ -389,8 +400,8 @@ export function AppSidebar({
               className="side-panel-resize"
               role="separator"
               aria-orientation="vertical"
-              aria-label="Zmień szerokość panelu"
-              title="Przeciągnij, żeby zmienić szerokość"
+              aria-label={t('sidebar.resizeAria')}
+              title={t('sidebar.resizeTitle')}
               onPointerDown={onResizePointerDown}
               onPointerMove={onResizePointerMove}
               onPointerUp={onResizePointerUp}

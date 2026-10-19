@@ -1,9 +1,9 @@
 import type { StateCreator } from 'zustand';
 import { DEFAULT_BANGS, type Bang } from '../lib/bangs';
+import { getDefaultBookmarkFolders } from '../lib/getDefaultBookmarkFolders';
 import {
   BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_OTHER_FOLDER_ID,
-  DEFAULT_BOOKMARK_FOLDERS,
   DEFAULT_SETTINGS,
   DEFAULT_SHORTCUTS,
   DEFAULT_SIDE_APPS,
@@ -58,7 +58,7 @@ export const createSettingsSlice: StateCreator<StoreState, [], [], SettingsSlice
   shortcuts: [...DEFAULT_SHORTCUTS],
   history: [],
   bookmarks: [],
-  bookmarkFolders: [...DEFAULT_BOOKMARK_FOLDERS],
+  bookmarkFolders: getDefaultBookmarkFolders(),
 
   patchSettings: (p) =>
     set((s) => {

@@ -1,29 +1,42 @@
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
-import { useStore } from '../../../store';
+import { useT } from '../../../i18n';
+import { useStore, type UiLocale } from '../../../store';
 import { FieldRow, SettingsGroup, Toggle } from '../SettingsControls';
 
 export function GeneralSection() {
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
+  const t = useT();
 
   return (
     <div className="settings-stack">
-      <SettingsGroup title="Aplikacja">
-        <FieldRow label="Nazwa aplikacji">
+      <SettingsGroup title={t('settings.general.app')}>
+        <FieldRow label={t('settings.general.uiLocale')} desc={t('settings.general.uiLocaleDesc')}>
+          <Select
+            aria-label={t('settings.general.uiLocale')}
+            value={settings.uiLocale || 'pl'}
+            onChange={(v) => patchSettings({ uiLocale: v as UiLocale })}
+            options={[
+              { value: 'pl', label: t('settings.general.localePl') },
+              { value: 'en', label: t('settings.general.localeEn') },
+            ]}
+          />
+        </FieldRow>
+        <FieldRow label={t('settings.general.appName')}>
           <Input
             value={settings.appName}
             onChange={(e) => patchSettings({ appName: e.target.value })}
           />
         </FieldRow>
-        <FieldRow label="Strona startowa" desc="Zostaw about:home, żeby używać wbudowanej strony startowej">
+        <FieldRow label={t('settings.general.homepage')} desc={t('settings.general.homepageDesc')}>
           <Input
             value={settings.homepage}
             onChange={(e) => patchSettings({ homepage: e.target.value })}
             placeholder="about:home"
           />
         </FieldRow>
-        <FieldRow label="Placeholder omniboxa">
+        <FieldRow label={t('settings.general.omniboxPlaceholder')}>
           <Input
             value={settings.omniboxPlaceholder}
             onChange={(e) => patchSettings({ omniboxPlaceholder: e.target.value })}
@@ -31,26 +44,29 @@ export function GeneralSection() {
         </FieldRow>
       </SettingsGroup>
 
-      <SettingsGroup title="Pobieranie">
+      <SettingsGroup title={t('settings.general.downloads')}>
         <Toggle
-          label="Zawsze pytaj, gdzie zapisać"
-          hint="Karty Tor zawsze pytają"
+          label={t('settings.general.askWhere')}
+          hint={t('settings.general.askWhereHint')}
           on={settings.downloadsAskWhere}
           onChange={(v) => patchSettings({ downloadsAskWhere: v })}
         />
-        <FieldRow label="Folder pobierania" desc="Puste = folder Pobrane systemu">
+        <FieldRow
+          label={t('settings.general.downloadsFolder')}
+          desc={t('settings.general.downloadsFolderDesc')}
+        >
           <Input
             value={settings.downloadsFolder || ''}
             onChange={(e) => patchSettings({ downloadsFolder: e.target.value })}
-            placeholder="np. C:\\Users\\…\\Downloads"
+            placeholder="e.g. C:\\Users\\…\\Downloads"
           />
         </FieldRow>
       </SettingsGroup>
 
-      <SettingsGroup title="Zachowanie">
-        <FieldRow label="Przy starcie">
+      <SettingsGroup title={t('settings.general.behavior')}>
+        <FieldRow label={t('settings.general.onStartup')}>
           <Select
-            aria-label="Przy starcie"
+            aria-label={t('settings.general.onStartup')}
             value={settings.startupMode || 'session'}
             onChange={(v) =>
               patchSettings({
@@ -58,14 +74,17 @@ export function GeneralSection() {
               })
             }
             options={[
-              { value: 'session', label: 'Otwórz poprzednie karty' },
-              { value: 'newtab', label: 'Otwórz nową kartę' },
-              { value: 'pages', label: 'Otwórz konkretne strony' },
+              { value: 'session', label: t('settings.general.startupSession') },
+              { value: 'newtab', label: t('settings.general.startupNewtab') },
+              { value: 'pages', label: t('settings.general.startupPages') },
             ]}
           />
         </FieldRow>
         {(settings.startupMode || 'session') === 'pages' && (
-          <FieldRow label="Strony startowe" desc="Jedna URL na linię">
+          <FieldRow
+            label={t('settings.general.startupPagesLabel')}
+            desc={t('settings.general.startupPagesDesc')}
+          >
             <textarea
               rows={4}
               value={settings.startupPages || ''}
@@ -75,24 +94,24 @@ export function GeneralSection() {
           </FieldRow>
         )}
         <Toggle
-          label="Nowa karta otwiera wyszukiwarkę"
+          label={t('settings.general.newTabIsSearch')}
           on={settings.newTabIsSearch}
           onChange={(v) => patchSettings({ newTabIsSearch: v })}
         />
         <Toggle
-          label="Szukanie z omniboxa w nowej karcie"
+          label={t('settings.general.openSearchInNewTab')}
           on={settings.openSearchInNewTab}
           onChange={(v) => patchSettings({ openSearchInNewTab: v })}
         />
         <Toggle
-          label="Linki zewnętrzne w aplikacji"
-          hint="Zamiast systemowej przeglądarki"
+          label={t('settings.general.openExternalInApp')}
+          hint={t('settings.general.openExternalInAppHint')}
           on={settings.openExternalInApp}
           onChange={(v) => patchSettings({ openExternalInApp: v })}
         />
         <Toggle
-          label="Obraz w obrazie przy zmianie karty"
-          hint="Gdy wychodzisz z karty z odtwarzanym wideo, włącz PiP (Alt+P lub ikona omniboxa). PiP pozostaje na poziomie systemu po ukryciu karty."
+          label={t('settings.general.autoPip')}
+          hint={t('settings.general.autoPipHint')}
           on={settings.autoPipOnTabSwitch}
           onChange={(v) => patchSettings({ autoPipOnTabSwitch: v })}
         />

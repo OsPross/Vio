@@ -1,19 +1,27 @@
 import { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
+import { useT } from '../i18n';
 import { WidgetEmpty } from './WidgetFrame';
 
 type Dl = { id: string; filename: string; state: string; savePath: string };
 
-const DEMO: Dl[] = [
-  { id: '1', filename: 'raport.pdf', state: 'completed', savePath: '' },
-  { id: '2', filename: 'zdjęcie.png', state: 'completed', savePath: '' },
-];
-
 export function DownloadsWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?: boolean }) {
-  const [items, setItems] = useState<Dl[]>(preview ? DEMO : []);
+  const t = useT();
+  const [items, setItems] = useState<Dl[]>([]);
 
   useEffect(() => {
-    if (preview) return;
+    if (preview) {
+      setItems([
+        { id: '1', filename: t('widgets.ui.downloads.demoPdf'), state: 'completed', savePath: '' },
+        {
+          id: '2',
+          filename: t('widgets.ui.downloads.demoPhoto'),
+          state: 'completed',
+          savePath: '',
+        },
+      ]);
+      return;
+    }
     let cancelled = false;
     const load = () => {
       void window.shell?.downloadsList?.().then((list) => {
@@ -38,10 +46,10 @@ export function DownloadsWidget({ size, preview }: { size: 'S' | 'M' | 'L'; prev
       cancelled = true;
       unsub?.();
     };
-  }, [size, preview]);
+  }, [size, preview, t]);
 
   if (!items.length) {
-    return <WidgetEmpty icon={Download} text="Brak pobranych plików." />;
+    return <WidgetEmpty icon={Download} text={t('widgets.ui.downloads.empty')} />;
   }
 
   return (
@@ -57,7 +65,9 @@ export function DownloadsWidget({ size, preview }: { size: 'S' | 'M' | 'L'; prev
           >
             <Download size={13} strokeWidth={1.75} />
             <span className="grow">{it.filename}</span>
-            <em className="hw-muted">{it.state === 'completed' ? 'gotowe' : it.state}</em>
+            <em className="hw-muted">
+              {it.state === 'completed' ? t('widgets.ui.downloads.completed') : it.state}
+            </em>
           </button>
         </li>
       ))}

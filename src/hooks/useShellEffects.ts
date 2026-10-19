@@ -1,5 +1,6 @@
 import { useEffect, type Dispatch, type SetStateAction } from 'react';
 import type { SaveOffer } from '../features/tabs';
+import { setUiLocale } from '../i18n/core';
 import { applyThemeToDom, type Settings } from '../store';
 
 export type UseShellEffectsArgs = {
@@ -38,6 +39,12 @@ export function useShellEffects({
     document.documentElement.dataset.reduceMotion =
       settings.perfReduceMotion || !settings.uiMotion || prefersReduce ? 'on' : 'off';
   }, [settings]);
+
+  useEffect(() => {
+    const locale = settings.uiLocale === 'en' ? 'en' : 'pl';
+    setUiLocale(locale);
+    void window.shell?.setUiLocale?.(locale);
+  }, [settings.uiLocale]);
 
   useEffect(() => {
     void window.shell?.perfBoot?.({

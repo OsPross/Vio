@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import {
   Activity,
@@ -15,6 +16,7 @@ import {
   Sparkles,
   Wrench,
 } from 'lucide-react';
+import { useT } from '../../i18n';
 import { useStore, type SettingsTab } from '../../store';
 import { isMotionOff, sectionTransition } from '../../lib/motionPresets';
 import { PasswordsPanel } from '../PasswordsPanel';
@@ -32,61 +34,138 @@ import { SidebarSection } from './sections/SidebarSection';
 
 type TabId = SettingsTab;
 
-const NAV: {
-  title: string;
-  items: { id: TabId; label: string; icon: typeof Home; hint: string }[];
-}[] = [
-  {
-    title: 'Przeglądarka',
-    items: [
-      { id: 'general', label: 'Ogólne', icon: SlidersHorizontal, hint: 'Start i zachowanie' },
-      { id: 'home', label: 'Strona startowa', icon: Home, hint: 'Nowa karta' },
-      { id: 'search', label: 'Wyszukiwanie', icon: Search, hint: 'Silniki, bangs, Tryb Tor' },
-    ],
-  },
-  {
-    title: 'Interfejs',
-    items: [
-      { id: 'look', label: 'Wygląd', icon: Sparkles, hint: 'Motywy i glass' },
-      { id: 'sidebar', label: 'Sidebar', icon: PanelLeft, hint: 'Rail i aplikacje' },
-      { id: 'shortcuts', label: 'Skróty', icon: LayoutGrid, hint: 'Ikony na home' },
-    ],
-  },
-  {
-    title: 'System',
-    items: [
-      { id: 'privacy', label: 'Prywatność', icon: Shield, hint: 'Ciasteczka i historia' },
-      { id: 'adblock', label: 'Adblock', icon: ShieldBan, hint: 'Listy, wyjątki, statystyki' },
-      { id: 'passwords', label: 'Hasła', icon: KeyRound, hint: 'Sejf i autouzupełnianie' },
-      { id: 'performance', label: 'Wydajność', icon: Gauge, hint: 'RAM, CPU, karty' },
-      { id: 'resources', label: 'Zasoby', icon: Activity, hint: 'Menedżer zadań' },
-      { id: 'advanced', label: 'Zaawansowane', icon: Wrench, hint: 'Diagnostyka' },
-    ],
-  },
-];
-
-const TITLES: Record<TabId, { title: string; desc: string }> = {
-  general: { title: 'Ogólne', desc: 'Nazwa aplikacji, strona startowa i zachowanie okna.' },
-  home: { title: 'Strona startowa', desc: 'Teksty, układ i elementy nowej karty.' },
-  search: { title: 'Wyszukiwanie', desc: 'Silniki web, prywatne, onion oraz własne bangs.' },
-  look: { title: 'Wygląd', desc: 'Motywy, akcent, glass i gęstość interfejsu.' },
-  sidebar: { title: 'Sidebar', desc: 'Rail aplikacji bocznych i szerokość panelu.' },
-  shortcuts: { title: 'Skróty', desc: 'Ikony na stronie startowej i w railu.' },
-  privacy: { title: 'Prywatność', desc: 'Ciasteczka, fingerprint i lokalna historia.' },
-  adblock: { title: 'Adblock', desc: 'Blokada reklam, listy filtrów, wyjątki i statystyki.' },
-  passwords: { title: 'Hasła', desc: 'Zaszyfrowany sejf, generator, audyt i autouzupełnianie.' },
-  performance: { title: 'Wydajność', desc: 'RAM, CPU, cache i zachowanie kart.' },
-  resources: { title: 'Zasoby', desc: 'Zużycie systemu i przeglądarki (Shift+Esc).' },
-  advanced: { title: 'Zaawansowane', desc: 'Status techniczny, skróty klawiszowe i reset.' },
-};
-
 export function SettingsPage() {
   const settings = useStore((s) => s.settings);
   const settingsTab = useStore((s) => s.settingsTab);
   const setView = useStore((s) => s.setView);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
+  const t = useT();
 
-  const head = TITLES[settingsTab] ?? TITLES.general;
+  const nav = useMemo(
+    () => [
+      {
+        title: t('settings.nav.browser'),
+        items: [
+          {
+            id: 'general' as TabId,
+            label: t('settings.nav.general'),
+            icon: SlidersHorizontal,
+            hint: t('settings.nav.generalHint'),
+          },
+          {
+            id: 'home' as TabId,
+            label: t('settings.nav.home'),
+            icon: Home,
+            hint: t('settings.nav.homeHint'),
+          },
+          {
+            id: 'search' as TabId,
+            label: t('settings.nav.search'),
+            icon: Search,
+            hint: t('settings.nav.searchHint'),
+          },
+        ],
+      },
+      {
+        title: t('settings.nav.interface'),
+        items: [
+          {
+            id: 'look' as TabId,
+            label: t('settings.nav.look'),
+            icon: Sparkles,
+            hint: t('settings.nav.lookHint'),
+          },
+          {
+            id: 'sidebar' as TabId,
+            label: t('settings.nav.sidebar'),
+            icon: PanelLeft,
+            hint: t('settings.nav.sidebarHint'),
+          },
+          {
+            id: 'shortcuts' as TabId,
+            label: t('settings.nav.shortcuts'),
+            icon: LayoutGrid,
+            hint: t('settings.nav.shortcutsHint'),
+          },
+        ],
+      },
+      {
+        title: t('settings.nav.system'),
+        items: [
+          {
+            id: 'privacy' as TabId,
+            label: t('settings.nav.privacy'),
+            icon: Shield,
+            hint: t('settings.nav.privacyHint'),
+          },
+          {
+            id: 'adblock' as TabId,
+            label: t('settings.nav.adblock'),
+            icon: ShieldBan,
+            hint: t('settings.nav.adblockHint'),
+          },
+          {
+            id: 'passwords' as TabId,
+            label: t('settings.nav.passwords'),
+            icon: KeyRound,
+            hint: t('settings.nav.passwordsHint'),
+          },
+          {
+            id: 'performance' as TabId,
+            label: t('settings.nav.performance'),
+            icon: Gauge,
+            hint: t('settings.nav.performanceHint'),
+          },
+          {
+            id: 'resources' as TabId,
+            label: t('settings.nav.resources'),
+            icon: Activity,
+            hint: t('settings.nav.resourcesHint'),
+          },
+          {
+            id: 'advanced' as TabId,
+            label: t('settings.nav.advanced'),
+            icon: Wrench,
+            hint: t('settings.nav.advancedHint'),
+          },
+        ],
+      },
+    ],
+    [t],
+  );
+
+  const titles = useMemo(
+    () =>
+      ({
+        general: { title: t('settings.titles.general'), desc: t('settings.titles.generalDesc') },
+        home: { title: t('settings.titles.home'), desc: t('settings.titles.homeDesc') },
+        search: { title: t('settings.titles.search'), desc: t('settings.titles.searchDesc') },
+        look: { title: t('settings.titles.look'), desc: t('settings.titles.lookDesc') },
+        sidebar: { title: t('settings.titles.sidebar'), desc: t('settings.titles.sidebarDesc') },
+        shortcuts: {
+          title: t('settings.titles.shortcuts'),
+          desc: t('settings.titles.shortcutsDesc'),
+        },
+        privacy: { title: t('settings.titles.privacy'), desc: t('settings.titles.privacyDesc') },
+        adblock: { title: t('settings.titles.adblock'), desc: t('settings.titles.adblockDesc') },
+        passwords: {
+          title: t('settings.titles.passwords'),
+          desc: t('settings.titles.passwordsDesc'),
+        },
+        performance: {
+          title: t('settings.titles.performance'),
+          desc: t('settings.titles.performanceDesc'),
+        },
+        resources: {
+          title: t('settings.titles.resources'),
+          desc: t('settings.titles.resourcesDesc'),
+        },
+        advanced: { title: t('settings.titles.advanced'), desc: t('settings.titles.advancedDesc') },
+      }) satisfies Record<TabId, { title: string; desc: string }>,
+    [t],
+  );
+
+  const head = titles[settingsTab] ?? titles.general;
   const motionOff = isMotionOff(settings);
   const sectionMotion = sectionTransition(motionOff);
 
@@ -95,20 +174,20 @@ export function SettingsPage() {
       <aside className="settings-nav">
         <button type="button" className="settings-back" onClick={() => setView('browser')}>
           <ArrowLeft size={16} strokeWidth={1.75} />
-          Wróć do przeglądarki
+          {t('settings.backToBrowser')}
         </button>
 
         <div className="settings-brand">
           <Monitor size={16} strokeWidth={1.75} />
           <div>
-            <strong>Ustawienia</strong>
+            <strong>{t('settings.brand')}</strong>
             <span>{settings.appName || 'Vio'}</span>
           </div>
         </div>
 
         <nav className="settings-nav-groups">
           <LayoutGroup id="settings-nav">
-            {NAV.map((group) => (
+            {nav.map((group) => (
               <div key={group.title} className="settings-nav-group">
                 <span className="settings-nav-label">{group.title}</span>
                 {group.items.map((item) => {

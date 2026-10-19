@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react';
+import { useT } from '../../../i18n';
 import { ColorPicker, Segmented } from '../../ui';
 import {
   THEMES,
@@ -10,15 +11,16 @@ import {
 import { Row, SettingsGroup, SliderRow, Toggle } from '../SettingsControls';
 
 export function AppearanceSection() {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
 
   return (
     <div className="settings-stack">
-      <SettingsGroup title="Motyw">
+      <SettingsGroup title={t('settings.look.theme')}>
         <div className="stheme-grid">
           {(Object.keys(THEMES) as ThemeId[]).map((id) => {
-            const t = THEMES[id];
+            const theme = THEMES[id];
             const on = settings.theme === id;
             return (
               <button
@@ -28,49 +30,49 @@ export function AppearanceSection() {
                 onClick={() =>
                   patchSettings({
                     theme: id,
-                    ...(settings.useThemeAccent ? { accent: t.accent } : {}),
+                    ...(settings.useThemeAccent ? { accent: theme.accent } : {}),
                   })
                 }
               >
-                <span className="stheme-win" style={{ background: t.bg, color: t.fg2 }}>
+                <span className="stheme-win" style={{ background: theme.bg, color: theme.fg2 }}>
                   {on && (
                     <span className="stheme-check">
                       <Check size={10} strokeWidth={2.5} />
                     </span>
                   )}
                   <span className="stheme-chrome">
-                    <span className="stheme-titlebar" style={{ background: t.elev }}>
+                    <span className="stheme-titlebar" style={{ background: theme.elev }}>
                       <i className="stheme-dot" />
                       <i className="stheme-dot" />
                       <i className="stheme-dot" />
                     </span>
                     <span className="stheme-body">
-                      <span className="stheme-rail" style={{ background: t.side }} />
-                      <span className="stheme-main" style={{ background: t.bg }}>
-                        <span className="stheme-omnibox" style={{ background: t.fg3 }} />
-                        <span className="stheme-content" style={{ background: t.elev }}>
-                          <i className="stheme-accent" style={{ background: t.accent }} />
+                      <span className="stheme-rail" style={{ background: theme.side }} />
+                      <span className="stheme-main" style={{ background: theme.bg }}>
+                        <span className="stheme-omnibox" style={{ background: theme.fg3 }} />
+                        <span className="stheme-content" style={{ background: theme.elev }}>
+                          <i className="stheme-accent" style={{ background: theme.accent }} />
                         </span>
                       </span>
                     </span>
                   </span>
                 </span>
-                <span className="stheme-name">{t.label}</span>
+                <span className="stheme-name">{theme.label}</span>
               </button>
             );
           })}
         </div>
         <Toggle
-          label="Akcent z motywu"
-          hint="Wyłącz, żeby ustawić własny kolor"
+          label={t('settings.look.themeAccent')}
+          hint={t('settings.look.themeAccentHint')}
           on={settings.useThemeAccent}
           onChange={(v) => {
-            const t = THEMES[settings.theme];
-            patchSettings({ useThemeAccent: v, ...(v ? { accent: t.accent } : {}) });
+            const theme = THEMES[settings.theme];
+            patchSettings({ useThemeAccent: v, ...(v ? { accent: theme.accent } : {}) });
           }}
         />
         {!settings.useThemeAccent && (
-          <Row label="Kolor akcentu">
+          <Row label={t('settings.look.accentColor')}>
             <div className="sswatches">
               {[
                 '#6b9eff',
@@ -95,43 +97,40 @@ export function AppearanceSection() {
               <ColorPicker
                 value={settings.accent}
                 onChange={(accent) => patchSettings({ accent })}
-                aria-label="Własny kolor akcentu"
+                aria-label={t('settings.look.customAccentAria')}
               />
             </div>
           </Row>
         )}
       </SettingsGroup>
 
-      <SettingsGroup title="Strony WWW">
-        <Row
-          label="Wygląd stron"
-          desc="Osobno od motywu przeglądarki — ciemny chrome nie psuje jasnych witryn"
-        >
+      <SettingsGroup title={t('settings.look.pages')}>
+        <Row label={t('settings.look.pageAppearance')} desc={t('settings.look.pageAppearanceDesc')}>
           <Segmented
             value={settings.pageColorScheme || 'system'}
             options={[
-              { id: 'system', label: 'System' },
-              { id: 'light', label: 'Jasny' },
-              { id: 'dark', label: 'Ciemny' },
+              { id: 'system', label: t('settings.look.system') },
+              { id: 'light', label: t('settings.look.light') },
+              { id: 'dark', label: t('settings.look.dark') },
             ]}
             onChange={(v) => patchSettings({ pageColorScheme: v as PageColorScheme })}
           />
         </Row>
         <Toggle
-          label="Ciemne paski przewijania na stronach"
+          label={t('settings.look.darkScrollbars')}
           on={settings.darkPageScrollbars}
           onChange={(v) => patchSettings({ darkPageScrollbars: v })}
         />
       </SettingsGroup>
 
-      <SettingsGroup title="Glass i UI">
+      <SettingsGroup title={t('settings.look.glassUi')}>
         <Toggle
-          label="Efekt glass (blur + przezroczystość)"
+          label={t('settings.look.glassEffect')}
           on={settings.uiGlass}
           onChange={(v) => patchSettings({ uiGlass: v })}
         />
         <SliderRow
-          label="Siła blur"
+          label={t('settings.look.glassBlur')}
           value={`${settings.glassBlur} px`}
           min={8}
           max={32}
@@ -140,7 +139,7 @@ export function AppearanceSection() {
           onChange={(n) => patchSettings({ glassBlur: n })}
         />
         <SliderRow
-          label="Krycie szkła"
+          label={t('settings.look.glassOpacity')}
           value={`${Math.round(settings.glassOpacity * 100)}%`}
           min={25}
           max={85}
@@ -149,16 +148,16 @@ export function AppearanceSection() {
           onChange={(n) => patchSettings({ glassOpacity: n / 100 })}
         />
         <Toggle
-          label="Płynne przejścia"
+          label={t('settings.look.uiMotion')}
           on={settings.uiMotion}
           onChange={(v) => patchSettings({ uiMotion: v })}
         />
-        <Row label="Gęstość UI">
+        <Row label={t('settings.look.uiDensity')}>
           <Segmented
             value={settings.uiDensity}
             options={[
-              { id: 'comfortable', label: 'Komfort' },
-              { id: 'compact', label: 'Zwarta' },
+              { id: 'comfortable', label: t('settings.look.uiDensityComfortable') },
+              { id: 'compact', label: t('settings.look.uiDensityCompact') },
             ]}
             onChange={(v) => patchSettings({ uiDensity: v as UiDensity })}
           />

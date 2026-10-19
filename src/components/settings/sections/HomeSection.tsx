@@ -1,6 +1,7 @@
 import { Segmented } from '../../ui';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
+import { useT } from '../../../i18n';
 import {
   migrateHomeWidgets,
   normalizeHomeWidgets,
@@ -16,25 +17,26 @@ import { FieldRow, Row, SettingsGroup, Toggle } from '../SettingsControls';
 export function HomeSection() {
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
+  const t = useT();
 
   return (
     <div className="settings-stack">
-      <SettingsGroup title="Teksty">
-        <FieldRow label="Nagłówek" desc="Puste = powitanie według godziny">
+      <SettingsGroup title={t('settings.home.texts')}>
+        <FieldRow label={t('settings.home.headline')} desc={t('settings.home.headlineDesc')}>
           <Input
             value={settings.homeHeadline}
             onChange={(e) => patchSettings({ homeHeadline: e.target.value })}
-            placeholder="np. Do roboty"
+            placeholder={t('settings.home.headlinePlaceholder')}
           />
         </FieldRow>
-        <FieldRow label="Podtytuł" desc="Puste = info o silniku">
+        <FieldRow label={t('settings.home.subline')} desc={t('settings.home.sublineDesc')}>
           <Input
             value={settings.homeSubline}
             onChange={(e) => patchSettings({ homeSubline: e.target.value })}
-            placeholder="Opcjonalnie"
+            placeholder={t('settings.home.sublinePlaceholder')}
           />
         </FieldRow>
-        <FieldRow label="Placeholder w polu szukania">
+        <FieldRow label={t('settings.home.searchPlaceholder')}>
           <Input
             value={settings.homePlaceholder}
             onChange={(e) => patchSettings({ homePlaceholder: e.target.value })}
@@ -42,109 +44,108 @@ export function HomeSection() {
         </FieldRow>
       </SettingsGroup>
 
-      <SettingsGroup title="Układ">
-        <Row label="Układ">
+      <SettingsGroup title={t('settings.home.layoutGroup')}>
+        <Row label={t('settings.home.layout')}>
           <Select
-            aria-label="Układ strony startowej"
+            aria-label={t('settings.home.layout')}
             value={settings.homeLayout}
             onChange={(v) => patchSettings({ homeLayout: v as HomeLayout })}
             options={[
-              { value: 'dashboard', label: 'Wyśrodkowany' },
-              { value: 'minimal', label: 'Tylko szukaj' },
-              { value: 'stack', label: 'Do lewej' },
-              { value: 'split', label: 'Dwie kolumny' },
+              { value: 'dashboard', label: t('settings.home.layoutDashboard') },
+              { value: 'minimal', label: t('settings.home.layoutMinimal') },
+              { value: 'stack', label: t('settings.home.layoutStack') },
+              { value: 'split', label: t('settings.home.layoutSplit') },
             ]}
           />
         </Row>
-        <Row label="Wyrównanie">
+        <Row label={t('settings.home.align')}>
           <Segmented
             value={settings.homeAlign}
             options={[
-              { id: 'left', label: 'Lewa' },
-              { id: 'center', label: 'Środek' },
+              { id: 'left', label: t('settings.home.alignLeft') },
+              { id: 'center', label: t('settings.home.alignCenter') },
             ]}
             onChange={(v) => patchSettings({ homeAlign: v as HomeAlign })}
           />
         </Row>
-        <Row label="Gęstość">
+        <Row label={t('settings.home.density')}>
           <Segmented
             value={settings.homeDensity}
             options={[
-              { id: 'compact', label: 'Kompaktowa' },
-              { id: 'comfortable', label: 'Normalna' },
-              { id: 'spacious', label: 'Przestronna' },
+              { id: 'compact', label: t('settings.home.densityCompact') },
+              { id: 'comfortable', label: t('settings.home.densityComfortable') },
+              { id: 'spacious', label: t('settings.home.densitySpacious') },
             ]}
             onChange={(v) => patchSettings({ homeDensity: v as HomeDensity })}
           />
         </Row>
-        <Row label="Styl skrótów">
+        <Row label={t('settings.home.appsStyle')}>
           <Segmented
             value={settings.homeAppsStyle}
             options={[
-              { id: 'icons', label: 'Ikony' },
-              { id: 'list', label: 'Lista' },
+              { id: 'icons', label: t('settings.home.appsIcons') },
+              { id: 'list', label: t('settings.home.appsList') },
             ]}
             onChange={(v) => patchSettings({ homeAppsStyle: v as HomeAppsStyle })}
           />
         </Row>
-        <Row label="Tło home">
+        <Row label={t('settings.home.bgHome')}>
           <Select
-            aria-label="Tło strony startowej"
+            aria-label={t('settings.home.bgHome')}
             value={settings.bgStyle}
             onChange={(v) => patchSettings({ bgStyle: v as BgStyle })}
             options={[
-              { value: 'solid', label: 'Jednolite' },
-              { value: 'soft', label: 'Delikatny gradient' },
-              { value: 'panel', label: 'Panel' },
-              { value: 'mesh', label: 'Mesh (głębia)' },
-              { value: 'vignette', label: 'Winieta' },
+              { value: 'solid', label: t('settings.home.bgSolid') },
+              { value: 'soft', label: t('settings.home.bgSoft') },
+              { value: 'panel', label: t('settings.home.bgPanel') },
+              { value: 'mesh', label: t('settings.home.bgMesh') },
+              { value: 'vignette', label: t('settings.home.bgVignette') },
             ]}
           />
         </Row>
       </SettingsGroup>
 
-      <SettingsGroup title="Elementy">
+      <SettingsGroup title={t('settings.home.elements')}>
         <Toggle
-          label="Powitanie (gdy brak własnego nagłówka)"
+          label={t('settings.home.showGreeting')}
           on={settings.homeShowGreeting}
           onChange={(v) => patchSettings({ homeShowGreeting: v })}
         />
         <Toggle
-          label="Zegar"
+          label={t('settings.home.showClock')}
           on={settings.homeShowClock}
           onChange={(v) => patchSettings({ homeShowClock: v })}
         />
         <Toggle
-          label="Data"
+          label={t('settings.home.showDate')}
           on={settings.homeShowDate}
           onChange={(v) => patchSettings({ homeShowDate: v })}
         />
         <Toggle
-          label="Zegar 24h"
+          label={t('settings.home.clock24h')}
           on={settings.clock24h}
           onChange={(v) => patchSettings({ clock24h: v })}
         />
         <Toggle
-          label="Nazwa aplikacji"
+          label={t('settings.home.showBrand')}
           on={settings.homeShowBrand}
           onChange={(v) => patchSettings({ homeShowBrand: v })}
         />
         <Toggle
-          label="Nazwa silnika"
+          label={t('settings.home.showEngine')}
           on={settings.homeShowEngine}
           onChange={(v) => patchSettings({ homeShowEngine: v })}
         />
         <Toggle
-          label="Skróty / aplikacje"
+          label={t('settings.home.showApps')}
           on={settings.homeShowApps}
           onChange={(v) => patchSettings({ homeShowApps: v })}
         />
         <p className="muted" style={{ fontSize: 12, margin: '4px 0 8px' }}>
-          Ostatnie / notatki / zasoby — dodaj widżet z FAB na stronie startowej (lub
-          poniżej).
+          {t('settings.home.widgetsHint')}
         </p>
         <Toggle
-          label="Widżet: ostatnio odwiedzone"
+          label={t('settings.home.widgetRecent')}
           on={settings.homeWidgets.some((w) => w.type === 'recent')}
           onChange={(v) => {
             const cur = settings.homeWidgets.length
@@ -172,7 +173,7 @@ export function HomeSection() {
           }}
         />
         <Toggle
-          label="Widżet: notatki"
+          label={t('settings.home.widgetNotes')}
           on={settings.homeWidgets.some((w) => w.type === 'notes')}
           onChange={(v) => {
             const cur = settings.homeWidgets.length
@@ -200,8 +201,8 @@ export function HomeSection() {
           }}
         />
         <Toggle
-          label="Widżet: zasoby systemu"
-          hint="CPU / RAM — próbkowanie tylko gdy widoczny"
+          label={t('settings.home.widgetResources')}
+          hint={t('settings.home.widgetResourcesHint')}
           on={settings.homeWidgets.some((w) => w.type === 'resources')}
           onChange={(v) => {
             const cur = settings.homeWidgets.length
@@ -229,7 +230,7 @@ export function HomeSection() {
           }}
         />
         <Toggle
-          label="Bangs w podpowiedziach (!yt…)"
+          label={t('settings.home.widgetBangs')}
           on={settings.homeShowBangs}
           onChange={(v) => patchSettings({ homeShowBangs: v, suggestBangs: v })}
         />

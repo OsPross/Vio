@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
+import { useT } from '../../../i18n';
 import { useStore } from '../../../store';
 import {
   CompactToggle,
@@ -25,34 +26,44 @@ type BuiltinRow = {
   enabled: boolean;
 };
 
-/** Human labels + groups for built-in allowlist (id → meta). */
-const BUILTIN_META: Record<string, { label: string; group: string }> = {
-  'consent.google.com': { label: 'Zgoda cookies (Google)', group: 'Google i YouTube' },
-  'consent.youtube.com': { label: 'Zgoda cookies (YouTube)', group: 'Google i YouTube' },
-  'accounts.google.com': { label: 'Logowanie Google', group: 'Google i YouTube' },
-  'accounts.youtube.com': { label: 'Logowanie YouTube', group: 'Google i YouTube' },
-  'myaccount.google.com': { label: 'Konto Google', group: 'Google i YouTube' },
-  '*.gstatic.com': { label: 'Zasoby Google (gstatic)', group: 'Google i YouTube' },
-  '*.googleapis.com': { label: 'API Google', group: 'Google i YouTube' },
-  'login.microsoftonline.com': { label: 'Logowanie Microsoft 365', group: 'Kontrola dostępu' },
-  'login.live.com': { label: 'Logowanie Microsoft', group: 'Kontrola dostępu' },
-  'appleid.apple.com': { label: 'Apple ID', group: 'Kontrola dostępu' },
-  'github.com/login': { label: 'Logowanie GitHub', group: 'Kontrola dostępu' },
-  'challenges.cloudflare.com': { label: 'Weryfikacja Cloudflare', group: 'Captcha i boty' },
-  'hcaptcha.com': { label: 'hCaptcha', group: 'Captcha i boty' },
-  '*.recaptcha.net': { label: 'reCAPTCHA (recaptcha.net)', group: 'Captcha i boty' },
-  'google.com/recaptcha': { label: 'reCAPTCHA (Google)', group: 'Captcha i boty' },
-  '*.paypal.com': { label: 'PayPal', group: 'Płatności' },
-  '*.stripe.com': { label: 'Stripe', group: 'Płatności' },
-  '*.przelewy24.pl': { label: 'Przelewy24', group: 'Płatności' },
-  '*.payu.com': { label: 'PayU', group: 'Płatności' },
-  '*.blik.com': { label: 'BLIK', group: 'Płatności' },
+type BuiltinGroupId = 'google' | 'access' | 'captcha' | 'payments' | 'other';
+
+/** Built-in allowlist meta: i18n label key (or brand string) + stable group id. */
+const BUILTIN_META: Record<string, { labelKey?: string; brand?: string; group: BuiltinGroupId }> = {
+  'consent.google.com': { labelKey: 'settings.adblock.bConsentGoogle', group: 'google' },
+  'consent.youtube.com': { labelKey: 'settings.adblock.bConsentYoutube', group: 'google' },
+  'accounts.google.com': { labelKey: 'settings.adblock.bLoginGoogle', group: 'google' },
+  'accounts.youtube.com': { labelKey: 'settings.adblock.bLoginYoutube', group: 'google' },
+  'myaccount.google.com': { labelKey: 'settings.adblock.bAccountGoogle', group: 'google' },
+  '*.gstatic.com': { labelKey: 'settings.adblock.bGstatic', group: 'google' },
+  '*.googleapis.com': { labelKey: 'settings.adblock.bGoogleApis', group: 'google' },
+  'login.microsoftonline.com': { labelKey: 'settings.adblock.bLoginMs365', group: 'access' },
+  'login.live.com': { labelKey: 'settings.adblock.bLoginMicrosoft', group: 'access' },
+  'appleid.apple.com': { brand: 'Apple ID', group: 'access' },
+  'github.com/login': { labelKey: 'settings.adblock.bLoginGithub', group: 'access' },
+  'challenges.cloudflare.com': { labelKey: 'settings.adblock.bCloudflare', group: 'captcha' },
+  'hcaptcha.com': { brand: 'hCaptcha', group: 'captcha' },
+  '*.recaptcha.net': { brand: 'reCAPTCHA (recaptcha.net)', group: 'captcha' },
+  'google.com/recaptcha': { brand: 'reCAPTCHA (Google)', group: 'captcha' },
+  '*.paypal.com': { brand: 'PayPal', group: 'payments' },
+  '*.stripe.com': { brand: 'Stripe', group: 'payments' },
+  '*.przelewy24.pl': { brand: 'Przelewy24', group: 'payments' },
+  '*.payu.com': { brand: 'PayU', group: 'payments' },
+  '*.blik.com': { brand: 'BLIK', group: 'payments' },
 };
 
-const GROUP_ORDER = ['Google i YouTube', 'Kontrola dostępu', 'Captcha i boty', 'Płatności', 'Inne'];
+const GROUP_ORDER: BuiltinGroupId[] = ['google', 'access', 'captcha', 'payments', 'other'];
 
-function formatUpdated(at: number | null) {
-  if (!at) return 'brak lokalnej kopii';
+const GROUP_KEYS: Record<BuiltinGroupId, string> = {
+  google: 'settings.adblock.groupGoogle',
+  access: 'settings.adblock.groupAccess',
+  captcha: 'settings.adblock.groupCaptcha',
+  payments: 'settings.adblock.groupPayments',
+  other: 'settings.adblock.groupOther',
+};
+
+function formatUpdated(at: number | null, noLocal: string) {
+  if (!at) return noLocal;
   try {
     return new Date(at).toLocaleString('pl-PL', {
       dateStyle: 'short',
@@ -70,6 +81,7 @@ function builtinDetail(b: BuiltinRow): string {
 export function AdblockSection() {
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
+  const t = useT();
 
   const [lists, setLists] = useState<ListRow[]>([]);
   const [builtins, setBuiltins] = useState<BuiltinRow[]>([]);
@@ -136,18 +148,19 @@ export function AdblockSection() {
   };
 
   const builtinGroups = useMemo(() => {
-    const map = new Map<string, BuiltinRow[]>();
+    const map = new Map<BuiltinGroupId, BuiltinRow[]>();
     for (const b of builtins) {
-      const group = BUILTIN_META[b.id]?.group ?? 'Inne';
+      const group = BUILTIN_META[b.id]?.group ?? 'other';
       const list = map.get(group) ?? [];
       list.push(b);
       map.set(group, list);
     }
     return GROUP_ORDER.filter((g) => map.has(g)).map((g) => ({
-      name: g,
+      id: g,
+      name: t(GROUP_KEYS[g]),
       items: map.get(g)!,
     }));
-  }, [builtins]);
+  }, [builtins, t]);
 
   const builtinsOn = builtins.filter((b) => b.enabled).length;
   const customCount = settings.adblockExceptions?.length ?? 0;
@@ -155,22 +168,19 @@ export function AdblockSection() {
 
   return (
     <div className="settings-stack">
-      <SettingsGroup title="Blokada reklam">
+      <SettingsGroup title={t('settings.adblock.blocking')}>
         <Toggle
-          label="Włącz adblock"
-          hint="Listy EasyList, EasyPrivacy, uBlock i Peter Lowe"
+          label={t('settings.adblock.enable')}
+          hint={t('settings.adblock.enableHint')}
           on={settings.adblockEnabled}
           onChange={(v) => {
             patchSettings({ adblockEnabled: v });
             pushEngine({ enabled: v });
           }}
         />
-        <Row
-          label="Poziom"
-          desc="Standardowy omija first-party. Ścisły stosuje też jawne filtry tej samej domeny."
-        >
+        <Row label={t('settings.adblock.level')} desc={t('settings.adblock.levelDesc')}>
           <Select
-            aria-label="Poziom adblocka"
+            aria-label={t('settings.adblock.level')}
             value={settings.adblockLevel || 'standard'}
             onChange={(v) => {
               const level = v as 'standard' | 'strict';
@@ -178,13 +188,13 @@ export function AdblockSection() {
               pushEngine({ level });
             }}
             options={[
-              { value: 'standard', label: 'Standardowy' },
-              { value: 'strict', label: 'Ścisły' },
+              { value: 'standard', label: t('settings.adblock.levelStandard') },
+              { value: 'strict', label: t('settings.adblock.levelStrict') },
             ]}
           />
         </Row>
         <Toggle
-          label="Blokuj żądania sieciowe"
+          label={t('settings.adblock.networkBlock')}
           on={settings.adblockNetwork}
           onChange={(v) => {
             patchSettings({ adblockNetwork: v });
@@ -192,7 +202,7 @@ export function AdblockSection() {
           }}
         />
         <Toggle
-          label="Blokuj trackery"
+          label={t('settings.adblock.trackers')}
           on={settings.adblockTrackers}
           onChange={(v) => {
             patchSettings({ adblockTrackers: v });
@@ -200,8 +210,8 @@ export function AdblockSection() {
           }}
         />
         <Toggle
-          label="Filtry kosmetyczne"
-          hint="Ukrywa elementy reklamowe na stronie"
+          label={t('settings.adblock.cosmetic')}
+          hint={t('settings.adblock.cosmeticHint')}
           on={settings.adblockCosmetic}
           onChange={(v) => {
             patchSettings({ adblockCosmetic: v });
@@ -209,7 +219,7 @@ export function AdblockSection() {
           }}
         />
         <Toggle
-          label="Aktualizuj listy raz dziennie"
+          label={t('settings.adblock.updateDaily')}
           on={settings.adblockUpdateLists}
           onChange={(v) => {
             patchSettings({ adblockUpdateLists: v });
@@ -218,13 +228,13 @@ export function AdblockSection() {
         />
       </SettingsGroup>
 
-      <SettingsGroup title="Listy filtrów">
+      <SettingsGroup title={t('settings.adblock.lists')}>
         {lists.length === 0 ? (
-          <p className="snote">Brak danych o listach — silnik jeszcze się ładuje.</p>
+          <p className="snote">{t('settings.adblock.listsLoading')}</p>
         ) : (
           <SettingsDisclosure
-            title="Aktywne listy"
-            summary="Włącz lub wyłącz źródła filtrów"
+            title={t('settings.adblock.activeLists')}
+            summary={t('settings.adblock.activeListsSummary')}
             badge={`${listsOn}/${lists.length}`}
             defaultOpen={lists.length <= 4}
           >
@@ -233,7 +243,9 @@ export function AdblockSection() {
                 <CompactToggle
                   key={l.id}
                   label={l.name}
-                  detail={`Aktualizacja: ${formatUpdated(l.updatedAt)}`}
+                  detail={t('settings.adblock.listUpdated', {
+                    date: formatUpdated(l.updatedAt, t('settings.adblock.noLocalCopy')),
+                  })}
                   on={settings.adblockListsEnabled?.[l.id] !== false}
                   onChange={(v) => {
                     const listsEnabled = { ...settings.adblockListsEnabled, [l.id]: v };
@@ -245,7 +257,7 @@ export function AdblockSection() {
             </div>
           </SettingsDisclosure>
         )}
-        <Row label="Pobierz listy teraz">
+        <Row label={t('settings.adblock.fetchListsNow')}>
           <button
             type="button"
             className="sbtn"
@@ -258,34 +270,35 @@ export function AdblockSection() {
                 .finally(() => setUpdating(false));
             }}
           >
-            {updating ? 'Aktualizacja…' : 'Aktualizuj'}
+            {updating ? t('settings.adblock.updating') : t('settings.adblock.update')}
           </button>
         </Row>
       </SettingsGroup>
 
-      <SettingsGroup title="Wyjątki">
-        <p className="snote">
-          Te domeny nie są blokowane przez adblock — logowanie, captcha i płatności działają
-          normalnie. Ochrona prywatności (tarcza) działa osobno.
-        </p>
+      <SettingsGroup title={t('settings.adblock.exceptions')}>
+        <p className="snote">{t('settings.adblock.exceptionsHelp')}</p>
 
         <SettingsDisclosure
-          title="Domyślne wyjątki"
-          summary="Logowanie, captcha, płatności — możesz wyłączyć pojedynczo"
+          title={t('settings.adblock.defaultExceptions')}
+          summary={t('settings.adblock.defaultExceptionsSummary')}
           badge={builtins.length ? `${builtinsOn}/${builtins.length}` : '…'}
           defaultOpen={false}
         >
           {!builtins.length ? (
-            <p className="snote">Załaduj silnik, aby zobaczyć listę domyślną.</p>
+            <p className="snote">{t('settings.adblock.builtinsLoading')}</p>
           ) : (
             builtinGroups.map((g) => (
-              <div key={g.name} className="sdense-group">
+              <div key={g.id} className="sdense-group">
                 <span className="sdense-group-label">{g.name}</span>
                 <div className="sdense">
                   {g.items.map((b) => (
                     <CompactToggle
                       key={b.id}
-                      label={BUILTIN_META[b.id]?.label ?? b.id}
+                      label={
+                        BUILTIN_META[b.id]?.labelKey
+                          ? t(BUILTIN_META[b.id]!.labelKey!)
+                          : (BUILTIN_META[b.id]?.brand ?? b.id)
+                      }
                       detail={builtinDetail(b)}
                       on={b.enabled}
                       onChange={(v) => {
@@ -305,8 +318,8 @@ export function AdblockSection() {
         </SettingsDisclosure>
 
         <SettingsDisclosure
-          title="Twoje wyjątki"
-          summary="Domeny, które sam dodałeś"
+          title={t('settings.adblock.yourExceptions')}
+          summary={t('settings.adblock.yourExceptionsSummary')}
           badge={customCount}
           defaultOpen={customCount > 0 && customCount <= 8}
         >
@@ -317,8 +330,8 @@ export function AdblockSection() {
                 <button
                   type="button"
                   className="icon-btn sm"
-                  title="Usuń"
-                  aria-label={`Usuń wyjątek ${d}`}
+                  title={t('common.remove')}
+                  aria-label={t('settings.privacy.removeExceptionAria', { domain: d })}
                   onClick={() => {
                     const next = settings.adblockExceptions.filter((x) => x !== d);
                     patchSettings({ adblockExceptions: next });
@@ -330,14 +343,14 @@ export function AdblockSection() {
               </div>
             ))}
             {!customCount ? (
-              <p className="snote">Brak własnych wyjątków — dodaj domenę poniżej.</p>
+              <p className="snote">{t('settings.adblock.noCustomExceptions')}</p>
             ) : null}
           </div>
           <div className="sfold-footer">
             <Input
               value={exceptionDraft}
               onChange={(e) => setExceptionDraft(e.target.value)}
-              placeholder="example.com lub *.cdn.example.com"
+              placeholder={t('settings.adblock.exceptionPlaceholder')}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
@@ -346,20 +359,20 @@ export function AdblockSection() {
               }}
             />
             <button type="button" className="sbtn" onClick={addException}>
-              Dodaj
+              {t('common.add')}
             </button>
           </div>
         </SettingsDisclosure>
       </SettingsGroup>
 
-      <SettingsGroup title="Statystyki">
-        <Row label="Zablokowane dziś">
+      <SettingsGroup title={t('settings.adblock.stats')}>
+        <Row label={t('settings.adblock.blockedToday')}>
           <span className="sr-value">{blockedToday}</span>
         </Row>
-        <Row label="Zablokowane łącznie">
+        <Row label={t('settings.adblock.blockedTotal')}>
           <span className="sr-value">{blockedCount}</span>
         </Row>
-        <Row label="Wyczyść statystyki">
+        <Row label={t('settings.adblock.clearStats')}>
           <button
             type="button"
             className="sbtn danger-text"
@@ -373,15 +386,15 @@ export function AdblockSection() {
               });
             }}
           >
-            Wyczyść
+            {t('common.clear')}
           </button>
         </Row>
       </SettingsGroup>
 
-      <SettingsGroup title="Zaawansowane">
+      <SettingsGroup title={t('settings.adblock.advanced')}>
         <SettingsDisclosure
-          title="Własne reguły filtrów"
-          summary="Składnia EasyList — jedna reguła na linię"
+          title={t('settings.adblock.customRules')}
+          summary={t('settings.adblock.customRulesSummary')}
           defaultOpen={Boolean(settings.adblockCustomRules?.trim())}
         >
           <div className="sfold-pad">

@@ -1,13 +1,14 @@
 import type { CSSProperties } from 'react';
 import type { BgStyle } from '../../../store';
 import { homeBgCssUrl } from '../../../lib/homeBg';
+import { useT } from '../../../i18n';
 
-const LABELS: Record<string, string> = {
-  soft: 'Miękkie',
-  vignette: 'Głębia',
-  mesh: 'Warstwy',
-  solid: 'Jednolite',
-  custom: 'Własny obraz',
+const LABEL_KEYS: Record<string, string> = {
+  soft: 'home.personalize.bgSoft',
+  vignette: 'home.personalize.bgVignette',
+  mesh: 'home.personalize.bgMesh',
+  solid: 'home.personalize.bgSolid',
+  custom: 'home.personalize.bgCustom',
 };
 
 export function BgStyleCard({
@@ -21,6 +22,7 @@ export function BgStyleCard({
   onSelect: () => void;
   imageUrl?: string | null;
 }) {
+  const t = useT();
   const cssUrl = id === 'custom' ? homeBgCssUrl(imageUrl) : null;
   return (
     <button
@@ -37,7 +39,7 @@ export function BgStyleCard({
             : undefined
         }
       />
-      <span className="pz-bg-label">{LABELS[id]}</span>
+      <span className="pz-bg-label">{t(LABEL_KEYS[id])}</span>
     </button>
   );
 }

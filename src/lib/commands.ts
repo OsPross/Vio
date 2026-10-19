@@ -23,6 +23,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
+import { t, type TParams } from '../i18n/core';
 import {
   BOOKMARKS_URL,
   DOWNLOADS_URL,
@@ -45,7 +46,10 @@ export type CommandContext = {
 
 export type CommandDef = {
   id: string;
-  title: string;
+  titleKey?: string;
+  titleParams?: TParams;
+  /** Fallback when titleKey is missing (palette help row only). */
+  title?: string;
   keywords?: string[];
   shortcut?: string;
   icon: LucideIcon;
@@ -81,11 +85,16 @@ export function bindCommandHost(h: Host) {
   host = h;
 }
 
+export function getCommandTitle(cmd: CommandDef): string {
+  if (cmd.titleKey) return t(cmd.titleKey, cmd.titleParams);
+  return cmd.title ?? cmd.id;
+}
+
 export function getCommands(): CommandDef[] {
   return [
     {
       id: 'new-tab',
-      title: 'Nowa karta',
+      titleKey: 'commands.newTab',
       keywords: ['new', 'tab', 'nowa'],
       shortcut: 'Ctrl+T',
       icon: Plus,
@@ -94,7 +103,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'new-tor',
-      title: 'Nowa karta Tor',
+      titleKey: 'commands.newTor',
       keywords: ['tor', 'onion'],
       shortcut: 'Ctrl+Shift+N',
       icon: Sparkles,
@@ -103,7 +112,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'close-tab',
-      title: 'Zamknij kartę',
+      titleKey: 'commands.closeTab',
       shortcut: 'Ctrl+W',
       icon: Minus,
       group: 'command',
@@ -111,7 +120,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'reopen-tab',
-      title: 'Otwórz ponownie zamkniętą kartę',
+      titleKey: 'commands.reopenTab',
       shortcut: 'Ctrl+Shift+T',
       icon: RefreshCw,
       group: 'command',
@@ -120,7 +129,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'pin-tab',
-      title: 'Przypnij / odepnij kartę',
+      titleKey: 'commands.pinTab',
       icon: LayoutTemplate,
       group: 'command',
       when: (c) => !c.tor,
@@ -128,7 +137,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'dup-tab',
-      title: 'Duplikuj kartę',
+      titleKey: 'commands.dupTab',
       icon: ClipboardList,
       group: 'command',
       when: (c) => !c.tor,
@@ -136,7 +145,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'mute-tab',
-      title: 'Wycisz / włącz dźwięk karty',
+      titleKey: 'commands.muteTab',
       keywords: ['mute', 'wycisz', 'audio'],
       icon: EyeOff,
       group: 'command',
@@ -144,7 +153,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'new-identity',
-      title: 'Nowa tożsamość Tor',
+      titleKey: 'commands.newIdentity',
       keywords: ['newnym', 'tożsamość', 'identity'],
       shortcut: 'Ctrl+Shift+U',
       icon: Sparkles,
@@ -154,7 +163,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'downloads',
-      title: 'Pobrania',
+      titleKey: 'commands.downloads',
       shortcut: 'Ctrl+J',
       icon: Download,
       group: 'command',
@@ -163,7 +172,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'history',
-      title: 'Historia',
+      titleKey: 'commands.history',
       shortcut: 'Ctrl+H',
       icon: History,
       group: 'command',
@@ -172,7 +181,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'bookmarks',
-      title: 'Zakładki',
+      titleKey: 'commands.bookmarks',
       shortcut: 'Ctrl+Shift+O',
       icon: Star,
       group: 'command',
@@ -181,7 +190,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'extensions',
-      title: 'Rozszerzenia',
+      titleKey: 'commands.extensions',
       icon: Puzzle,
       group: 'command',
       when: (c) => !c.tor,
@@ -189,7 +198,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'task-mgr',
-      title: 'Menedżer zadań',
+      titleKey: 'commands.taskMgr',
       shortcut: 'Shift+Esc',
       icon: EyeOff,
       group: 'command',
@@ -197,7 +206,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'passwords',
-      title: 'Menedżer haseł',
+      titleKey: 'commands.passwords',
       icon: KeyRound,
       group: 'command',
       when: (c) => !c.tor,
@@ -205,7 +214,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'settings',
-      title: 'Ustawienia',
+      titleKey: 'commands.settings',
       shortcut: 'Ctrl+,',
       icon: Settings2,
       group: 'settings',
@@ -213,21 +222,21 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'settings-privacy',
-      title: 'Ustawienia: Prywatność',
+      titleKey: 'commands.settingsPrivacy',
       icon: Shield,
       group: 'settings',
       run: () => host?.setSettingsTab('privacy'),
     },
     {
       id: 'settings-search',
-      title: 'Ustawienia: Wyszukiwanie',
+      titleKey: 'commands.settingsSearch',
       icon: Search,
       group: 'settings',
       run: () => host?.setSettingsTab('search'),
     },
     {
       id: 'toggle-sidebar',
-      title: 'Pokaż / ukryj sidebar',
+      titleKey: 'commands.toggleSidebar',
       shortcut: 'Ctrl+B',
       icon: PanelLeft,
       group: 'command',
@@ -235,42 +244,42 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'zoom-in',
-      title: 'Powiększ',
+      titleKey: 'commands.zoomIn',
       icon: ZoomIn,
       group: 'command',
       run: () => host?.zoom(0.1),
     },
     {
       id: 'zoom-out',
-      title: 'Pomniejsz',
+      titleKey: 'commands.zoomOut',
       icon: ZoomOut,
       group: 'command',
       run: () => host?.zoom(-0.1),
     },
     {
       id: 'print',
-      title: 'Drukuj',
+      titleKey: 'commands.print',
       icon: Printer,
       group: 'command',
       run: () => host?.print(),
     },
     {
       id: 'privacy-strict',
-      title: 'Preset prywatności: Strict',
+      titleKey: 'commands.privacyStrict',
       icon: Shield,
       group: 'command',
       run: () => host?.patchSettings({ privacyPreset: 'strict' }),
     },
     {
       id: 'privacy-standard',
-      title: 'Preset prywatności: Standard',
+      titleKey: 'commands.privacyStandard',
       icon: Shield,
       group: 'command',
       run: () => host?.patchSettings({ privacyPreset: 'standard' }),
     },
     {
       id: 'forget-site',
-      title: 'Zapomnij tę stronę',
+      titleKey: 'commands.forgetSite',
       icon: Trash2,
       group: 'command',
       when: (c) => !c.tor && !!c.activeUrl && /^https?:/i.test(c.activeUrl),
@@ -278,7 +287,7 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'disable-shield',
-      title: 'Wyłącz ochronę dla tej strony',
+      titleKey: 'commands.disableShield',
       icon: ShieldOff,
       group: 'command',
       when: (c) => !c.tor && !!c.activeUrl && /^https?:/i.test(c.activeUrl),
@@ -299,21 +308,22 @@ export function getCommands(): CommandDef[] {
     },
     {
       id: 'clear-data',
-      title: 'Wyczyść dane przeglądania (cache)',
+      titleKey: 'commands.clearData',
       icon: Trash2,
       group: 'command',
       run: () => host?.clearData(),
     },
     {
       id: 'home',
-      title: 'Strona startowa',
+      titleKey: 'commands.home',
       icon: LayoutTemplate,
       group: 'command',
       run: () => host?.navigate(HOME_URL),
     },
-    ...Object.entries(THEMES).map(([id, t]) => ({
+    ...Object.entries(THEMES).map(([id, theme]) => ({
       id: `theme-${id}`,
-      title: `Motyw: ${t.label}`,
+      titleKey: 'commands.theme',
+      titleParams: { name: theme.label },
       keywords: ['theme', 'motyw', id],
       icon: Palette,
       group: 'theme' as const,

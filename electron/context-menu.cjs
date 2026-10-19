@@ -5,6 +5,7 @@
 const { Menu, clipboard, nativeImage, dialog, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { t } = require('./lib/locale.cjs');
 
 const CTX_LOG = process.env.DJXXR_CTX_LOG !== '0';
 
@@ -109,14 +110,14 @@ function attachChromeEditMenu(wc) {
     const template = [];
     if (editable) {
       template.push(
-        { role: 'cut', label: 'Wytnij', enabled: hasSelection },
-        { role: 'copy', label: 'Kopiuj', enabled: hasSelection },
-        { role: 'paste', label: 'Wklej' },
+        { role: 'cut', label: t('menu.cut'), enabled: hasSelection },
+        { role: 'copy', label: t('menu.copy'), enabled: hasSelection },
+        { role: 'paste', label: t('menu.paste') },
         { type: 'separator' },
-        { role: 'selectAll', label: 'Zaznacz wszystko' },
+        { role: 'selectAll', label: t('menu.selectAll') },
       );
     } else if (hasSelection) {
-      template.push({ role: 'copy', label: 'Kopiuj' });
+      template.push({ role: 'copy', label: t('menu.copy') });
     }
     if (params.dictionarySuggestions?.length) {
       template.push({ type: 'separator' });
@@ -176,34 +177,34 @@ function showGuestContextMenu(wc, params, deps) {
   if (hasLink) {
     template.push(
       {
-        label: 'Otwórz link w nowej karcie',
+        label: t('menu.openLinkNewTab'),
         click: () => openSame(params.linkURL, { background: false }),
       },
       {
-        label: 'Otwórz link w karcie w tle',
+        label: t('menu.openLinkBackground'),
         click: () => openSame(params.linkURL, { background: true }),
       },
       {
-        label: 'Otwórz link w nowym oknie',
+        label: t('menu.openLinkNewWindow'),
         click: () => deps.askRenderer('open-window', { url: params.linkURL, tor, private: priv }),
       },
       {
-        label: 'Otwórz link w oknie prywatnym',
+        label: t('menu.openLinkPrivate'),
         enabled: !tor && !priv,
         click: () => deps.openUrl(params.linkURL, { private: true }),
       },
       {
-        label: 'Otwórz link w Torze',
+        label: t('menu.openLinkTor'),
         enabled: !tor,
         click: () => deps.openUrl(params.linkURL, { tor: true }),
       },
       { type: 'separator' },
       {
-        label: 'Kopiuj adres linku',
+        label: t('menu.copyLinkAddress'),
         click: () => clipboard.writeText(params.linkURL),
       },
       {
-        label: 'Zapisz link jako…',
+        label: t('menu.saveLinkAs'),
         click: () => {
           try {
             wc.session.downloadURL(params.linkURL);
@@ -221,11 +222,11 @@ function showGuestContextMenu(wc, params, deps) {
     const imgUrl = params.srcURL;
     template.push(
       {
-        label: 'Otwórz obraz w nowej karcie',
+        label: t('menu.openImageNewTab'),
         click: () => openSame(imgUrl),
       },
       {
-        label: 'Zapisz obraz jako…',
+        label: t('menu.saveImageAs'),
         click: () => {
           try {
             // Same session/partition as this guest (Tor-safe)
@@ -236,7 +237,7 @@ function showGuestContextMenu(wc, params, deps) {
         },
       },
       {
-        label: 'Kopiuj obraz',
+        label: t('menu.copyImage'),
         click: () => {
           try {
             wc.copyImageAt(params.x, params.y);
@@ -246,11 +247,11 @@ function showGuestContextMenu(wc, params, deps) {
         },
       },
       {
-        label: 'Kopiuj adres obrazu',
+        label: t('menu.copyImageAddress'),
         click: () => clipboard.writeText(imgUrl),
       },
       {
-        label: 'Szukaj obrazu w Google Lens',
+        label: t('menu.searchImageGoogleLens'),
         enabled: !tor && /^https?:/i.test(imgUrl),
         click: () => {
           const lens = `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(imgUrl)}`;
@@ -266,7 +267,7 @@ function showGuestContextMenu(wc, params, deps) {
     const mediaUrl = params.srcURL || '';
     template.push(
       {
-        label: 'Odtwórz / Pauza',
+        label: t('menu.mediaPlayPause'),
         click: () => {
           wc
             .executeJavaScript(
@@ -277,7 +278,7 @@ function showGuestContextMenu(wc, params, deps) {
         },
       },
       {
-        label: 'Wycisz / Włącz dźwięk',
+        label: t('menu.mediaMute'),
         click: () => {
           wc
             .executeJavaScript(
@@ -288,7 +289,7 @@ function showGuestContextMenu(wc, params, deps) {
         },
       },
       {
-        label: 'Pętla',
+        label: t('menu.mediaLoop'),
         click: () => {
           wc
             .executeJavaScript(
@@ -299,7 +300,7 @@ function showGuestContextMenu(wc, params, deps) {
         },
       },
       {
-        label: 'Pokaż kontrolki',
+        label: t('menu.mediaShowControls'),
         click: () => {
           wc
             .executeJavaScript(
@@ -310,7 +311,7 @@ function showGuestContextMenu(wc, params, deps) {
         },
       },
       {
-        label: 'Obraz w obrazie',
+        label: t('menu.pictureInPicture'),
         enabled: params.mediaType === 'video',
         click: () => {
           wc
@@ -322,7 +323,7 @@ function showGuestContextMenu(wc, params, deps) {
         },
       },
       {
-        label: params.mediaType === 'audio' ? 'Zapisz audio jako…' : 'Zapisz wideo jako…',
+        label: params.mediaType === 'audio' ? t('menu.saveAudioAs') : t('menu.saveVideoAs'),
         enabled: Boolean(mediaUrl),
         click: () => {
           try {
@@ -333,7 +334,7 @@ function showGuestContextMenu(wc, params, deps) {
         },
       },
       {
-        label: 'Kopiuj adres mediów',
+        label: t('menu.copyMediaAddress'),
         enabled: Boolean(mediaUrl),
         click: () => clipboard.writeText(mediaUrl),
       },
@@ -344,18 +345,20 @@ function showGuestContextMenu(wc, params, deps) {
   // —— Selection ——
   if (hasSelection && !isEditable) {
     template.push({
-      label: 'Kopiuj',
+      label: t('menu.copySelection'),
       role: 'copy',
       accelerator: 'CmdOrCtrl+C',
     });
     template.push({
-      label: `Szukaj „${selection.slice(0, 32)}${selection.length > 32 ? '…' : ''}”`,
+      label: t('menu.searchSelection', {
+        q: `${selection.slice(0, 32)}${selection.length > 32 ? '…' : ''}`,
+      }),
       click: () => deps.askRenderer('search-selection', { text: selection, tor, private: priv }),
     });
     if (lookLikeUrl) {
       const url = /^https?:\/\//i.test(selection) ? selection : `https://${selection}`;
       template.push({
-        label: 'Otwórz jako link',
+        label: t('menu.openSelectionAsLink'),
         click: () => openSame(url),
       });
     }
@@ -381,7 +384,7 @@ function showGuestContextMenu(wc, params, deps) {
     }
     if (params.misspelledWord) {
       template.push({
-        label: 'Dodaj do słownika',
+        label: t('menu.addToDictionary'),
         click: () => {
           try {
             wc.session.addWordToSpellCheckerDictionary(params.misspelledWord);
@@ -394,14 +397,14 @@ function showGuestContextMenu(wc, params, deps) {
     if (suggestions.length || params.misspelledWord) pushSep();
 
     template.push(
-      { label: 'Cofnij', role: 'undo', accelerator: 'CmdOrCtrl+Z', enabled: params.editFlags?.canUndo !== false },
-      { label: 'Ponów', role: 'redo', accelerator: 'CmdOrCtrl+Y', enabled: params.editFlags?.canRedo !== false },
+      { label: t('menu.undo'), role: 'undo', accelerator: 'CmdOrCtrl+Z', enabled: params.editFlags?.canUndo !== false },
+      { label: t('menu.redo'), role: 'redo', accelerator: 'CmdOrCtrl+Y', enabled: params.editFlags?.canRedo !== false },
       { type: 'separator' },
-      { label: 'Wytnij', role: 'cut', accelerator: 'CmdOrCtrl+X', enabled: params.editFlags?.canCut !== false },
-      { label: 'Kopiuj', role: 'copy', accelerator: 'CmdOrCtrl+C', enabled: params.editFlags?.canCopy !== false },
-      { label: 'Wklej', role: 'paste', accelerator: 'CmdOrCtrl+V', enabled: params.editFlags?.canPaste !== false },
+      { label: t('menu.cut'), role: 'cut', accelerator: 'CmdOrCtrl+X', enabled: params.editFlags?.canCut !== false },
+      { label: t('menu.copy'), role: 'copy', accelerator: 'CmdOrCtrl+C', enabled: params.editFlags?.canCopy !== false },
+      { label: t('menu.paste'), role: 'paste', accelerator: 'CmdOrCtrl+V', enabled: params.editFlags?.canPaste !== false },
       {
-        label: 'Wklej jako zwykły tekst',
+        label: t('menu.pastePlainText'),
         accelerator: 'CmdOrCtrl+Shift+V',
         enabled: params.editFlags?.canPaste !== false,
         click: () => {
@@ -419,7 +422,7 @@ function showGuestContextMenu(wc, params, deps) {
         },
       },
       {
-        label: 'Zaznacz wszystko',
+        label: t('menu.selectAll'),
         role: 'selectAll',
         accelerator: 'CmdOrCtrl+A',
         enabled: params.editFlags?.canSelectAll !== false,
@@ -431,34 +434,34 @@ function showGuestContextMenu(wc, params, deps) {
   // —— Navigation / page ——
   template.push(
     {
-      label: 'Wstecz',
+      label: t('menu.goBack'),
       accelerator: 'Alt+Left',
       enabled: wc.canGoBack(),
       click: () => wc.goBack(),
     },
     {
-      label: 'Dalej',
+      label: t('menu.goForward'),
       accelerator: 'Alt+Right',
       enabled: wc.canGoForward(),
       click: () => wc.goForward(),
     },
     {
-      label: 'Odśwież',
+      label: t('menu.reload'),
       accelerator: 'CmdOrCtrl+R',
       click: () => wc.reload(),
     },
     { type: 'separator' },
     {
-      label: 'Zapisz stronę jako…',
+      label: t('menu.savePageAs'),
       accelerator: 'CmdOrCtrl+S',
       click: async () => {
         const parent = win && !win.isDestroyed() ? win : BrowserWindow.getFocusedWindow();
         const { canceled, filePath } = await dialog.showSaveDialog(parent || undefined, {
-          title: 'Zapisz stronę',
+          title: t('main.savePage'),
           defaultPath: 'page.html',
           filters: [
-            { name: 'Strona WWW', extensions: ['html', 'htm'] },
-            { name: 'Wszystkie pliki', extensions: ['*'] },
+            { name: t('menu.filterWebPage'), extensions: ['html', 'htm'] },
+            { name: t('menu.filterAllFiles'), extensions: ['*'] },
           ],
         });
         if (canceled || !filePath) return;
@@ -470,7 +473,7 @@ function showGuestContextMenu(wc, params, deps) {
       },
     },
     {
-      label: 'Drukuj…',
+      label: t('menu.print'),
       accelerator: 'CmdOrCtrl+P',
       click: () => {
         try {
@@ -481,7 +484,7 @@ function showGuestContextMenu(wc, params, deps) {
       },
     },
     {
-      label: 'Wyświetl źródło strony',
+      label: t('menu.viewPageSource'),
       accelerator: 'CmdOrCtrl+U',
       click: () => {
         let url = '';
@@ -499,7 +502,7 @@ function showGuestContextMenu(wc, params, deps) {
 
   if (deps.canInspect?.()) {
     template.push({
-      label: 'Zbadaj element',
+      label: t('menu.inspect'),
       accelerator: 'CmdOrCtrl+Shift+I',
       click: () => {
         try {

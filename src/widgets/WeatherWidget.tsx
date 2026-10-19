@@ -11,24 +11,26 @@ import {
   Sun,
 } from 'lucide-react';
 import { useStore, type HomeWidget } from '../store';
+import { useT, useUiLocale } from '../i18n';
+import { t as tCore } from '../i18n/core';
 import { WidgetEmpty } from './WidgetFrame';
 
-const WMO: Record<number, string> = {
-  0: 'Bezchmurnie',
-  1: 'Prawie bezchmurnie',
-  2: 'Częściowe zachmurzenie',
-  3: 'Pochmurnie',
-  45: 'Mgła',
-  48: 'Mgła szronowa',
-  51: 'Mżawka',
-  61: 'Deszcz',
-  63: 'Deszcz',
-  65: 'Ulewny deszcz',
-  71: 'Śnieg',
-  73: 'Śnieg',
-  75: 'Intensywny śnieg',
-  80: 'Przelotny deszcz',
-  95: 'Burza',
+const WMO_KEYS: Record<number, string> = {
+  0: 'widgets.ui.weather.clear',
+  1: 'widgets.ui.weather.mostlyClear',
+  2: 'widgets.ui.weather.partlyCloudy',
+  3: 'widgets.ui.weather.overcast',
+  45: 'widgets.ui.weather.fog',
+  48: 'widgets.ui.weather.rimeFog',
+  51: 'widgets.ui.weather.drizzle',
+  61: 'widgets.ui.weather.rain',
+  63: 'widgets.ui.weather.rain',
+  65: 'widgets.ui.weather.heavyRain',
+  71: 'widgets.ui.weather.snow',
+  73: 'widgets.ui.weather.snow',
+  75: 'widgets.ui.weather.heavySnow',
+  80: 'widgets.ui.weather.showers',
+  95: 'widgets.ui.weather.thunderstorm',
 };
 
 function weatherIcon(code: number) {
@@ -54,7 +56,13 @@ type WeatherData = Awaited<ReturnType<NonNullable<Window['shell']>['weatherFetch
 
 export const WEATHER_DEMO: WeatherData = {
   ok: true,
-  place: { name: 'Warszawa', country: 'Polska', admin1: 'Mazowieckie', lat: 52.23, lon: 21.01 },
+  place: {
+    name: tCore('widgets.ui.weather.demoCity'),
+    country: tCore('widgets.ui.weather.demoCountry'),
+    admin1: tCore('widgets.ui.weather.demoAdmin'),
+    lat: 52.23,
+    lon: 21.01,
+  },
   current: { temperature_2m: 18, weather_code: 2, wind_speed_10m: 12, relative_humidity_2m: 55 },
   daily: {
     time: ['2026-03-30', '2026-03-31', '2026-04-01'],
@@ -80,6 +88,9 @@ export function WeatherWidget({
   onPatchSettings?: (settings: Record<string, unknown>) => void;
   preview?: boolean;
 }) {
+  const t = useT();
+  const locale = useUiLocale();
+  const dateLocale = locale === 'en' ? 'en-US' : 'pl-PL';
   const allowNet = useStore((s) => s.settings.privacyAllowAppNetwork);
   const location = String(widget.settings.location || '');
   const savedLat = typeof widget.settings.lat === 'number' ? widget.settings.lat : undefined;
@@ -102,7 +113,11 @@ export function WeatherWidget({
     try {
       const res = await window.shell?.weatherFetch?.(opts);
       if (!res?.ok) {
-        setErr(res?.error === 'not_found' ? 'Nie znaleziono lokalizacji' : 'Błąd sieci');
+        setErr(
+          res?.error === 'not_found'
+            ? t('widgets.ui.weather.notFound')
+            : t('widgets.ui.weather.networkError'),
+        );
         setData(null);
       } else {
         setData(res);
@@ -113,7 +128,7 @@ export function WeatherWidget({
         });
       }
     } catch {
-      setErr('Błąd sieci');
+      setErr(t('widgets.ui.weather.networkError'));
     } finally {
       setLoading(false);
     }
@@ -133,14 +148,14 @@ export function WeatherWidget({
       return;
     }
     let cancelled = false;
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void window.shell?.weatherSuggest?.({ q }).then((res) => {
         if (!cancelled && res?.places) setSuggests(res.places);
       });
     }, 300);
     return () => {
       cancelled = true;
-      window.clearTimeout(t);
+      window.clearTimeout(timer);
     };
   }, [draft, location, allowNet, preview]);
 
@@ -153,20 +168,15 @@ export function WeatherWidget({
       <div className={`hw-weather hw-weather-setup hw-size-${size}`}>
         <div className="hw-weather-setup-inner">
           <MapPin size={28} strokeWidth={1.5} className="hw-weather-pin" />
-          <p className="hw-weather-setup-title">Ustaw miasto</p>
-          <p className="hw-muted">Ustaw miasto w Personalizacja → Widżety.</p>
+          <p className="hw-weather-setup-title">{t('widgets.ui.weather.setCity')}</p>
+          <p className="hw-muted">{t('widgets.ui.weather.setCityHint')}</p>
         </div>
       </div>
     );
   }
 
   if (err === 'privacy') {
-    return (
-      <WidgetEmpty
-        icon={MapPin}
-        text="Zapytania aplikacji wyłączone — włącz je w Ustawieniach → Prywatność."
-      />
-    );
+    return <WidgetEmpty icon={MapPin} text={t('widgets.ui.weather.privacyOff')} />;
   }
 
   if (loading && !data) {
@@ -189,7 +199,7 @@ export function WeatherWidget({
           className="hw-btn"
           onClick={() => void fetchWx({ location, lat: savedLat, lon: savedLon })}
         >
-          Ponów
+          {t('widgets.ui.retry')}
         </button>
       </div>
     );
@@ -197,7 +207,8 @@ export function WeatherWidget({
 
   const temp = data?.current?.temperature_2m;
   const code = data?.current?.weather_code ?? 0;
-  const label = WMO[code] || WMO[Math.floor(code / 10) * 10] || 'Pogoda';
+  const wmoKey = WMO_KEYS[code] || WMO_KEYS[Math.floor(code / 10) * 10];
+  const label = wmoKey ? t(wmoKey) : t('widgets.ui.weather.fallback');
   const Icon = weatherIcon(code);
   const tmax = data?.daily?.temperature_2m_max?.[0];
   const tmin = data?.daily?.temperature_2m_min?.[0];
@@ -220,7 +231,7 @@ export function WeatherWidget({
           <button
             type="button"
             className="hw-icon-btn"
-            title="Zmień miasto"
+            title={t('widgets.ui.weather.changeCity')}
             onClick={() => {
               onPatchSettings?.({ location: '', lat: undefined, lon: undefined });
               setDraft('');
@@ -236,7 +247,7 @@ export function WeatherWidget({
         <ul className="hw-weather-days">
           {data.daily.time.slice(0, 3).map((day, i) => (
             <li key={day}>
-              <span>{new Date(day).toLocaleDateString('pl-PL', { weekday: 'short' })}</span>
+              <span>{new Date(day).toLocaleDateString(dateLocale, { weekday: 'short' })}</span>
               <strong>
                 {Math.round(data.daily!.temperature_2m_max?.[i] ?? 0)}°/
                 {Math.round(data.daily!.temperature_2m_min?.[i] ?? 0)}°
@@ -250,10 +261,10 @@ export function WeatherWidget({
         <>
           {data?.hourly?.time && (
             <ul className="hw-weather-hours">
-              {data.hourly.time.slice(0, 6).map((t, i) => (
-                <li key={t}>
+              {data.hourly.time.slice(0, 6).map((hour, i) => (
+                <li key={hour}>
                   <span>
-                    {new Date(t).toLocaleTimeString('pl-PL', {
+                    {new Date(hour).toLocaleTimeString(dateLocale, {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
@@ -267,7 +278,7 @@ export function WeatherWidget({
             <ul className="hw-weather-days">
               {data.daily.time.slice(0, 5).map((day, i) => (
                 <li key={day}>
-                  <span>{new Date(day).toLocaleDateString('pl-PL', { weekday: 'short' })}</span>
+                  <span>{new Date(day).toLocaleDateString(dateLocale, { weekday: 'short' })}</span>
                   <strong>
                     {Math.round(data.daily!.temperature_2m_max?.[i] ?? 0)}°/
                     {Math.round(data.daily!.temperature_2m_min?.[i] ?? 0)}°

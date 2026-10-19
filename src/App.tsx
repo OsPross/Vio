@@ -23,6 +23,7 @@ import { usePictureInPicture } from './hooks/usePictureInPicture';
 import { useShellEffects } from './hooks/useShellEffects';
 import { usePageActions } from './hooks/usePageActions';
 import { useAutomationBridge } from './hooks/useAutomationBridge';
+import { useT } from './i18n';
 
 /** Heavy routes / dialogs — not needed for first paint */
 const SettingsPage = lazy(() =>
@@ -30,14 +31,16 @@ const SettingsPage = lazy(() =>
 );
 
 function LazyFallback({ label }: { label?: string }) {
+  const t = useT();
   return (
     <div className="lazy-route-fallback" role="status" aria-live="polite">
-      {label || 'Ładowanie…'}
+      {label || t('common.loading')}
     </div>
   );
 }
 
 export function App() {
+  const t = useT();
   const tabs = useStore((s) => s.tabs);
   const activeId = useStore((s) => s.activeId);
   const settings = useStore((s) => s.settings);
@@ -274,7 +277,7 @@ export function App() {
           >
             <div className="drag-strip absolute-drag" />
             <ErrorBoundary name="settings">
-              <Suspense fallback={<LazyFallback label="Ustawienia…" />}>
+              <Suspense fallback={<LazyFallback label={`${t('settings.brand')}…`} />}>
                 <SettingsPage />
               </Suspense>
             </ErrorBoundary>

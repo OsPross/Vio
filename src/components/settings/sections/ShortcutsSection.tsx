@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Input } from '../../ui/Input';
+import { useT } from '../../../i18n';
 import { useStore } from '../../../store';
 import { SettingsGroup } from '../SettingsControls';
 
@@ -8,13 +9,14 @@ export function ShortcutsSection() {
   const shortcuts = useStore((s) => s.shortcuts);
   const addShortcut = useStore((s) => s.addShortcut);
   const removeShortcut = useStore((s) => s.removeShortcut);
+  const t = useT();
 
   const [scLabel, setScLabel] = useState('');
   const [scUrl, setScUrl] = useState('');
 
   return (
     <div className="settings-stack">
-      <SettingsGroup title="Skróty">
+      <SettingsGroup title={t('settings.shortcuts.title')}>
         <div className="slist">
           {shortcuts.map((s) => (
             <div key={s.id} className="slist-row">
@@ -26,7 +28,7 @@ export function ShortcutsSection() {
                 type="button"
                 className="icon-btn sm"
                 onClick={() => removeShortcut(s.id)}
-                aria-label={`Usuń ${s.label}`}
+                aria-label={t('settings.shortcuts.removeAria', { name: s.label })}
               >
                 <Trash2 size={14} strokeWidth={1.75} />
               </button>
@@ -35,7 +37,7 @@ export function ShortcutsSection() {
         </div>
         <div className="sform">
           <Input
-            placeholder="Nazwa"
+            placeholder={t('settings.shortcuts.namePlaceholder')}
             value={scLabel}
             onChange={(e) => setScLabel(e.target.value)}
           />
@@ -55,7 +57,7 @@ export function ShortcutsSection() {
               setScUrl('');
             }}
           >
-            <Plus size={14} strokeWidth={1.75} /> Dodaj
+            <Plus size={14} strokeWidth={1.75} /> {t('common.add')}
           </button>
         </div>
       </SettingsGroup>

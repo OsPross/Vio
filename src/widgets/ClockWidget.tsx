@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useStore } from '../store';
+import { useT, useUiLocale } from '../i18n';
 
 const easeOut = [0.16, 1, 0.3, 1] as const;
 
@@ -34,9 +35,12 @@ export function ClockDigits({ value, animate }: { value: string; animate: boolea
 }
 
 export function ClockWidget({ size = 'L', reduced }: { size?: 'S' | 'M' | 'L'; reduced: boolean }) {
+  const t = useT();
+  const locale = useUiLocale();
   const settings = useStore((s) => s.settings);
   const [now, setNow] = useState(() => new Date());
   const showSeconds = settings.homeShowSeconds && !settings.perfLowPowerClock;
+  const dateLocale = locale === 'en' ? 'en-US' : 'pl-PL';
 
   useEffect(() => {
     if (!settings.homeShowClock && !settings.homeShowDate) return;
@@ -57,15 +61,20 @@ export function ClockWidget({ size = 'L', reduced }: { size?: 'S' | 'M' | 'L'; r
   ]);
 
   const hour = now.getHours();
-  const greet = hour < 12 ? 'Dzień dobry' : hour < 18 ? 'Dzień dobry' : 'Dobry wieczór';
+  const greet =
+    hour < 12
+      ? t('widgets.ui.greetMorning')
+      : hour < 18
+        ? t('widgets.ui.greetAfternoon')
+        : t('widgets.ui.greetEvening');
   const headline = settings.homeHeadline.trim() || (settings.homeShowGreeting ? greet : '');
-  const timeStr = now.toLocaleTimeString('pl-PL', {
+  const timeStr = now.toLocaleTimeString(dateLocale, {
     hour: '2-digit',
     minute: '2-digit',
     second: showSeconds ? '2-digit' : undefined,
     hour12: !settings.clock24h,
   });
-  const dateStr = now.toLocaleDateString('pl-PL', {
+  const dateStr = now.toLocaleDateString(dateLocale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

@@ -7,6 +7,7 @@ import { resolveFavicon, faviconImgFallback } from '../../lib/favicon';
 import { isMotionOff, popupTransition } from '../../lib/motionPresets';
 import { AnimatedNumber, Sparkline } from './Sparkline';
 import { useStore } from '../../store';
+import { useT } from '../../i18n';
 
 function fmtBytes(n: number) {
   if (!n) return '—';
@@ -24,6 +25,7 @@ function faviconOf(row: MetricsRow) {
 type SortKey = 'title' | 'cpu' | 'memMb' | 'netRate';
 
 export function ResourcesPanel({ active }: { active: boolean }) {
+  const t = useT();
   const lowPower = useStore((s) => s.settings.perfLowPowerClock);
   const data = useMetrics(active, lowPower);
   const closeTab = useStore((s) => s.closeTab);
@@ -42,20 +44,22 @@ export function ResourcesPanel({ active }: { active: boolean }) {
       setLoadError('');
       return;
     }
-    const t = window.setTimeout(() => {
-      setLoadError('Brak metryk z procesu głównego (shell:metrics).');
+    const timer = window.setTimeout(() => {
+      setLoadError(t('settings.resources.metricsMissing'));
     }, 6000);
-    return () => window.clearTimeout(t);
-  }, [active, data]);
+    return () => window.clearTimeout(timer);
+  }, [active, data, t]);
 
   const onRetry = async () => {
     setRetrying(true);
     setLoadError('');
     try {
       const snap = await metricsRetry();
-      if (!snap) setLoadError('Nie udało się pobrać metryk. Spróbuj ponownie.');
+      if (!snap) setLoadError(t('settings.resources.metricsFetchFailed'));
     } catch (err) {
-      setLoadError(String((err as Error)?.message || err || 'Błąd IPC metryk'));
+      setLoadError(
+        String((err as Error)?.message || err || t('settings.resources.metricsIpcError')),
+      );
     } finally {
       setRetrying(false);
     }
@@ -79,21 +83,21 @@ export function ResourcesPanel({ active }: { active: boolean }) {
   };
 
   const sleep = (id: string) => {
-    if (tabs.some((t) => t.id === id)) updateTab(id, { discarded: true });
+    if (tabs.some((tab) => tab.id === id)) updateTab(id, { discarded: true });
   };
 
   const kill = (id: string, kind: string) => {
-    if (kind === 'tab' && tabs.some((t) => t.id === id)) closeTab(id);
+    if (kind === 'tab' && tabs.some((tab) => tab.id === id)) closeTab(id);
   };
 
   return (
     <div className="settings-stack">
       <section className="sg">
-        <span className="sg-label">System i przeglądarka</span>
+        <span className="sg-label">{t('settings.resources.systemBrowser')}</span>
         <div className="sg-block mx-overview">
           <div className="mx-card">
             <div className="mx-card-head">
-              <span>CPU systemu</span>
+              <span>{t('settings.resources.cpuSystem')}</span>
               <strong>
                 <AnimatedNumber value={data?.system.cpu ?? 0} digits={1} suffix="%" />
               </strong>
@@ -108,7 +112,7 @@ export function ResourcesPanel({ active }: { active: boolean }) {
           </div>
           <div className="mx-card">
             <div className="mx-card-head">
-              <span>RAM systemu</span>
+              <span>{t('settings.resources.ramSystem')}</span>
               <strong>
                 <AnimatedNumber value={data?.system.memPercent ?? 0} digits={0} suffix="%" />
               </strong>
@@ -127,7 +131,7 @@ export function ResourcesPanel({ active }: { active: boolean }) {
           </div>
           <div className="mx-card">
             <div className="mx-card-head">
-              <span>CPU Vio</span>
+              <span>{t('settings.resources.cpuVio')}</span>
               <strong>
                 <AnimatedNumber value={data?.browser.cpu ?? 0} digits={1} suffix="%" />
               </strong>
@@ -142,24 +146,26 @@ export function ResourcesPanel({ active }: { active: boolean }) {
           </div>
           <div className="mx-card">
             <div className="mx-card-head">
-              <span>RAM Vio</span>
+              <span>{t('settings.resources.ramVio')}</span>
               <strong>
                 <AnimatedNumber value={data?.browser.memMb ?? 0} digits={0} suffix=" MB" />
               </strong>
             </div>
             <Sparkline points={data?.history ?? []} field="appMem" width={200} height={40} />
-            <div className="mx-sub">{data ? `${data.browser.processes} procesów` : '—'}</div>
+            <div className="mx-sub">
+              {data ? t('settings.resources.processes', { n: data.browser.processes }) : '—'}
+            </div>
           </div>
         </div>
       </section>
 
       {(data?.gpu?.gpuDevice || data?.uptimeSec != null) && (
         <section className="sg">
-          <span className="sg-label">Szczegóły</span>
+          <span className="sg-label">{t('settings.resources.details')}</span>
           <div className="sg-block">
             <div className="sr">
               <div className="sr-text">
-                <div className="sr-label">Czas działania</div>
+                <div className="sr-label">{t('settings.resources.uptime')}</div>
               </div>
               <div className="sr-control">
                 <span className="sr-value">{formatUptime(data?.uptimeSec ?? 0)}</span>
@@ -168,17 +174,15 @@ export function ResourcesPanel({ active }: { active: boolean }) {
             {data?.gpu?.gpuDevice && (
               <div className="sr">
                 <div className="sr-text">
-                  <div className="sr-label">GPU</div>
+                  <div className="sr-label">{t('settings.resources.gpu')}</div>
                   <div className="sr-hint">{data.gpu.gpuDevice}</div>
                 </div>
               </div>
             )}
             <div className="sr">
               <div className="sr-text">
-                <div className="sr-label">Próbkowanie</div>
-                <div className="sr-hint">
-                  Tylko gdy ten widok / menedżer / widżet home jest otwarty
-                </div>
+                <div className="sr-label">{t('settings.resources.sampling')}</div>
+                <div className="sr-hint">{t('settings.resources.samplingHint')}</div>
               </div>
               <div className="sr-control">
                 <span className="sr-value">
@@ -191,33 +195,33 @@ export function ResourcesPanel({ active }: { active: boolean }) {
       )}
 
       <section className="sg">
-        <span className="sg-label">Menedżer zadań</span>
+        <span className="sg-label">{t('settings.resources.taskManager')}</span>
         <div className="sg-block mx-table-wrap">
           {loadError && !data ? (
             <div className="snote" style={{ display: 'grid', gap: 10 }}>
               <span>{loadError}</span>
               <button type="button" className="sbtn" disabled={retrying} onClick={() => void onRetry()}>
-                Spróbuj ponownie
+                {t('errors.tryAgain')}
               </button>
             </div>
           ) : (
-            !data && <p className="snote">Ładowanie metryk…</p>
+            !data && <p className="snote">{t('settings.resources.loading')}</p>
           )}
           {data && (
             <table className="mx-table">
               <thead>
                 <tr>
-                  <th onClick={() => toggleSort('title')}>Zadanie</th>
-                  <th onClick={() => toggleSort('cpu')}>CPU</th>
-                  <th onClick={() => toggleSort('memMb')}>Pamięć</th>
-                  <th onClick={() => toggleSort('netRate')}>Sieć</th>
+                  <th onClick={() => toggleSort('title')}>{t('settings.resources.colTask')}</th>
+                  <th onClick={() => toggleSort('cpu')}>{t('settings.resources.colCpu')}</th>
+                  <th onClick={() => toggleSort('memMb')}>{t('settings.resources.colMem')}</th>
+                  <th onClick={() => toggleSort('netRate')}>{t('settings.resources.colNet')}</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => {
-                  const isTab = r.kind === 'tab' && tabs.some((t) => t.id === r.id);
-                  const sleeping = isTab && tabs.find((t) => t.id === r.id)?.discarded;
+                  const isTab = r.kind === 'tab' && tabs.some((tab) => tab.id === r.id);
+                  const sleeping = isTab && tabs.find((tab) => tab.id === r.id)?.discarded;
                   return (
                     <tr key={r.id} className={sleeping ? 'is-sleep' : ''}>
                       <td>
@@ -236,7 +240,11 @@ export function ResourcesPanel({ active }: { active: boolean }) {
                           <span>
                             <strong>{r.title || '—'}</strong>
                             <em>
-                              {r.kind === 'tab' ? 'Karta' : r.kind === 'side' ? 'Sidebar' : r.kind}
+                              {r.kind === 'tab'
+                                ? t('settings.resources.kindTab')
+                                : r.kind === 'side'
+                                  ? t('settings.resources.kindSidebar')
+                                  : r.kind}
                             </em>
                           </span>
                         </div>
@@ -251,7 +259,7 @@ export function ResourcesPanel({ active }: { active: boolean }) {
                           <button
                             type="button"
                             className="sbtn ghost"
-                            title="Uśpij"
+                            title={t('settings.resources.sleep')}
                             onClick={() => sleep(r.id)}
                           >
                             <Moon size={13} strokeWidth={1.75} />
@@ -261,7 +269,7 @@ export function ResourcesPanel({ active }: { active: boolean }) {
                           <button
                             type="button"
                             className="sbtn danger-text"
-                            title="Zamknij"
+                            title={t('common.close')}
                             onClick={() => kill(r.id, r.kind)}
                           >
                             <X size={13} strokeWidth={1.75} />
@@ -290,6 +298,7 @@ function formatUptime(sec: number) {
 }
 
 export function TaskManagerOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const motionOff = isMotionOff(settings);
   const popMotion = popupTransition(motionOff);
@@ -300,7 +309,7 @@ export function TaskManagerOverlay({ open, onClose }: { open: boolean; onClose: 
         <motion.div
           className="mx-overlay"
           role="dialog"
-          aria-label="Menedżer zadań"
+          aria-label={t('settings.resources.overlayTitle')}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: motionOff ? 0.06 : 0.12 } }}
@@ -309,7 +318,7 @@ export function TaskManagerOverlay({ open, onClose }: { open: boolean; onClose: 
           <button
             type="button"
             className="mx-overlay-backdrop"
-            aria-label="Zamknij"
+            aria-label={t('common.close')}
             onClick={onClose}
           />
           <motion.div
@@ -322,10 +331,10 @@ export function TaskManagerOverlay({ open, onClose }: { open: boolean; onClose: 
           >
             <header className="mx-overlay-head">
               <div>
-                <strong>Menedżer zadań</strong>
-                <span>Shift+Esc · zużycie kart i procesów</span>
+                <strong>{t('settings.resources.overlayTitle')}</strong>
+                <span>{t('settings.resources.overlayHint')}</span>
               </div>
-              <button type="button" className="icon-btn" onClick={onClose} title="Zamknij">
+              <button type="button" className="icon-btn" onClick={onClose} title={t('common.close')}>
                 <X size={16} strokeWidth={1.75} />
               </button>
             </header>
@@ -340,13 +349,14 @@ export function TaskManagerOverlay({ open, onClose }: { open: boolean; onClose: 
 }
 
 export function HomeResourcesWidget({ active }: { active: boolean }) {
+  const t = useT();
   const lowPower = useStore((s) => s.settings.perfLowPowerClock);
   const data = useMetrics(active, lowPower);
   if (!active) return null;
   return (
     <div className="mx-home-widget">
       <div className="mx-home-row">
-        <span>CPU</span>
+        <span>{t('settings.resources.widgetCpu')}</span>
         <strong>
           <AnimatedNumber value={data?.system.cpu ?? 0} digits={0} suffix="%" />
         </strong>
@@ -359,7 +369,7 @@ export function HomeResourcesWidget({ active }: { active: boolean }) {
         />
       </div>
       <div className="mx-home-row">
-        <span>RAM</span>
+        <span>{t('settings.resources.widgetRam')}</span>
         <strong>
           <AnimatedNumber value={data?.system.memPercent ?? 0} digits={0} suffix="%" />
         </strong>
@@ -372,7 +382,7 @@ export function HomeResourcesWidget({ active }: { active: boolean }) {
         />
       </div>
       <div className="mx-home-row">
-        <span>Vio</span>
+        <span>{t('settings.resources.widgetVio')}</span>
         <strong>
           <AnimatedNumber value={data?.browser.memMb ?? 0} digits={0} suffix=" MB" />
         </strong>

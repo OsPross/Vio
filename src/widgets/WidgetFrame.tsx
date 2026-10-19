@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
 import { Settings2, X, type LucideIcon } from 'lucide-react';
+import { useT } from '../i18n';
 
 /** Lucide icons or custom SVGs that accept the same size/className props. */
 export type WidgetFrameIcon = ComponentType<{
@@ -31,6 +32,7 @@ export function WidgetFrame({
   /** No card chrome — only for clock/search/shortcuts outside edit outlines */
   bare?: boolean;
 }) {
+  const t = useT();
   const showEditChrome = !!editMode && !locked;
 
   /* bare chrome (clock/search/shortcuts): no card outside edit */
@@ -55,15 +57,20 @@ export function WidgetFrame({
                 <button
                   type="button"
                   className="hw-icon-btn"
-                  title="Ustawienia"
-                  aria-label={`Ustawienia: ${title}`}
+                  title={t('common.settings')}
+                  aria-label={t('widgets.ui.settingsAria', { title })}
                   onClick={(e) => onOpenSettings(e.currentTarget)}
                 >
                   <Settings2 size={13} />
                 </button>
               )}
               {onRemove && (
-                <button type="button" className="hw-icon-btn" title="Usuń" onClick={onRemove}>
+                <button
+                  type="button"
+                  className="hw-icon-btn"
+                  title={t('common.remove')}
+                  onClick={onRemove}
+                >
                   <X size={13} />
                 </button>
               )}
@@ -87,15 +94,20 @@ export function WidgetFrame({
               <button
                 type="button"
                 className="hw-icon-btn"
-                title="Ustawienia"
-                aria-label={`Ustawienia: ${title}`}
+                title={t('common.settings')}
+                aria-label={t('widgets.ui.settingsAria', { title })}
                 onClick={(e) => onOpenSettings(e.currentTarget)}
               >
                 <Settings2 size={13} />
               </button>
             )}
             {onRemove && (
-              <button type="button" className="hw-icon-btn" title="Usuń" onClick={onRemove}>
+              <button
+                type="button"
+                className="hw-icon-btn"
+                title={t('common.remove')}
+                onClick={onRemove}
+              >
                 <X size={13} />
               </button>
             )}

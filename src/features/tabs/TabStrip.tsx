@@ -3,6 +3,7 @@ import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { Globe, Moon, Plus, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { PerfGate } from '../../components/PerfGate';
+import { useT } from '../../i18n';
 import { formatUrlPlain } from '../../lib/url-display';
 import { isPrivateTab, isTorTab, useStore } from '../../store';
 
@@ -65,6 +66,8 @@ export function TabStrip({
       settings: s.settings,
     })),
   );
+
+  const tr = useT();
 
   const motionOff =
     settings.perfReduceMotion ||
@@ -137,7 +140,7 @@ export function TabStrip({
                 style={{ originX: 0 }}
                 title={
                   t.mode === 'tor'
-                    ? 'Karta Tor'
+                    ? tr('tabs.torTabTitle')
                     : t.pinned
                       ? t.title
                       : t.url
@@ -174,10 +177,10 @@ export function TabStrip({
                   )}
                   <span className="tab-title">
                     {t.discarded && t.id !== activeId ? '○ ' : ''}
-                    {t.title || 'Karta'}
+                    {t.title || tr('tabs.untitled')}
                   </span>
                   {!t.pinned && (hotTabs[t.id] || 0) >= 3 && !t.discarded && (
-                    <span className="tab-cpu-hint" title="Wysokie CPU — uśpij kartę">
+                    <span className="tab-cpu-hint" title={tr('tabs.highCpuSleep')}>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -208,7 +211,7 @@ export function TabStrip({
         <button
           type="button"
           className="tab-add"
-          title="Nowa karta (Ctrl+T) · PPM / przytrzymaj: Tor"
+          title={tr('tabs.newTabTitle')}
           onClick={() => newTab()}
           onContextMenu={(e) => {
             e.preventDefault();
@@ -255,7 +258,7 @@ export function TabStrip({
                 setNewTabMenu(null);
               }}
             >
-              Nowa karta
+              {tr('tabs.newTab')}
               <kbd>Ctrl+T</kbd>
             </button>
             <button
@@ -266,7 +269,7 @@ export function TabStrip({
                 void openTorTab();
               }}
             >
-              Nowa karta Tor
+              {tr('tabs.newTorTab')}
               <kbd>Shift+Alt+N</kbd>
             </button>
             <button
@@ -276,7 +279,7 @@ export function TabStrip({
                 void window.shell?.newWindow?.({ boot: 'tor' });
               }}
             >
-              Nowe okno Tor
+              {tr('tabs.newTorWindow')}
             </button>
           </div>
         </div>
@@ -308,7 +311,7 @@ export function TabStrip({
                       setTabMenu(null);
                     }}
                   >
-                    Nowa karta obok
+                    {tr('tabs.newTabBeside')}
                     <kbd>Ctrl+T</kbd>
                   </button>
                   <button
@@ -319,7 +322,7 @@ export function TabStrip({
                       setTabMenu(null);
                     }}
                   >
-                    Duplikuj
+                    {tr('tabs.duplicate')}
                   </button>
                   <button
                     type="button"
@@ -329,7 +332,7 @@ export function TabStrip({
                       setTabMenu(null);
                     }}
                   >
-                    {tab?.pinned ? 'Odepnij kartę' : 'Przypnij kartę'}
+                    {tab?.pinned ? tr('tabs.unpin') : tr('tabs.pin')}
                   </button>
                   <button
                     type="button"
@@ -339,7 +342,7 @@ export function TabStrip({
                       setTabMenu(null);
                     }}
                   >
-                    {tab?.muted ? 'Włącz dźwięk karty' : 'Wycisz kartę'}
+                    {tab?.muted ? tr('tabs.unmute') : tr('tabs.mute')}
                   </button>
                   <button
                     type="button"
@@ -350,7 +353,7 @@ export function TabStrip({
                       if (u) void openTorTab(u);
                     }}
                   >
-                    Otwórz w oknie Tor
+                    {tr('tabs.openInTor')}
                   </button>
                   <hr />
                   <button
@@ -360,7 +363,7 @@ export function TabStrip({
                       setTabMenu(null);
                     }}
                   >
-                    Zamknij inne
+                    {tr('tabs.closeOthers')}
                   </button>
                   <button
                     type="button"
@@ -369,7 +372,7 @@ export function TabStrip({
                       setTabMenu(null);
                     }}
                   >
-                    Zamknij po prawej
+                    {tr('tabs.closeToRight')}
                   </button>
                   <button
                     type="button"
@@ -378,7 +381,7 @@ export function TabStrip({
                       setTabMenu(null);
                     }}
                   >
-                    Zamknij kartę
+                    {tr('tabs.closeTab')}
                     <kbd>Ctrl+W</kbd>
                   </button>
                   <hr />
@@ -390,7 +393,7 @@ export function TabStrip({
                       setTabMenu(null);
                     }}
                   >
-                    Otwórz ponownie zamkniętą
+                    {tr('tabs.reopenClosed')}
                     {closedTabs.length ? ` (${closedTabs.length})` : ''}
                     <kbd>Ctrl+Shift+T</kbd>
                   </button>

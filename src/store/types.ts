@@ -80,6 +80,9 @@ export type SearchEngine =
 /** Language preference for search results / engine UI (URL params). */
 export type SearchLanguage = 'auto' | 'en' | 'pl';
 
+/** UI chrome language (menus, settings, dialogs). */
+export type UiLocale = 'pl' | 'en';
+
 export type HomeLayout = 'dashboard' | 'split' | 'stack' | 'minimal';
 export type HomeAlign = 'left' | 'center';
 export type HomeDensity = 'comfortable' | 'compact' | 'spacious';
@@ -149,6 +152,8 @@ export type Settings = {
   searchEngine: SearchEngine;
   /** Preferred language of search results (engines that support URL lang params). */
   searchLanguage: SearchLanguage;
+  /** Interface language (PL / EN). */
+  uiLocale: UiLocale;
   searxUrl: string;
   customSearchUrl: string;
   /** SOCKS address for Tryb Tor (9050 daemon / 9150 Tor Browser) */

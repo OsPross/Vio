@@ -29,6 +29,7 @@ import {
   notesUpdate,
   type NoteRecord,
 } from '../lib/notesApi';
+import { useT, useUiLocale, type TParams } from '../i18n';
 
 const SAVE_DEBOUNCE_MS = 420;
 const UNDO_MS = 6000;
@@ -39,24 +40,27 @@ const LIST_DEFAULT = 240;
 const LIST_WIDTH_KEY = 'djxxr-notes-list-width';
 
 type NoteRow = NoteRecord & { pinned?: boolean };
+type TFn = (key: string, params?: TParams) => string;
 
-const PREVIEW_NOTES: NoteRow[] = [
-  {
-    id: 'p1',
-    title: 'Lista zakupów',
-    body: 'Lista zakupów\n- mleko\n- chleb\n- [ ] jajka',
-    createdAt: Date.now() - 86400000,
-    updatedAt: Date.now() - 3600000,
-    pinned: true,
-  },
-  {
-    id: 'p2',
-    title: 'Pomysły',
-    body: 'Pomysły\nSpotkanie w piątek',
-    createdAt: Date.now() - 172800000,
-    updatedAt: Date.now() - 7200000,
-  },
-];
+function previewNotes(t: TFn): NoteRow[] {
+  return [
+    {
+      id: 'p1',
+      title: t('widgets.ui.notes.demoShoppingTitle'),
+      body: t('widgets.ui.notes.demoShoppingBody'),
+      createdAt: Date.now() - 86400000,
+      updatedAt: Date.now() - 3600000,
+      pinned: true,
+    },
+    {
+      id: 'p2',
+      title: t('widgets.ui.notes.demoIdeasTitle'),
+      body: t('widgets.ui.notes.demoIdeasBody'),
+      createdAt: Date.now() - 172800000,
+      updatedAt: Date.now() - 7200000,
+    },
+  ];
+}
 
 function applyWrap(
   value: string,
@@ -87,17 +91,17 @@ function prefixLines(value: string, start: number, end: number, prefix: string) 
   return { next, selStart: lineStart, selEnd: lineStart + nextBlock.length };
 }
 
-function relativeTime(ts: number): string {
+function relativeTime(ts: number, t: TFn, dateLocale: string): string {
   const diff = Date.now() - ts;
   const m = Math.floor(diff / 60000);
-  if (m < 1) return 'teraz';
-  if (m < 60) return `${m} min`;
+  if (m < 1) return t('widgets.ui.notes.justNow');
+  if (m < 60) return t('widgets.ui.notes.minutes', { n: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} godz.`;
+  if (h < 24) return t('widgets.ui.notes.hours', { n: h });
   const d = Math.floor(h / 24);
-  if (d < 7) return `${d} dn.`;
+  if (d < 7) return t('widgets.ui.notes.days', { n: d });
   try {
-    return new Date(ts).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+    return new Date(ts).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' });
   } catch {
     return '';
   }
@@ -121,6 +125,9 @@ function sortNotes(list: NoteRow[]): NoteRow[] {
 }
 
 export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?: boolean }) {
+  const t = useT();
+  const locale = useUiLocale();
+  const dateLocale = locale === 'en' ? 'en-US' : 'pl-PL';
   const legacyNotes = useStore((s) => s.settings.homeNotes);
   const patchSettings = useStore((s) => s.patchSettings);
 
@@ -129,11 +136,10 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [notes, setNotes] = useState<NoteRow[]>(preview ? PREVIEW_NOTES : []);
-  const [activeId, setActiveId] = useState<string | null>(
-    preview ? (PREVIEW_NOTES[0]?.id ?? null) : null,
-  );
-  const [draft, setDraft] = useState(preview ? (PREVIEW_NOTES[0]?.body ?? '') : '');
+  const demoRows = previewNotes(t);
+  const [notes, setNotes] = useState<NoteRow[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(preview ? 'p1' : null);
+  const [draft, setDraft] = useState(preview ? demoRows[0]?.body ?? '' : '');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(!preview);
   const [saving, setSaving] = useState(false);
@@ -457,12 +463,12 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
   if (loading && !preview) {
     return (
       <div ref={rootRef} className={`hw-notes hw-size-${size}`}>
-        <div className="hw-notes-muted">Ładowanie notatek…</div>
+        <div className="hw-notes-muted">{t('widgets.ui.notes.loading')}</div>
       </div>
     );
   }
 
-  const rows = preview ? PREVIEW_NOTES : notes;
+  const rows = preview ? demoRows : notes;
   const titleLine = draft.split(/\r?\n/)[0] || '';
   const bodyRest = draft.includes('\n') ? draft.slice(draft.indexOf('\n') + 1) : '';
 
@@ -474,10 +480,10 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
     >
       {pendingDelete && !preview && (
         <div className="hw-notes-undo" role="status">
-          <span>Usunięto „{pendingDelete.title}”</span>
+          <span>{t('widgets.ui.notes.deleted', { title: pendingDelete.title })}</span>
           <button type="button" className="hw-notes-undo-btn" onClick={undoDelete}>
             <Undo2 size={14} />
-            Cofnij
+            {t('widgets.ui.undo')}
           </button>
         </div>
       )}
@@ -485,33 +491,33 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
       {empty ? (
         <div className="hw-notes-empty-full">
           <StickyNote size={36} strokeWidth={1.4} aria-hidden />
-          <p className="hw-notes-empty-title">Brak notatek</p>
+          <p className="hw-notes-empty-title">{t('widgets.ui.notes.empty')}</p>
           <button type="button" className="hw-notes-empty-cta" onClick={() => void addNote()}>
-            Nowa notatka
+            {t('widgets.ui.notes.newNote')}
             <kbd>Ctrl+N</kbd>
           </button>
         </div>
       ) : (
         <div className="hw-notes-shell">
           {listVisible && (
-            <aside className="hw-notes-list-pane" aria-label="Lista notatek">
+            <aside className="hw-notes-list-pane" aria-label={t('widgets.ui.notes.listAria')}>
               <div className="hw-notes-list-head">
                 <div className="hw-notes-search">
                   <Search size={14} aria-hidden />
                   <input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Szukaj"
+                    placeholder={t('common.search')}
                     spellCheck={false}
                     disabled={preview}
-                    aria-label="Szukaj notatek"
+                    aria-label={t('widgets.ui.notes.searchAria')}
                   />
                 </div>
                 {!preview && (
                   <button
                     type="button"
                     className="hw-notes-new-btn"
-                    title="Nowa notatka (Ctrl+N)"
+                    title={t('widgets.ui.notes.newNoteTitle')}
                     onClick={() => void addNote()}
                   >
                     <Plus size={16} />
@@ -519,7 +525,7 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
                 )}
               </div>
               {rows.length === 0 ? (
-                <div className="hw-notes-list-empty">Brak wyników</div>
+                <div className="hw-notes-list-empty">{t('widgets.ui.notes.noResults')}</div>
               ) : (
                 <ul className="hw-notes-list">
                   {rows.map((n) => {
@@ -540,9 +546,13 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
                           <span className="hw-notes-list-top">
                             <span className="hw-notes-list-title">
                               {n.pinned ? <Pin size={11} className="hw-notes-pin" /> : null}
-                              <span className="hw-notes-list-title-text">{n.title || 'Bez tytułu'}</span>
+                              <span className="hw-notes-list-title-text">
+                                {n.title || t('widgets.ui.notes.untitled')}
+                              </span>
                             </span>
-                            <span className="hw-notes-list-date">{relativeTime(n.updatedAt)}</span>
+                            <span className="hw-notes-list-date">
+                              {relativeTime(n.updatedAt, t, dateLocale)}
+                            </span>
                           </span>
                           <span className="hw-notes-list-snippet">{snippet || ' '}</span>
                         </button>
@@ -559,7 +569,7 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
               className="hw-notes-resizer"
               role="separator"
               aria-orientation="vertical"
-              aria-label="Szerokość listy"
+              aria-label={t('widgets.ui.notes.listWidth')}
               onPointerDown={onResizeStart}
             />
           )}
@@ -574,18 +584,18 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
                   disabled={preview}
                 >
                   <ArrowLeft size={14} />
-                  Notatki
+                  {t('widgets.ui.notes.notesLabel')}
                 </button>
               )}
               {!activeNote && !preview ? (
-                <div className="hw-notes-editor-placeholder">Wybierz notatkę</div>
+                <div className="hw-notes-editor-placeholder">{t('widgets.ui.notes.pickNote')}</div>
               ) : (
                 <>
                   <div className="hw-notes-toolbar">
                     <button
                       type="button"
                       className="hw-notes-tool"
-                      title="Pogrubienie"
+                      title={t('widgets.ui.notes.bold')}
                       disabled={preview}
                       onClick={() => format('bold')}
                     >
@@ -594,7 +604,7 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
                     <button
                       type="button"
                       className="hw-notes-tool"
-                      title="Lista"
+                      title={t('widgets.ui.notes.list')}
                       disabled={preview}
                       onClick={() => format('list')}
                     >
@@ -603,7 +613,7 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
                     <button
                       type="button"
                       className="hw-notes-tool"
-                      title="Checkbox"
+                      title={t('widgets.ui.notes.checkbox')}
                       disabled={preview}
                       onClick={() => format('check')}
                     >
@@ -611,13 +621,17 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
                     </button>
                     <span className="hw-notes-toolbar-spacer" />
                     <span className="hw-notes-save-hint">
-                      {saving ? 'Zapisywanie…' : preview ? '' : 'Autosave'}
+                      {saving
+                        ? t('widgets.ui.notes.saving')
+                        : preview
+                          ? ''
+                          : t('widgets.ui.notes.autosave')}
                     </span>
                     {!preview && activeNote && (
                       <button
                         type="button"
                         className="hw-notes-tool danger"
-                        title="Usuń"
+                        title={t('common.remove')}
                         onClick={() => confirmDelete()}
                       >
                         <Trash2 size={14} />
@@ -628,14 +642,14 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
                     <div className="hw-notes-editor-inner">
                       <input
                         className="hw-notes-title-input"
-                        value={preview ? (PREVIEW_NOTES[0]?.title ?? titleLine) : titleLine}
+                        value={preview ? (demoRows[0]?.title ?? titleLine) : titleLine}
                         readOnly={preview}
-                        placeholder="Tytuł"
-                        aria-label="Tytuł notatki"
+                        placeholder={t('widgets.ui.notes.title')}
+                        aria-label={t('widgets.ui.notes.titleAria')}
                         onChange={(e) => {
-                          const t = e.target.value;
+                          const nextTitle = e.target.value;
                           const rest = bodyRest;
-                          onDraftChange(rest ? `${t}\n${rest}` : t);
+                          onDraftChange(rest ? `${nextTitle}\n${rest}` : nextTitle);
                         }}
                       />
                       <textarea
@@ -643,17 +657,19 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
                         className="hw-notes-body"
                         value={
                           preview
-                            ? (PREVIEW_NOTES[0]?.body.split(/\r?\n/).slice(1).join('\n') ?? '')
+                            ? (demoRows[0]?.body.split(/\r?\n/).slice(1).join('\n') ?? '')
                             : bodyRest
                         }
                         readOnly={preview}
                         onChange={(e) => {
-                          const t = titleLine || 'Nowa notatka';
-                          onDraftChange(e.target.value ? `${t}\n${e.target.value}` : t);
+                          const nextTitle = titleLine || t('widgets.ui.notes.newNote');
+                          onDraftChange(
+                            e.target.value ? `${nextTitle}\n${e.target.value}` : nextTitle,
+                          );
                         }}
-                        placeholder="Zacznij pisać…"
+                        placeholder={t('widgets.ui.notes.bodyPlaceholder')}
                         spellCheck
-                        aria-label="Treść notatki"
+                        aria-label={t('widgets.ui.notes.bodyAria')}
                       />
                     </div>
                   </div>
@@ -674,12 +690,12 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
           <button type="button" role="menuitem" onClick={() => togglePin(ctxMenu.id)}>
             <Pin size={14} />
             {pinnedIds.has(ctxMenu.id) || notes.find((n) => n.id === ctxMenu.id)?.pinned
-              ? 'Odepnij'
-              : 'Przypnij'}
+              ? t('widgets.ui.notes.unpin')
+              : t('widgets.ui.notes.pin')}
           </button>
           <button type="button" role="menuitem" onClick={() => void duplicateNote(ctxMenu.id)}>
             <Copy size={14} />
-            Duplikuj
+            {t('widgets.ui.notes.duplicate')}
           </button>
           <button
             type="button"
@@ -688,7 +704,7 @@ export function NotesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?
             onClick={() => confirmDelete(ctxMenu.id)}
           >
             <Trash2 size={14} />
-            Usuń
+            {t('common.remove')}
           </button>
         </div>
       )}

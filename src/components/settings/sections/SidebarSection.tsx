@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import { useT } from '../../../i18n';
 import { Input } from '../../ui/Input';
 import { useStore } from '../../../store';
 import { SettingsGroup, SliderRow, Toggle } from '../SettingsControls';
 
 export function SidebarSection() {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const sideApps = useStore((s) => s.sideApps);
   const patchSettings = useStore((s) => s.patchSettings);
@@ -16,9 +18,9 @@ export function SidebarSection() {
 
   return (
     <div className="settings-stack">
-      <SettingsGroup title="Rail">
+      <SettingsGroup title={t('settings.sidebar.rail')}>
         <Toggle
-          label="Pokaż sidebar"
+          label={t('settings.sidebar.showSidebar')}
           hint="Ctrl+B, Ctrl+Shift+M, Ctrl+Shift+G"
           on={settings.showSidebar}
           onChange={(v) =>
@@ -26,8 +28,8 @@ export function SidebarSection() {
           }
         />
         <SliderRow
-          label="Szerokość panelu aplikacji"
-          desc="Albo przeciągnij prawą krawędź otwartego panelu"
+          label={t('settings.sidebar.panelWidth')}
+          desc={t('settings.sidebar.panelWidthDesc')}
           value={`${settings.sidePanelWidth} px`}
           min={280}
           max={720}
@@ -37,7 +39,7 @@ export function SidebarSection() {
         />
       </SettingsGroup>
 
-      <SettingsGroup title="Aplikacje boczne">
+      <SettingsGroup title={t('settings.sidebar.sideApps')}>
         <div className="slist">
           {sideApps.map((s) => (
             <div key={s.id} className="slist-row">
@@ -49,7 +51,7 @@ export function SidebarSection() {
                 type="button"
                 className="icon-btn sm"
                 onClick={() => removeSideApp(s.id)}
-                aria-label={`Usuń ${s.label}`}
+                aria-label={`${t('common.remove')} ${s.label}`}
               >
                 <Trash2 size={14} strokeWidth={1.75} />
               </button>
@@ -58,7 +60,7 @@ export function SidebarSection() {
         </div>
         <div className="sform">
           <Input
-            placeholder="Nazwa"
+            placeholder={t('settings.sidebar.name')}
             value={saLabel}
             onChange={(e) => setSaLabel(e.target.value)}
           />
@@ -78,7 +80,7 @@ export function SidebarSection() {
               setSaUrl('');
             }}
           >
-            <Plus size={14} strokeWidth={1.75} /> Dodaj
+            <Plus size={14} strokeWidth={1.75} /> {t('common.add')}
           </button>
         </div>
       </SettingsGroup>

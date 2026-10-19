@@ -1,3 +1,5 @@
+import { t } from '../i18n/core';
+
 export type DisplayUrlParts = {
   text: string;
   host: string;
@@ -11,16 +13,18 @@ export type DisplayUrlParts = {
 
 const DEFAULT_MAX_LEN = 48;
 
-const INTERNAL_LABELS: Record<string, string> = {
-  'about:home': 'Strona startowa',
-  'about:history': 'Historia',
-  'about:downloads': 'Pobrania',
-  'about:bookmarks': 'Zakładki',
-  'about:extensions': 'Rozszerzenia',
-  'djxxr://about': 'O aplikacji',
-  'about:about': 'O aplikacji',
-  'about:tor': 'Tor',
-};
+function internalLabels(): Record<string, string> {
+  return {
+    'about:home': t('pages.home'),
+    'about:history': t('pages.history'),
+    'about:downloads': t('pages.downloads'),
+    'about:bookmarks': t('pages.bookmarks'),
+    'about:extensions': t('pages.extensions'),
+    'djxxr://about': t('pages.about'),
+    'about:about': t('pages.about'),
+    'about:tor': t('pages.tor'),
+  };
+}
 
 /** Latin, Cyrillic, Greek, Common (digits/punctuation) for spoof detection */
 function scriptBucket(ch: string): string {
@@ -157,7 +161,7 @@ function trimTrailingSlash(text: string): string {
 
 function internalParts(url: string, maxLen: number): DisplayUrlParts | null {
   const key = url.split(/[?#]/)[0].toLowerCase();
-  const label = INTERNAL_LABELS[key];
+  const label = internalLabels()[key];
   if (!label) return null;
   return {
     text: label,
@@ -333,7 +337,7 @@ export function formatOmniboxIdleDisplay(url: string, opts?: { maxLen?: number }
   if (!trimmed) return '';
   if (/^djxxr:\/\//i.test(trimmed)) {
     const key = trimmed.split(/[?#]/)[0].toLowerCase();
-    const label = INTERNAL_LABELS[key];
+    const label = internalLabels()[key];
     if (label) return label;
     return rewriteLegacyProtocol(trimmed);
   }

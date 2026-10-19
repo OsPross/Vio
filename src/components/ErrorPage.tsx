@@ -1,4 +1,5 @@
 import { RefreshCw, TriangleAlert } from 'lucide-react';
+import { useT } from '../i18n';
 
 type Props = {
   url: string;
@@ -9,11 +10,15 @@ type Props = {
   kind?: 'crash' | 'network';
 };
 
-function headlineFor(errorCode: number, kind?: string, description?: string): string {
-  if (kind === 'crash' || errorCode === -9001) return 'Ta strona przestała działać';
-  if (errorCode === -105 || errorCode === -106 || errorCode === -137)
-    return 'Brak połączenia z internetem';
-  if (errorCode === -7 || errorCode === -118) return 'Przekroczono limit czasu połączenia';
+function headlineFor(
+  errorCode: number,
+  t: (key: string) => string,
+  kind?: string,
+  description?: string,
+): string {
+  if (kind === 'crash' || errorCode === -9001) return t('errors.crash');
+  if (errorCode === -105 || errorCode === -106 || errorCode === -137) return t('errors.noInternet');
+  if (errorCode === -7 || errorCode === -118) return t('errors.timeout');
   if (
     errorCode === -200 ||
     errorCode === -201 ||
@@ -22,15 +27,16 @@ function headlineFor(errorCode: number, kind?: string, description?: string): st
     errorCode === -324 ||
     /CERT|SSL|CERTIFICATE/i.test(description || '')
   ) {
-    return 'Problem z certyfikatem bezpieczeństwa';
+    return t('errors.certificate');
   }
-  if (errorCode === -501) return 'Nieobsługiwany protokół';
-  if (errorCode === -300 || errorCode === -302) return 'Nieprawidłowy adres';
-  return 'Nie udało się załadować strony';
+  if (errorCode === -501) return t('errors.unsupportedProtocol');
+  if (errorCode === -300 || errorCode === -302) return t('errors.invalidAddress');
+  return t('errors.loadFailed');
 }
 
 export function ErrorPage({ url, errorCode, description, onRetry, kind }: Props) {
-  const headline = headlineFor(errorCode, kind, description);
+  const t = useT();
+  const headline = headlineFor(errorCode, t, kind, description);
 
   return (
     <div className="page-error-overlay" role="alert">
@@ -39,10 +45,12 @@ export function ErrorPage({ url, errorCode, description, onRetry, kind }: Props)
         <h2>{headline}</h2>
         {description ? <p className="page-error-desc">{description}</p> : null}
         <code className="page-error-url">{url || 'about:blank'}</code>
-        {kind !== 'crash' ? <p className="page-error-code muted">Kod błędu: {errorCode}</p> : null}
+        {kind !== 'crash' ? (
+          <p className="page-error-code muted">{t('errors.errorCode', { code: errorCode })}</p>
+        ) : null}
         <button type="button" className="sbtn" onClick={onRetry}>
           <RefreshCw size={14} strokeWidth={1.75} />
-          Odśwież
+          {t('common.refresh')}
         </button>
       </div>
     </div>

@@ -40,6 +40,7 @@ import {
   type Bookmark as Bm,
   type BookmarkFolder,
 } from '../store';
+import { useT } from '../i18n';
 import { InternalPage } from './InternalPage';
 import { Input } from './ui/Input';
 import { Switch } from './ui/Switch';
@@ -63,9 +64,13 @@ function folderIdOf(b: Bm) {
   return b.folderId ?? BOOKMARKS_OTHER_FOLDER_ID;
 }
 
-function folderLabel(folders: BookmarkFolder[], id: string) {
-  if (id === BOOKMARKS_BAR_FOLDER_ID) return 'Pasek zakładek';
-  if (id === BOOKMARKS_OTHER_FOLDER_ID) return 'Inne';
+function folderLabel(
+  folders: BookmarkFolder[],
+  id: string,
+  t: (key: string) => string,
+) {
+  if (id === BOOKMARKS_BAR_FOLDER_ID) return t('folders.bookmarksBar');
+  if (id === BOOKMARKS_OTHER_FOLDER_ID) return t('folders.otherBookmarks');
   return folders.find((f) => f.id === id)?.title ?? '—';
 }
 
@@ -212,6 +217,7 @@ function SortableRow({
 }
 
 export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
+  const t = useT();
   const bookmarks = useStore((s) => s.bookmarks);
   const bookmarkFolders = useStore((s) => s.bookmarkFolders);
   const addBookmarkFolder = useStore((s) => s.addBookmarkFolder);
@@ -331,30 +337,34 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
       if (!text) return;
       const count = countChromeImportPreview(text);
       if (!count) {
-        window.alert('Nie znaleziono zakładek w tym profilu.');
+        window.alert(t('internal.bookmarksImportNone'));
         return;
       }
-      if (!window.confirm(`Zaimportować ${count} zakładek (pomijając duplikaty URL)?`)) return;
+      if (!window.confirm(t('internal.bookmarksImportConfirm', { n: count }))) return;
       mergeImportedBookmarks(parseChromeBookmarksJson(text));
       setImportOpen(false);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Import nie powiódł się.');
+      window.alert(err instanceof Error ? err.message : t('internal.bookmarksImportFailed'));
     }
   };
 
   const onExport = async () => {
-    const html = exportNetscapeBookmarksHtml(bookmarkFolders, bookmarks, 'Zakładki Vio');
+    const html = exportNetscapeBookmarksHtml(
+      bookmarkFolders,
+      bookmarks,
+      t('internal.bookmarksExportTitle'),
+    );
     try {
       if (window.shell?.bookmarksSaveExport) {
         const res = await window.shell.bookmarksSaveExport(html);
         if (res?.canceled) return;
         if (!res?.ok) {
-          window.alert(res?.error || 'Eksport nie powiódł się.');
+          window.alert(res?.error || t('internal.bookmarksExportFailed'));
         }
         return;
       }
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Eksport nie powiódł się.');
+      window.alert(err instanceof Error ? err.message : t('internal.bookmarksExportFailed'));
       return;
     }
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -367,7 +377,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
   };
 
   const newFolder = () => {
-    const title = prompt('Nazwa folderu');
+    const title = prompt(t('internal.bookmarksFolderNamePrompt'));
     if (!title?.trim()) return;
     const parentId = selectedFolder === 'all' ? BOOKMARKS_OTHER_FOLDER_ID : selectedFolder;
     addBookmarkFolder({ title: title.trim(), parentId });
@@ -428,11 +438,14 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
   return (
     <InternalPage
       className="bookmarks-page"
-      title="Zakładki"
+      title={t('internal.bookmarks')}
       icon={<Bookmark size={18} strokeWidth={1.75} />}
       subtitle={
         <span>
-          {bookmarks.length} {bookmarks.length === 1 ? 'zakładka' : 'zakładek'}
+          {t(
+            bookmarks.length === 1 ? 'internal.bookmarksSubOne' : 'internal.bookmarksSub',
+            { n: bookmarks.length },
+          )}
         </span>
       }
       toolbar={
@@ -442,7 +455,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Szukaj zakładek…"
+              placeholder={t('internal.searchBookmarks')}
               spellCheck={false}
             />
           </label>
@@ -452,12 +465,12 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
               className="history-sbtn secondary"
               onClick={() => setImportOpen((v) => !v)}
             >
-              <Upload size={14} /> Import
+              <Upload size={14} /> {t('internal.import')}
             </button>
             {importOpen && (
               <div className="bm-import-pop">
                 <button type="button" onClick={() => fileRef.current?.click()}>
-                  Plik HTML (Netscape)…
+                  {t('internal.bookmarksImportHtml')}
                 </button>
                 {profiles.map((p) => (
                   <button
@@ -466,8 +479,8 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                     disabled={!p.exists}
                     onClick={() => void onImportChrome(p.path)}
                   >
-                    Z {p.browser}
-                    {!p.exists ? ' (brak profilu)' : ''}
+                    {t('internal.bookmarksImportFrom', { browser: p.browser })}
+                    {!p.exists ? t('internal.bookmarksNoProfile') : ''}
                   </button>
                 ))}
               </div>
@@ -479,18 +492,18 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
             onClick={onExport}
             disabled={!bookmarks.length}
           >
-            <Download size={14} /> Eksport
+            <Download size={14} /> {t('internal.export')}
           </button>
           <button type="button" className="history-sbtn secondary" onClick={newFolder}>
-            <FolderPlus size={14} /> Nowy folder
+            <FolderPlus size={14} /> {t('internal.newFolder')}
           </button>
           <label className="bm-toolbar-switch">
             <Switch
               on={showBar}
               onChange={(v) => patchSettings({ showBookmarksBar: v })}
-              aria-label="Pokaż pasek zakładek"
+              aria-label={t('internal.bookmarksShowBar')}
             />
-            Pokaż pasek zakładek
+            {t('internal.bookmarksShowBar')}
           </label>
           <input
             ref={fileRef}
@@ -513,13 +526,13 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
         onDragEnd={onDragEnd}
       >
         <div className="bm-layout">
-          <nav className="bm-folders" aria-label="Foldery">
+          <nav className="bm-folders" aria-label={t('internal.bookmarksFoldersAria')}>
             <FolderDropTarget
               id="all"
               active={selectedFolder === 'all'}
               onSelect={() => setSelectedFolder('all')}
               icon={<Bookmark size={14} strokeWidth={1.75} />}
-              label="Wszystkie"
+              label={t('internal.all')}
               count={counts.get('all') ?? 0}
             />
             <FolderDropTarget
@@ -527,7 +540,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
               active={selectedFolder === BOOKMARKS_BAR_FOLDER_ID}
               onSelect={() => setSelectedFolder(BOOKMARKS_BAR_FOLDER_ID)}
               icon={<Folder size={14} strokeWidth={1.75} />}
-              label="Pasek zakładek"
+              label={t('folders.bookmarksBar')}
               count={counts.get(BOOKMARKS_BAR_FOLDER_ID) ?? 0}
             />
             <FolderDropTarget
@@ -535,7 +548,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
               active={selectedFolder === BOOKMARKS_OTHER_FOLDER_ID}
               onSelect={() => setSelectedFolder(BOOKMARKS_OTHER_FOLDER_ID)}
               icon={<Folder size={14} strokeWidth={1.75} />}
-              label="Inne"
+              label={t('folders.otherBookmarks')}
               count={counts.get(BOOKMARKS_OTHER_FOLDER_ID) ?? 0}
             />
             {userFolders.map((f) => (
@@ -551,9 +564,13 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                 <button
                   type="button"
                   className="icon-btn sm"
-                  title="Usuń folder"
+                  title={t('internal.bookmarksRemoveFolder')}
                   onClick={() => {
-                    if (window.confirm(`Usunąć folder „${f.title}”? Zakładki trafią do „Inne”.`)) {
+                    if (
+                      window.confirm(
+                        t('internal.bookmarksRemoveFolderConfirm', { title: f.title }),
+                      )
+                    ) {
                       removeBookmarkFolder(f.id);
                       if (selectedFolder === f.id) setSelectedFolder('all');
                     }
@@ -571,7 +588,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                 <span className="ip-empty-ico" aria-hidden>
                   <Bookmark size={28} strokeWidth={1.5} />
                 </span>
-                <p>Brak zakładek{q ? ' dla tego zapytania' : ''}</p>
+                <p>{q.trim() ? t('internal.bookmarksEmptyQuery') : t('internal.bookmarksEmpty')}</p>
                 {emptyAll && !q ? (
                   <>
                     <button
@@ -579,12 +596,12 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                       className="history-sbtn secondary"
                       onClick={() => setImportOpen(true)}
                     >
-                      Importuj z Chrome/Brave
+                      {t('internal.bookmarksImportChrome')}
                     </button>
-                    <span className="muted">Ctrl+D na stronie dodaje zakładkę</span>
+                    <span className="muted">{t('internal.bookmarksAddHint')}</span>
                   </>
                 ) : (
-                  <span className="muted">Zmień folder lub wyszukiwanie.</span>
+                  <span className="muted">{t('internal.bookmarksEmptyFilterHint')}</span>
                 )}
               </div>
             ) : (
@@ -596,7 +613,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                   <SortableRow
                     key={b.id}
                     bookmark={b}
-                    folderName={folderLabel(bookmarkFolders, folderIdOf(b))}
+                    folderName={folderLabel(bookmarkFolders, folderIdOf(b), t)}
                     favicon={favicons[b.url] || letterFavicon(b.url)}
                     selected={selected.has(b.id)}
                     selectionActive={selectionActive}
@@ -657,7 +674,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                 setCtx(null);
               }}
             >
-              Otwórz
+              {t('common.open')}
             </button>
             <button
               type="button"
@@ -666,7 +683,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                 setCtx(null);
               }}
             >
-              Otwórz w nowej karcie
+              {t('internal.openInNewTab')}
             </button>
             <button
               type="button"
@@ -675,7 +692,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                 setCtx(null);
               }}
             >
-              Edytuj…
+              {t('internal.bookmarksEdit')}
             </button>
             <button
               type="button"
@@ -685,14 +702,14 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                 setCtx(null);
               }}
             >
-              Usuń
+              {t('common.delete')}
             </button>
             <hr />
             <button
               type="button"
               onClick={() => setMoveMenuFor((v) => (v ? null : ctx.bookmark.id))}
             >
-              Przenieś do folderu…
+              {t('internal.bookmarksMoveToFolder')}
             </button>
             {moveMenuFor === ctx.bookmark.id && (
               <>
@@ -710,7 +727,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                       setMoveMenuFor(null);
                     }}
                   >
-                    {folderLabel(bookmarkFolders, fid)}
+                    {folderLabel(bookmarkFolders, fid, t)}
                   </button>
                 ))}
               </>

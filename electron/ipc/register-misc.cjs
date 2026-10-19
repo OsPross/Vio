@@ -27,6 +27,7 @@ function register(deps) {
     perf,
     spellcheck,
   } = deps;
+  const locale = require('../lib/locale.cjs');
 
   ipcMain.handle(
     C.OPEN_EXTERNAL,
@@ -300,6 +301,15 @@ function register(deps) {
       } catch (err) {
         return { ok: false, error: String(err?.message || err || 'fail') };
       }
+    }),
+  );
+
+  ipcMain.handle(
+    C.SET_UI_LOCALE,
+    wrapApp((_e, next) => {
+      const lang = next === 'en' ? 'en' : 'pl';
+      locale.setAppLocale(lang);
+      return { ok: true, locale: lang };
     }),
   );
 

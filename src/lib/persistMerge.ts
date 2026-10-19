@@ -125,6 +125,9 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
   if (s.searchLanguage !== 'auto' && s.searchLanguage !== 'en' && s.searchLanguage !== 'pl') {
     s.searchLanguage = 'en';
   }
+  if (s.uiLocale !== 'pl' && s.uiLocale !== 'en') {
+    s.uiLocale = 'pl';
+  }
   if (typeof s.perfSpellcheck !== 'boolean') s.perfSpellcheck = true;
   if (!s.zoomFactors || typeof s.zoomFactors !== 'object') s.zoomFactors = {};
   if (typeof s.showBookmarksBar !== 'boolean') s.showBookmarksBar = false;

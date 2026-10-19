@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { HomeChromeId, HomeClockStyle, HomeWidgetSize, HomeWidgetStyle } from '../store';
 import { Switch } from '../components/ui/Switch';
+import { useT } from '../i18n';
 
 export type SettingsTarget =
   | {
@@ -99,6 +100,7 @@ export function WidgetSettingsPopover({
   onToggleClock?: (v: boolean) => void;
   onToggleApps?: (v: boolean) => void;
 }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: 0, top: 0 });
 
@@ -129,11 +131,11 @@ export function WidgetSettingsPopover({
   const title =
     target.kind === 'chrome'
       ? target.id === 'clock'
-        ? 'Zegar'
+        ? t('widgets.clock')
         : target.id === 'search'
-          ? 'Wyszukiwarka'
-          : 'Skróty'
-      : 'Widżet';
+          ? t('widgets.ui.searchBox')
+          : t('widgets.shortcuts')
+      : t('widgets.ui.widget');
 
   const widgetStyleChoice =
     target.kind === 'widget' ? (target.style === undefined ? 'inherit' : target.style) : 'inherit';
@@ -144,12 +146,17 @@ export function WidgetSettingsPopover({
       className="hw-settings-pop"
       style={{ left: pos.left, top: pos.top }}
       role="dialog"
-      aria-label={`Ustawienia: ${title}`}
+      aria-label={t('widgets.ui.settingsAria', { title })}
       onPointerDown={(e) => e.stopPropagation()}
     >
       <header className="hw-settings-pop-head">
         <strong>{title}</strong>
-        <button type="button" className="hw-icon-btn" onClick={onClose} aria-label="Zamknij">
+        <button
+          type="button"
+          className="hw-icon-btn"
+          onClick={onClose}
+          aria-label={t('common.close')}
+        >
           ×
         </button>
       </header>
@@ -157,7 +164,7 @@ export function WidgetSettingsPopover({
       {target.kind === 'widget' && (
         <>
           <label className="hw-settings-row">
-            <span>Rozmiar</span>
+            <span>{t('widgets.ui.size')}</span>
             <div className="hw-size-seg">
               {(['S', 'M', 'L'] as HomeWidgetSize[]).map((s) => (
                 <button
@@ -172,21 +179,21 @@ export function WidgetSettingsPopover({
             </div>
           </label>
           <label className="hw-settings-row">
-            <span>Styl karty</span>
+            <span>{t('widgets.ui.cardStyle')}</span>
             <div className="hw-size-seg hw-style-seg">
               <button
                 type="button"
                 className={widgetStyleChoice === 'inherit' ? 'on' : ''}
-                title={`Jak globalnie (${globalWidgetStyle})`}
+                title={t('widgets.ui.likeGlobal', { style: globalWidgetStyle })}
                 onClick={() => onWidgetStyle?.(null)}
               >
-                Global
+                {t('widgets.ui.global')}
               </button>
               {(
                 [
-                  ['transparent', 'Przez.'],
-                  ['glass', 'Szkło'],
-                  ['solid', 'Pełne'],
+                  ['transparent', t('widgets.ui.styleTransparentShort')],
+                  ['glass', t('widgets.ui.styleGlass')],
+                  ['solid', t('widgets.ui.styleSolid')],
                 ] as [HomeWidgetStyle, string][]
               ).map(([id, label]) => (
                 <button
@@ -202,7 +209,7 @@ export function WidgetSettingsPopover({
           </label>
           {onRemoveWidget && (
             <button type="button" className="hw-settings-danger" onClick={onRemoveWidget}>
-              Usuń widżet
+              {t('widgets.ui.removeWidget')}
             </button>
           )}
         </>
@@ -211,13 +218,13 @@ export function WidgetSettingsPopover({
       {target.kind === 'chrome' && target.id === 'clock' && (
         <>
           <label className="hw-settings-row">
-            <span>Styl</span>
+            <span>{t('widgets.ui.style')}</span>
             <div className="hw-size-seg hw-style-seg">
               {(
                 [
-                  ['thin', 'Cienki'],
-                  ['classic', 'Klasyczny'],
-                  ['mono', 'Mono'],
+                  ['thin', t('home.personalize.clockThin')],
+                  ['classic', t('home.personalize.clockClassic')],
+                  ['mono', t('home.personalize.clockMono')],
                 ] as [HomeClockStyle, string][]
               ).map(([id, label]) => (
                 <button
@@ -232,30 +239,44 @@ export function WidgetSettingsPopover({
             </div>
           </label>
           <label className="hw-settings-check">
-            <Switch on={showClock} onChange={(v) => onToggleClock?.(v)} aria-label="Pokaż zegar" />
-            Pokaż zegar
+            <Switch
+              on={showClock}
+              onChange={(v) => onToggleClock?.(v)}
+              aria-label={t('widgets.ui.showClock')}
+            />
+            {t('widgets.ui.showClock')}
           </label>
           <label className="hw-settings-check">
-            <Switch on={showDate} onChange={(v) => onToggleDate?.(v)} aria-label="Pokaż datę" />
-            Pokaż datę
+            <Switch
+              on={showDate}
+              onChange={(v) => onToggleDate?.(v)}
+              aria-label={t('widgets.ui.showDate')}
+            />
+            {t('widgets.ui.showDate')}
           </label>
           <label className="hw-settings-check">
-            <Switch on={showSeconds} onChange={(v) => onToggleSeconds?.(v)} aria-label="Sekundy" />
-            Sekundy
+            <Switch
+              on={showSeconds}
+              onChange={(v) => onToggleSeconds?.(v)}
+              aria-label={t('home.personalize.seconds')}
+            />
+            {t('home.personalize.seconds')}
           </label>
         </>
       )}
 
       {target.kind === 'chrome' && target.id === 'search' && (
-        <p className="hw-settings-hint">
-          Silnik i podpowiedzi ustawisz w Personalizacji → Zegar i wyszukiwarka.
-        </p>
+        <p className="hw-settings-hint">{t('widgets.ui.searchChromeHint')}</p>
       )}
 
       {target.kind === 'chrome' && target.id === 'shortcuts' && (
         <label className="hw-settings-check">
-          <Switch on={showApps} onChange={(v) => onToggleApps?.(v)} aria-label="Pokaż skróty" />
-          Pokaż skróty
+          <Switch
+            on={showApps}
+            onChange={(v) => onToggleApps?.(v)}
+            aria-label={t('widgets.ui.showShortcuts')}
+          />
+          {t('widgets.ui.showShortcuts')}
         </label>
       )}
     </div>
