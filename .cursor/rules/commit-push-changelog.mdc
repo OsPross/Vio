@@ -1,0 +1,24 @@
+---
+description: Po zmianach w Vio zawsze commit + push (Discord changelog)
+alwaysApply: true
+---
+
+# Commit + push po zmianach (changelog Discord)
+
+Użytkownik chce **stałego** workflow: po sensownych zmianach w kodzie Vio od razu rób **commit i `git push origin main`**, żeby bot Discord (`#changelog-vio`) dostał nowy commit z GitHuba.
+
+## Kiedy
+- Po dokończeniu zadania / fixa / featura (nie po każdym drobnym half-edit w trakcie iteracji).
+- Gdy typecheck/testy wymagane przez CLAUDE.md przechodzą (albo awaria jest świadomie zaakceptowana).
+- Nie czekaj na dodatkowe „zrób push” — to jest domyślne dla tego repo.
+
+## Jak
+1. Commit tylko plików z tej pracy (bez cudzego WIP, bez sekretów).
+2. Krótki message w stylu repo (`feat` / `fix` / `chore`).
+3. `git push origin main`.
+4. Nie pushuj force; nie ruszaj Tor/vault bez zgody.
+
+## Wyjątki
+- User wyraźnie każe **nie** commitować / nie pushować.
+- Same eksperymenty lokalne, które user każe wyrzucić.
+- Pliki z sekretami (`.env`, tokeny) — nigdy do repo.
