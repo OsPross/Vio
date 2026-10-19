@@ -17,7 +17,7 @@ import {
   useStore,
   type Tab,
 } from '../../store';
-import { isMotionOff, viewTransition } from '../../lib/motionPresets';
+import { isMotionOff } from '../../lib/motionPresets';
 import { TabWebview, type SaveOffer, type WebviewEl } from './TabWebview';
 
 const AboutPage = lazy(() =>
@@ -124,7 +124,16 @@ export function TabContent({
   const pushHistory = useStore((s) => s.pushHistory);
   const patchSettings = useStore((s) => s.patchSettings);
   const motionOff = isMotionOff(settings);
-  const aboutMotion = viewTransition(motionOff);
+  // Opacity only — y/scale made about:* ↔ webview (and about↔about) feel like a jump.
+  const aboutMotion = {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    exit: {
+      opacity: 0,
+      transition: { duration: motionOff ? 0.06 : 0.12, ease: [0.16, 1, 0.3, 1] as const },
+    },
+    transition: { duration: motionOff ? 0.06 : 0.14, ease: [0.16, 1, 0.3, 1] as const },
+  };
   const aboutKey = active?.url || 'about';
 
   return (

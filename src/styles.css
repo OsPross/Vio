@@ -3538,7 +3538,8 @@ html.side-panel-resizing .app {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  padding: calc(var(--title-h, 36px) + 20px) 28px 24px;
+  /* Stage is already below tabs+toolbar — do NOT add --title-h again (caused a big empty gap / jump vs webviews). */
+  padding: 20px 28px 24px;
   background: var(--bg);
   z-index: 2;
   display: flex;
