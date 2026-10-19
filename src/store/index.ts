@@ -57,6 +57,7 @@ import {
   resolveBangWithSettings,
   searchHome,
   searchUrl,
+  searchLanguageParams,
 } from './settingsHelpers';
 import { createSettingsSlice } from './settingsSlice';
 import type { StoreState } from './storeState';
@@ -226,6 +227,7 @@ export type {
   HomeWidgetType,
   PerfMode,
   SearchEngine,
+  SearchLanguage,
   Settings,
   SettingsTab,
   Shortcut,
@@ -286,6 +288,7 @@ export {
   resolveBangWithSettings,
   searchHome,
   searchUrl,
+  searchLanguageParams,
 };
 
 export { isBookmarkableUrl, isOnionUrl, isPrivateTab, isTorTab, sortTabsPinnedFirst };

@@ -77,6 +77,9 @@ export type SearchEngine =
   | 'onionland'
   | 'custom';
 
+/** Language preference for search results / engine UI (URL params). */
+export type SearchLanguage = 'auto' | 'en' | 'pl';
+
 export type HomeLayout = 'dashboard' | 'split' | 'stack' | 'minimal';
 export type HomeAlign = 'left' | 'center';
 export type HomeDensity = 'comfortable' | 'compact' | 'spacious';
@@ -144,6 +147,8 @@ export type HomeTodoItem = { id: string; text: string; done: boolean };
 
 export type Settings = {
   searchEngine: SearchEngine;
+  /** Preferred language of search results (engines that support URL lang params). */
+  searchLanguage: SearchLanguage;
   searxUrl: string;
   customSearchUrl: string;
   /** SOCKS address for Tryb Tor (9050 daemon / 9150 Tor Browser) */

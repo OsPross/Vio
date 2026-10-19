@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
-import { SEARCH_ENGINES, useStore, type SearchEngine } from '../../../store';
+import { SEARCH_ENGINES, useStore, type SearchEngine, type SearchLanguage } from '../../../store';
 import { FieldRow, Row, SettingsDisclosure, SettingsGroup, Toggle } from '../SettingsControls';
 
 export function SearchSection() {
@@ -83,6 +83,21 @@ export function SearchSection() {
             />
           </FieldRow>
         )}
+        <Row
+          label="Język wyników"
+          desc="Angielski wymusza wyniki / UI po angielsku (Google, DDG, Brave…)"
+        >
+          <Select
+            aria-label="Język wyników wyszukiwania"
+            value={settings.searchLanguage || 'en'}
+            onChange={(v) => patchSettings({ searchLanguage: v as SearchLanguage })}
+            options={[
+              { value: 'en', label: 'English' },
+              { value: 'pl', label: 'Polski' },
+              { value: 'auto', label: 'Auto (silnik / IP)' },
+            ]}
+          />
+        </Row>
       </SettingsGroup>
 
       <SettingsGroup title="Tryb Tor">

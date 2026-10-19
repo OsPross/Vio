@@ -122,6 +122,9 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
   if (typeof s.privacySearchSuggest !== 'boolean') s.privacySearchSuggest = true;
   if (typeof s.privacyAllowAppNetwork !== 'boolean') s.privacyAllowAppNetwork = true;
   if (typeof s.newTabIsSearch !== 'boolean') s.newTabIsSearch = true;
+  if (s.searchLanguage !== 'auto' && s.searchLanguage !== 'en' && s.searchLanguage !== 'pl') {
+    s.searchLanguage = 'en';
+  }
   if (typeof s.perfSpellcheck !== 'boolean') s.perfSpellcheck = true;
   if (!s.zoomFactors || typeof s.zoomFactors !== 'object') s.zoomFactors = {};
   if (typeof s.showBookmarksBar !== 'boolean') s.showBookmarksBar = false;

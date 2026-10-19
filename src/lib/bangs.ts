@@ -3,9 +3,14 @@
 export type Bang = { key: string; label: string; url: string };
 
 export const DEFAULT_BANGS: Bang[] = [
-  { key: 'g', label: 'Google', url: 'https://www.google.com/search?q=%s' },
+  { key: 'g', label: 'Google', url: 'https://www.google.com/search?q=%s&hl=en&gl=us' },
   { key: 'yt', label: 'YouTube', url: 'https://www.youtube.com/results?search_query=%s' },
-  { key: 'w', label: 'Wikipedia', url: 'https://pl.wikipedia.org/wiki/Specjalna:Szukaj?search=%s' },
+  { key: 'w', label: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Special:Search?search=%s' },
+  {
+    key: 'wpl',
+    label: 'Wikipedia PL',
+    url: 'https://pl.wikipedia.org/wiki/Specjalna:Szukaj?search=%s',
+  },
   { key: 'gh', label: 'GitHub', url: 'https://github.com/search?q=%s' },
   { key: 'a', label: 'Amazon', url: 'https://www.amazon.com/s?k=%s' },
   { key: 'm', label: 'Mapy', url: 'https://www.google.com/maps/search/%s' },
@@ -14,10 +19,15 @@ export const DEFAULT_BANGS: Bang[] = [
   { key: 'gmail', label: 'Gmail', url: 'https://mail.google.com/mail/u/0/#search/%s' },
   {
     key: 'tr',
-    label: 'Tłumacz',
+    label: 'Tłumacz → EN',
+    url: 'https://translate.google.com/?sl=auto&tl=en&text=%s&op=translate',
+  },
+  {
+    key: 'trpl',
+    label: 'Tłumacz → PL',
     url: 'https://translate.google.com/?sl=auto&tl=pl&text=%s&op=translate',
   },
-  { key: 'gi', label: 'Google Images', url: 'https://www.google.com/search?tbm=isch&q=%s' },
+  { key: 'gi', label: 'Google Images', url: 'https://www.google.com/search?tbm=isch&q=%s&hl=en' },
   { key: 'so', label: 'Stack Overflow', url: 'https://stackoverflow.com/search?q=%s' },
   { key: 'tw', label: 'Twitter / X', url: 'https://x.com/search?q=%s' },
   { key: 'sp', label: 'Startpage', url: 'https://www.startpage.com/sp/search?query=%s' },
@@ -38,7 +48,11 @@ export function migrateBangsToDdg(bangs: Bang[]): Bang[] {
   const byKey = new Map(bangs.map((b) => [b.key.toLowerCase(), { ...b }]));
   const g = byKey.get('g');
   if (g && /mail\.google\.com/i.test(g.url)) {
-    byKey.set('g', { key: 'g', label: 'Google', url: 'https://www.google.com/search?q=%s' });
+    byKey.set('g', {
+      key: 'g',
+      label: 'Google',
+      url: 'https://www.google.com/search?q=%s&hl=en&gl=us',
+    });
   }
   if (!byKey.has('gmail')) {
     byKey.set('gmail', {

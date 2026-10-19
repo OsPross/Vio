@@ -190,6 +190,7 @@ export const DEFAULT_SIDE_APPS: SideApp[] = [
 
 export const DEFAULT_SETTINGS: Settings = {
   searchEngine: 'brave',
+  searchLanguage: 'en',
   searxUrl: 'http://127.0.0.1:8080',
   customSearchUrl: 'https://duckduckgo.com/?q=%s',
   torProxyUrl: 'socks5://127.0.0.1:9050',

@@ -1,10 +1,49 @@
 import { DEFAULT_BANGS, resolveBang, type Bang } from '../lib/bangs';
 import { nativeThemeSource } from '../lib/page-scrollbars';
-import type { PerfMode, SearchEngine, Settings } from './types';
+import type { PerfMode, SearchEngine, SearchLanguage, Settings } from './types';
 import { HOME_URL, SEARCH_ENGINES, THEMES } from './constants';
 
 export function engineLabel(id: SearchEngine): string {
   return SEARCH_ENGINES.find((e) => e.id === id)?.label ?? id;
+}
+
+/** Query-string fragment (no leading `?`/`&`) for engine language / region. */
+export function searchLanguageParams(
+  engine: SearchEngine,
+  lang: SearchLanguage | undefined,
+): string {
+  if (!lang || lang === 'auto') return '';
+  const en = lang === 'en';
+  switch (engine) {
+    case 'google':
+      return en ? 'hl=en&gl=us&lr=lang_en' : 'hl=pl&gl=pl&lr=lang_pl';
+    case 'bing':
+      return en ? 'setlang=en&cc=US&mkt=en-US' : 'setlang=pl&cc=PL&mkt=pl-PL';
+    case 'ddg':
+      return en ? 'kl=us-en' : 'kl=pl-pl';
+    case 'brave':
+      return en ? 'country=US' : 'country=PL';
+    case 'startpage':
+      return en ? 'language=english' : 'language=polski';
+    case 'qwant':
+      return en ? 'locale=en_US' : 'locale=pl_PL';
+    case 'ecosia':
+      return '';
+    case 'swisscows':
+      return en ? 'uiLanguage=en' : 'uiLanguage=pl';
+    case 'yandex':
+      return en ? 'lang=en' : 'lang=pl';
+    case 'searx':
+      return en ? 'language=en-US' : 'language=pl-PL';
+    default:
+      return '';
+  }
+}
+
+function withSearchLang(url: string, engine: SearchEngine, settings: Settings): string {
+  const qs = searchLanguageParams(engine, settings.searchLanguage);
+  if (!qs) return url;
+  return url.includes('?') ? `${url}&${qs}` : `${url}?${qs}`;
 }
 
 export function applyPerfPreset(mode: PerfMode): Partial<Settings> {
@@ -65,25 +104,36 @@ export function applyPerfPreset(mode: PerfMode): Partial<Settings> {
 export function searchUrl(settings: Settings, q: string) {
   const enc = encodeURIComponent(q);
   const searx = settings.searxUrl.replace(/\/$/, '');
-  switch (settings.searchEngine) {
+  const engine = settings.searchEngine;
+  let url: string;
+  switch (engine) {
     case 'searx':
-      return `${searx}/search?q=${enc}`;
+      url = `${searx}/search?q=${enc}`;
+      break;
     case 'brave':
-      return `https://search.brave.com/search?q=${enc}`;
+      url = `https://search.brave.com/search?q=${enc}`;
+      break;
     case 'ddg':
-      return `https://duckduckgo.com/?q=${enc}`;
+      url = `https://duckduckgo.com/?q=${enc}`;
+      break;
     case 'bing':
-      return `https://www.bing.com/search?q=${enc}`;
+      url = `https://www.bing.com/search?q=${enc}`;
+      break;
     case 'startpage':
-      return `https://www.startpage.com/sp/search?query=${enc}`;
+      url = `https://www.startpage.com/sp/search?query=${enc}`;
+      break;
     case 'qwant':
-      return `https://www.qwant.com/?q=${enc}`;
+      url = `https://www.qwant.com/?q=${enc}`;
+      break;
     case 'ecosia':
-      return `https://www.ecosia.org/search?q=${enc}`;
+      url = `https://www.ecosia.org/search?q=${enc}`;
+      break;
     case 'swisscows':
-      return `https://swisscows.com/web?query=${enc}`;
+      url = `https://swisscows.com/web?query=${enc}`;
+      break;
     case 'yandex':
-      return `https://yandex.com/search/?text=${enc}`;
+      url = `https://yandex.com/search/?text=${enc}`;
+      break;
     case 'ahmia':
       return `https://ahmia.fi/search/?q=${enc}`;
     case 'onionland':
@@ -93,8 +143,10 @@ export function searchUrl(settings: Settings, q: string) {
       return tpl.includes('%s') ? tpl.replace('%s', enc) : `${tpl}${enc}`;
     }
     default:
-      return `https://www.google.com/search?q=${enc}`;
+      url = `https://www.google.com/search?q=${enc}`;
+      return withSearchLang(url, 'google', settings);
   }
+  return withSearchLang(url, engine, settings);
 }
 
 export function searchHome(settings: Settings) {
