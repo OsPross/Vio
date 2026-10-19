@@ -2666,8 +2666,8 @@ html.side-panel-resizing .app {
   display: block;
   color: var(--fg);
   font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 500;
+  letter-spacing: -0.015em;
 }
 
 .settings-brand span {
@@ -2691,9 +2691,9 @@ html.side-panel-resizing .app {
 
 .settings-nav-label {
   margin: 0 8px 6px;
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.12em;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--fg-3);
 }
@@ -2718,8 +2718,9 @@ html.side-panel-resizing .app {
 
 .settings-nav-item strong {
   display: block;
-  font-size: 13.5px;
-  font-weight: 550;
+  font-size: 13px;
+  font-weight: 450;
+  letter-spacing: -0.01em;
   color: inherit;
 }
 
@@ -2773,9 +2774,9 @@ html.side-panel-resizing .app {
 
 .settings-hero h2 {
   margin: 0 0 6px;
-  font-size: 26px;
+  font-size: 24px;
   letter-spacing: -0.03em;
-  font-weight: 650;
+  font-weight: 550;
 }
 
 .settings-hero p {

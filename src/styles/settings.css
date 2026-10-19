@@ -80,8 +80,8 @@
   display: block;
   color: var(--fg);
   font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 500;
+  letter-spacing: -0.015em;
 }
 
 .settings-page .settings-brand span {
@@ -105,9 +105,9 @@
 
 .settings-page .settings-nav-label {
   margin: 0 8px 6px;
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--fg-3);
 }
@@ -147,7 +147,8 @@
 .settings-page .settings-nav-item strong {
   display: block;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 450;
+  letter-spacing: -0.01em;
   color: inherit;
 }
 
@@ -218,26 +219,27 @@
 }
 
 .settings-page .settings-hero {
-  max-width: 680px;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 35%, transparent);
+  max-width: 720px;
+  margin-bottom: 4px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
 }
 
 .settings-page .settings-hero h2 {
   margin: 0 0 6px;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.025em;
+  font-size: 24px;
+  font-weight: 550;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
   color: var(--fg);
 }
 
 .settings-page .settings-hero p {
   margin: 0;
-  max-width: 52ch;
+  max-width: 48ch;
   color: var(--fg-3);
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.5;
   font-weight: 400;
 }
 
@@ -245,102 +247,125 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  max-width: 680px;
+  max-width: 720px;
 }
 
 .settings-page .settings-section-fade {
-  max-width: 680px;
+  max-width: 720px;
 }
 
 /* Group block */
 .settings-page .sg {
-  margin-top: 28px;
+  margin-top: 26px;
 }
 
 .settings-page .sg-label {
   display: block;
-  margin: 0 0 8px 2px;
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
+  margin: 0 0 9px 2px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--fg-3);
 }
 
 .settings-page .sg-block {
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
-  background: var(--bg-elev);
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  background: color-mix(in srgb, var(--bg-elev) 88%, transparent);
   overflow: hidden;
-  box-shadow: none;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 3%, transparent);
 }
 
 .settings-page .sg-block > .sr:last-child,
-.settings-page .sg-block > .sr-stack:last-child .sr:last-child {
+.settings-page .sg-block > .sr-stack:last-child .sr:last-child,
+.settings-page .sg-block > .slist:last-child .slist-row:last-child {
   border-bottom: 0;
 }
 
-/* Row */
+/* Row — grid so copy never runs under controls */
 .settings-page .sr {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 24px;
+  row-gap: 6px;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 46px;
-  padding: 10px 16px;
+  min-height: 48px;
+  padding: 12px 16px;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
   border-radius: 0;
   background: transparent;
   width: 100%;
+  box-sizing: border-box;
   text-align: left;
   color: inherit;
   margin: 0;
 }
 
+.settings-page .sr.sr-has-desc {
+  align-items: start;
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+
 .settings-page .sr:hover {
-  background: color-mix(in srgb, var(--fg) 3.5%, transparent);
+  background: color-mix(in srgb, var(--fg) 2.5%, transparent);
+}
+
+.settings-page .sr.is-disabled {
+  opacity: 0.48;
+  pointer-events: none;
 }
 
 .settings-page .sr-copy {
   min-width: 0;
-  flex: 1;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .settings-page .sr-title {
   display: block;
   font-size: 13.5px;
-  font-weight: 500;
+  font-weight: 450;
   color: var(--fg);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
 }
 
 .settings-page .sr-desc {
   display: block;
-  margin-top: 2px;
+  margin-top: 3px;
   font-size: 12px;
   color: var(--fg-3);
-  line-height: 1.35;
+  line-height: 1.45;
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .settings-page .sr-control {
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  max-width: 56%;
+  min-width: 0;
+  justify-self: end;
+}
+
+.settings-page .sr.sr-has-desc .sr-control {
+  padding-top: 1px;
 }
 
 .settings-page .sr-value {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--fg-3);
   font-variant-numeric: tabular-nums;
-  min-width: 3.2em;
+  min-width: 3.4em;
   text-align: right;
+  font-weight: 450;
 }
 
 .settings-page .sr-stack {
@@ -348,22 +373,19 @@
   flex-direction: column;
 }
 
-.settings-page .sr-stack .sr {
-  /* nested rows still use group separators */
-}
-
 .settings-page .sr-field {
-  flex-direction: column;
+  grid-template-columns: 1fr;
   align-items: stretch;
-  gap: 8px;
-  padding-top: 12px;
-  padding-bottom: 12px;
+  gap: 10px;
+  padding-top: 14px;
+  padding-bottom: 14px;
 }
 
 .settings-page .sr-field .sr-control {
   max-width: none;
   width: 100%;
   justify-content: stretch;
+  justify-self: stretch;
 }
 
 .settings-page .sr-input,
@@ -478,34 +500,42 @@
   opacity: 0.4;
 }
 
-/* Segmented */
-.settings-page .sseg {
+/* Segmented (legacy .sseg + shared .ui-seg) */
+.settings-page .sseg,
+.settings-page .ui-seg {
   display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--fg) 6%, transparent);
-  border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  flex-shrink: 0;
+  gap: 1px;
+  padding: 3px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
 }
 
-.settings-page .sseg button {
-  height: 28px;
-  padding: 0 10px;
+.settings-page .sseg button,
+.settings-page .ui-seg button {
+  height: 26px;
+  padding: 0 11px;
   border-radius: 6px;
   border: 0;
   background: transparent;
   color: var(--fg-3);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 450;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-.settings-page .sseg button.on {
-  background: color-mix(in srgb, var(--bg-elev) 90%, var(--fg));
+.settings-page .sseg button.on,
+.settings-page .ui-seg button.on {
+  background: color-mix(in srgb, var(--bg-elev-2, var(--bg-elev)) 92%, var(--fg));
   color: var(--fg);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, #000 22%, transparent);
 }
 
-[data-theme='paper'] .settings-page .sseg button.on {
+[data-theme='paper'] .settings-page .sseg button.on,
+[data-theme='paper'] .settings-page .ui-seg button.on {
   background: #fff;
 }
 
@@ -705,22 +735,50 @@
 .settings-page .slist-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 8px 16px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+  gap: 14px;
+  min-height: 52px;
+  padding: 11px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
   background: transparent;
+}
+
+.settings-page .slist-row:hover {
+  background: color-mix(in srgb, var(--fg) 2.5%, transparent);
 }
 
 .settings-page .slist-row:last-child {
   border-bottom: 0;
 }
 
+/* Toggle/Row nested in slist-row — avoid double chrome */
+.settings-page .slist-row:has(> .sr) {
+  display: contents;
+}
+
+.settings-page .slist-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settings-page .slist-name {
+  font-size: 13.5px;
+  font-weight: 450;
+  letter-spacing: -0.015em;
+  color: var(--fg);
+  line-height: 1.25;
+}
+
+.settings-page .slist-url,
 .settings-page .slist-row code,
 .settings-page .slist-row .mono {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 12px;
-  color: var(--fg-2);
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--fg-3);
+  line-height: 1.35;
 }
 
 .settings-page .slist-row .grow {
@@ -738,23 +796,35 @@
   white-space: nowrap;
 }
 
+/* Legacy <strong> in list rows (if any remain) */
+.settings-page .slist-row > strong {
+  flex-shrink: 0;
+  font-size: 13.5px;
+  font-weight: 450;
+  letter-spacing: -0.015em;
+  color: var(--fg);
+}
+
 .settings-page .sform {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+  padding: 12px 16px 14px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  background: color-mix(in srgb, var(--fg) 1.5%, transparent);
 }
 
-.settings-page .sform input {
+.settings-page .sform input,
+.settings-page .sform .ui-input {
   height: 32px;
   padding: 0 10px;
   border-radius: 8px;
-  border: 1px solid transparent;
-  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
   color: var(--fg);
   min-width: 100px;
   font-size: 13px;
+  font-weight: 400;
 }
 
 .settings-page .sform input.grow {
@@ -774,11 +844,13 @@
   height: 32px;
   padding: 0 12px;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
   color: var(--fg-2);
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 450;
+  letter-spacing: -0.01em;
+  cursor: pointer;
 }
 
 .settings-page .sbtn:hover {
@@ -940,15 +1012,17 @@
     font-size: 18px;
   }
 
-  .settings-page .sr {
-    flex-wrap: wrap;
-    align-items: flex-start;
+  .settings-page .sr,
+  .settings-page .sr.sr-has-desc {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
   .settings-page .sr-control {
-    max-width: 100%;
+    max-width: none;
     width: 100%;
     justify-content: flex-start;
+    justify-self: stretch;
   }
 
   .settings-page .stheme-grid {

@@ -12,10 +12,10 @@ export function SettingsGroup({ title, children }: { title: string; children: Re
 
 export function Row({ label, desc, children }: { label: string; desc?: string; children: ReactNode }) {
   return (
-    <div className="sr">
+    <div className={`sr${desc ? ' sr-has-desc' : ''}`}>
       <div className="sr-copy">
         <span className="sr-title">{label}</span>
-        {desc && <span className="sr-desc">{desc}</span>}
+        {desc ? <span className="sr-desc">{desc}</span> : null}
       </div>
       <div className="sr-control">{children}</div>
     </div>
@@ -32,10 +32,10 @@ export function FieldRow({
   children: ReactNode;
 }) {
   return (
-    <div className="sr sr-field">
+    <div className={`sr sr-field${desc ? ' sr-has-desc' : ''}`}>
       <div className="sr-copy">
         <span className="sr-title">{label}</span>
-        {desc && <span className="sr-desc">{desc}</span>}
+        {desc ? <span className="sr-desc">{desc}</span> : null}
       </div>
       <div className="sr-control">{children}</div>
     </div>
@@ -54,10 +54,10 @@ export function Toggle({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className={`sr ${on ? 'on' : ''}`}>
+    <div className={`sr${on ? ' on' : ''}${hint ? ' sr-has-desc' : ''}`}>
       <div className="sr-copy">
         <span className="sr-title">{label}</span>
-        {hint && <span className="sr-desc">{hint}</span>}
+        {hint ? <span className="sr-desc">{hint}</span> : null}
       </div>
       <div className="sr-control">
         <Switch on={on} onChange={onChange} aria-label={label} />
@@ -88,10 +88,10 @@ export function SliderRow({
   onChange: (n: number) => void;
 }) {
   return (
-    <div className={`sr ${disabled ? 'is-disabled' : ''}`}>
+    <div className={`sr${disabled ? ' is-disabled' : ''}${desc ? ' sr-has-desc' : ''}`}>
       <div className="sr-copy">
         <span className="sr-title">{label}</span>
-        {desc && <span className="sr-desc">{desc}</span>}
+        {desc ? <span className="sr-desc">{desc}</span> : null}
       </div>
       <div className="sr-control">
         <div className="sslider">

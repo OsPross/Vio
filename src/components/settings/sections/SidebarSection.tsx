@@ -41,12 +41,15 @@ export function SidebarSection() {
         <div className="slist">
           {sideApps.map((s) => (
             <div key={s.id} className="slist-row">
-              <strong>{s.label}</strong>
-              <span className="grow muted mono truncate">{s.url}</span>
+              <div className="slist-meta">
+                <span className="slist-name">{s.label}</span>
+                <span className="slist-url mono truncate">{s.url}</span>
+              </div>
               <button
                 type="button"
                 className="icon-btn sm"
                 onClick={() => removeSideApp(s.id)}
+                aria-label={`Usuń ${s.label}`}
               >
                 <Trash2 size={14} strokeWidth={1.75} />
               </button>

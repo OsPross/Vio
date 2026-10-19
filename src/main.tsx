@@ -17,7 +17,6 @@ import './styles.css';
 import './styles/scrollbars.css';
 import './styles/motion.css';
 import './styles/personalize.css';
-import './styles/settings.css';
 import './styles/ui.css';
 import './styles/passwords.css';
 import './styles/resources.css';
@@ -30,6 +29,7 @@ import './styles/privacy-extra.css';
 import './styles/chrome-layout.css';
 import './styles/widgets.css';
 import './styles/chrome-pages.css';
+import './styles/settings.css';
 
 declare global {
   interface Window {
