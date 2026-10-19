@@ -19,6 +19,15 @@ jobs:
         if: github.ref_type == 'tag'
         shell: bash
         run: test "${GITHUB_REF_NAME}" = "v$(node -p "require('./package.json').version")"
+      # electron-builder uploads in parallel and would create duplicate drafts, so create the one draft first
+      - name: Draft release
+        shell: bash
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          gh release view "$TAG" --repo OsPross/vio-releases >/dev/null 2>&1 \
+            || gh release create "$TAG" --repo OsPross/vio-releases --draft --title "$TAG" --notes ""
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
       - run: npm run release
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
