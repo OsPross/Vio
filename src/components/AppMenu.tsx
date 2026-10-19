@@ -535,7 +535,8 @@ export function AppMenu({ actions }: Props) {
     setSubFocus(0);
   };
 
-  // Safe triangle: diagonal travel toward submenu cancels the close timer
+  // Safe zone only while crossing the narrow bridge from trigger → flyout.
+  // Old full-height corridor kept the submenu open when moving UP past it.
   useEffect(() => {
     if (!subOpen) return;
     const onMove = (e: MouseEvent) => {
@@ -549,7 +550,8 @@ export function AppMenu({ actions }: Props) {
       const prev = lastMouse.current;
       lastMouse.current = { x, y };
 
-      const inWrap = x >= wr.left - 2 && x <= wr.right + 2 && y >= wr.top - 2 && y <= wr.bottom + 2;
+      const inWrap =
+        x >= wr.left - 2 && x <= wr.right + 2 && y >= wr.top - 2 && y <= wr.bottom + 2;
       const inPanel =
         x >= pr.left - 2 && x <= pr.right + 2 && y >= pr.top - 2 && y <= pr.bottom + 2;
       if (inWrap || inPanel) {
@@ -558,21 +560,32 @@ export function AppMenu({ actions }: Props) {
       }
 
       const openOnRight = pr.left >= wr.right - 8;
-      const ax = prev.x;
-      const ay = prev.y;
-      const bx = openOnRight ? pr.left : pr.right;
-      const inTriangle = pointInTriangle(x, y, ax, ay, bx, pr.top, bx, pr.bottom);
-      const corridorLeft = Math.min(wr.right, pr.left) - 2;
-      const corridorRight = Math.max(wr.left, pr.right) + 2;
-      const corridorTop = Math.min(wr.top, pr.top) - 4;
-      const corridorBottom = Math.max(wr.bottom, pr.bottom) + 4;
-      const inCorridor =
-        x >= Math.min(corridorLeft, corridorRight) &&
-        x <= Math.max(corridorLeft, corridorRight) &&
-        y >= corridorTop &&
-        y <= corridorBottom;
+      // Bridge: only the gap between trigger and flyout, height ≈ trigger row
+      const bridgeLeft = openOnRight ? wr.right - 4 : pr.right - 4;
+      const bridgeRight = openOnRight ? pr.left + 4 : wr.left + 4;
+      const bridgeTop = wr.top - 8;
+      const bridgeBottom = wr.bottom + 8;
+      const inBridge =
+        x >= Math.min(bridgeLeft, bridgeRight) &&
+        x <= Math.max(bridgeLeft, bridgeRight) &&
+        y >= bridgeTop &&
+        y <= bridgeBottom;
 
-      if (inTriangle || inCorridor) clearCloseSubTimer();
+      // Short triangle toward the near edge of the flyout (not full panel height)
+      const bx = openOnRight ? pr.left : pr.right;
+      const edgeTop = Math.min(pr.top, wr.top) - 4;
+      const edgeBottom = Math.max(pr.top + 48, wr.bottom + 4);
+      const inTriangle = pointInTriangle(x, y, prev.x, prev.y, bx, edgeTop, bx, edgeBottom);
+
+      if (inBridge || inTriangle) {
+        clearCloseSubTimer();
+        return;
+      }
+
+      // Clearly away (e.g. moved above) — close; don't reset timer on every pixel
+      if (!closeSubTimer.current) {
+        closeSubTimer.current = window.setTimeout(() => setSubOpen(null), 160);
+      }
     };
     document.addEventListener('mousemove', onMove, { passive: true });
     return () => document.removeEventListener('mousemove', onMove);
