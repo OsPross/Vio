@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Copy, ExternalLink, FolderOpen } from 'lucide-react';
+import { Copy, ExternalLink, FolderOpen, Info } from 'lucide-react';
 import { InternalPage } from './InternalPage';
 import { CHROME_SHORTCUTS } from '../lib/shortcutsRegistry';
 
@@ -44,9 +44,10 @@ export function AboutPage() {
   return (
     <InternalPage
       title="O Vio"
+      icon={<Info size={18} strokeWidth={1.75} />}
       subtitle="Wersje, skróty i ścieżki profilu"
       toolbar={
-        <button type="button" className="sbtn ghost" onClick={() => void copy()}>
+        <button type="button" className="history-sbtn secondary" onClick={() => void copy()}>
           <Copy size={14} strokeWidth={1.75} />
           {copied ? 'Skopiowano' : 'Kopiuj informacje o wersji'}
         </button>
@@ -101,7 +102,7 @@ export function AboutPage() {
         <div className="about-actions">
           <button
             type="button"
-            className="sbtn ghost"
+            className="history-sbtn secondary"
             onClick={() => void window.shell?.openUserData?.()}
           >
             <FolderOpen size={14} strokeWidth={1.75} />
@@ -109,7 +110,7 @@ export function AboutPage() {
           </button>
           <button
             type="button"
-            className="sbtn ghost"
+            className="history-sbtn secondary"
             onClick={() => void window.shell?.openLogsFolder?.()}
           >
             <ExternalLink size={14} strokeWidth={1.75} />

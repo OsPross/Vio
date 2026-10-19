@@ -7,7 +7,7 @@ import {
   useState,
   type MouseEvent,
 } from 'react';
-import { ExternalLink, Globe, Search, Trash2 } from 'lucide-react';
+import { ExternalLink, Globe, History, Search, Trash2 } from 'lucide-react';
 import { letterFavicon } from '../lib/favicon';
 import { formatUrlForDisplay, formatUrlPlain } from '../lib/url-display';
 import { Dropdown } from './ui/Dropdown';
@@ -355,8 +355,9 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
     <InternalPage
       className="history-page"
       title="Historia"
+      icon={<History size={18} strokeWidth={1.75} />}
       subtitle={
-        <span className="muted">
+        <span>
           {total} {total === 1 ? 'wpis' : 'wpisów'} · tylko karty normalne (Tor nigdy nie jest
           zapisywany)
         </span>
@@ -405,9 +406,12 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
 
       <div className="history-scroll" ref={scrollRef}>
         {ready && !flatRows.length && (
-          <div className="history-empty">
-            <p>Brak wpisów{q ? ' dla tego zapytania' : ''}.</p>
-            <p className="muted">Odwiedzone strony z kart normalnych pojawią się tutaj.</p>
+          <div className="ip-empty">
+            <span className="ip-empty-ico" aria-hidden>
+              <History size={28} strokeWidth={1.5} />
+            </span>
+            <p>Brak wpisów{q ? ' dla tego zapytania' : ''}</p>
+            <span className="muted">Odwiedzone strony z kart normalnych pojawią się tutaj.</span>
           </div>
         )}
         {!!flatRows.length && (

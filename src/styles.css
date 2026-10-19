@@ -3534,61 +3534,7 @@ html.side-panel-resizing .app {
 .omnibox.tor-mode .omnibox-suggest {
   display: none;
 }
-.internal-page {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  /* Stage is already below tabs+toolbar — do NOT add --title-h again (caused a big empty gap / jump vs webviews). */
-  padding: 20px 28px 24px;
-  background: var(--bg);
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  box-sizing: border-box;
-}
-.internal-page-head {
-  position: sticky;
-  top: 0;
-  z-index: 12;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px 20px;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin: 0 auto 14px;
-  width: 100%;
-  max-width: var(--internal-page-max, 960px);
-  flex-shrink: 0;
-  padding-bottom: 6px;
-  background: var(--bg);
-}
-.internal-page-head-text h1 {
-  margin: 0 0 4px;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-.internal-page-subtitle {
-  margin: 0;
-  font-size: 12px;
-  color: var(--fg2);
-}
-.internal-page-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-.internal-page-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: var(--internal-page-max, 960px);
-  margin: 0 auto;
-}
+/* .internal-page shell → styles/chrome-pages.css */
 .history-page {
   /* history-specific shell; layout from .internal-page */
 }
@@ -4677,17 +4623,7 @@ html.side-panel-resizing .app {
 .dl-missing {
   text-decoration: line-through;
 }
-.dl-empty-page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-.dl-empty-page svg {
-  color: var(--fg2);
-  opacity: 0.55;
-  margin-bottom: 4px;
-}
+/* .dl-empty-page → styles/chrome-pages.css */
 .dl-panel-icon {
   flex-shrink: 0;
   color: var(--fg2);
@@ -5118,21 +5054,7 @@ html.side-panel-resizing .app {
   background: var(--chrome-input);
   color: var(--fg);
 }
-.bm-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 48px 16px;
-  text-align: center;
-  color: var(--fg2);
-}
-.bm-empty-icon {
-  color: var(--fg3);
-  opacity: 0.85;
-}
+/* .bm-empty → styles/chrome-pages.css */
 .bm-toolbar-switch {
   display: flex;
   align-items: center;
@@ -5255,91 +5177,22 @@ html.side-panel-resizing .app {
 .app.window-private .tabs {
   background: color-mix(in srgb, var(--chrome) 70%, #000 30%);
 }
-.about-page {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding-bottom: 32px;
-}
-.about-hero {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.about-logo {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--accent) 22%, var(--bg-elev));
-  color: var(--fg);
-}
+/* about-* layout → styles/chrome-pages.css */
 .about-logo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-.about-hero h2 {
-  margin: 0;
-  font-size: 20px;
-}
-.about-h3 {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--fg2);
 }
 .about-path {
   word-break: break-all;
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 11.5px;
 }
-.about-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.about-shortcuts {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 280px;
-  overflow: auto;
-}
-.about-shortcuts li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  font-size: 12.5px;
-}
-.about-shortcuts li:hover {
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
-}
 .about-shortcuts kbd {
   color: var(--fg3);
   font-variant-numeric: tabular-nums;
   font-family: inherit;
   font-size: 11px;
-}
-
-.about-dl {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-}
-.about-dl > div {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: 12px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--fg) 3%, transparent);
 }
 .about-dl dt {
   margin: 0;
@@ -5375,95 +5228,4 @@ html.side-panel-resizing .app {
   filter: saturate(0.75);
 }
 
-/* --- Extensions (about:extensions) --- */
-.extensions-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: auto;
-}
-.extensions-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.extensions-store-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  max-width: var(--internal-page-max, 960px);
-  width: 100%;
-  margin: 0 auto 12px;
-  padding: 0 4px;
-}
-.extensions-store-input {
-  flex: 1;
-  height: 34px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--chrome-input);
-  color: var(--fg);
-  padding: 0 12px;
-  font-size: 13px;
-}
-.extensions-err {
-  color: #e07070;
-  max-width: var(--internal-page-max, 960px);
-  margin: 0 auto 10px;
-  width: 100%;
-}
-.extensions-empty {
-  padding: 24px 8px;
-  color: var(--fg2);
-}
-.extensions-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.extensions-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  align-items: flex-start;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--chrome-input) 70%, transparent);
-}
-.extensions-meta {
-  flex: 1 1 220px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.extensions-meta strong {
-  font-size: 14px;
-}
-.extensions-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--fg2);
-  white-space: nowrap;
-}
-.extensions-perms {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--fg3);
-}
-.extensions-perms ul {
-  margin: 6px 0 0;
-  padding-left: 16px;
-}
-.extensions-foot {
-  max-width: var(--internal-page-max, 960px);
-  margin: 16px auto 8px;
-  width: 100%;
-  font-size: 12px;
-}
+/* extensions-* layout → styles/chrome-pages.css */

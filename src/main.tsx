@@ -29,6 +29,7 @@ import './styles/soul.css';
 import './styles/privacy-extra.css';
 import './styles/chrome-layout.css';
 import './styles/widgets.css';
+import './styles/chrome-pages.css';
 
 declare global {
   interface Window {

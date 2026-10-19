@@ -429,8 +429,9 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
     <InternalPage
       className="bookmarks-page"
       title="Zakładki"
+      icon={<Bookmark size={18} strokeWidth={1.75} />}
       subtitle={
-        <span className="muted">
+        <span>
           {bookmarks.length} {bookmarks.length === 1 ? 'zakładka' : 'zakładek'}
         </span>
       }
@@ -566,9 +567,11 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
 
           <div className="bm-list-wrap">
             {!filtered.length ? (
-              <div className="bm-empty">
-                <Bookmark size={36} strokeWidth={1.25} className="bm-empty-icon" aria-hidden />
-                <p>Brak zakładek{q ? ' dla tego zapytania' : ''}.</p>
+              <div className="ip-empty bm-empty">
+                <span className="ip-empty-ico" aria-hidden>
+                  <Bookmark size={28} strokeWidth={1.5} />
+                </span>
+                <p>Brak zakładek{q ? ' dla tego zapytania' : ''}</p>
                 {emptyAll && !q ? (
                   <>
                     <button
@@ -578,10 +581,10 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
                     >
                       Importuj z Chrome/Brave
                     </button>
-                    <p className="muted">Ctrl+D na stronie dodaje zakładkę</p>
+                    <span className="muted">Ctrl+D na stronie dodaje zakładkę</span>
                   </>
                 ) : (
-                  <p className="muted">Zmień folder lub wyszukiwanie.</p>
+                  <span className="muted">Zmień folder lub wyszukiwanie.</span>
                 )}
               </div>
             ) : (

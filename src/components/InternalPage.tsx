@@ -7,6 +7,8 @@ type Props = {
   children: ReactNode;
   className?: string;
   maxWidth?: number;
+  /** Optional leading icon in the page title */
+  icon?: ReactNode;
 };
 
 export function InternalPage({
@@ -15,7 +17,8 @@ export function InternalPage({
   toolbar,
   children,
   className,
-  maxWidth = 960,
+  maxWidth = 880,
+  icon,
 }: Props) {
   const style = { '--internal-page-max': `${maxWidth}px` } as CSSProperties;
 
@@ -23,7 +26,10 @@ export function InternalPage({
     <div className={`internal-page${className ? ` ${className}` : ''}`} style={style}>
       <header className="internal-page-head">
         <div className="internal-page-head-text">
-          <h1>{title}</h1>
+          <h1>
+            {icon ? <span className="internal-page-ico">{icon}</span> : null}
+            {title}
+          </h1>
           {subtitle != null ? <div className="internal-page-subtitle">{subtitle}</div> : null}
         </div>
         {toolbar ? <div className="internal-page-toolbar">{toolbar}</div> : null}

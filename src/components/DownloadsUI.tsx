@@ -497,8 +497,9 @@ export function DownloadsPage() {
     <InternalPage
       className="dl-page"
       title="Pobrane"
+      icon={<Download size={18} strokeWidth={1.75} />}
       subtitle={
-        <span className="muted">
+        <span>
           {rows.length} {rows.length === 1 ? 'pozycja' : 'pozycji'} · Tor nie jest zapisywany na
           dysku
         </span>
@@ -522,10 +523,12 @@ export function DownloadsPage() {
     >
       <div className="history-scroll">
         {!groups.length && (
-          <div className="history-empty dl-empty-page">
-            <Download size={32} strokeWidth={1.5} aria-hidden />
-            <p>Brak pobrań{q.trim() ? ' dla tego zapytania' : ''}.</p>
-            <p className="muted">Pliki pobrane w kartach normalnych pojawią się tutaj.</p>
+          <div className="ip-empty">
+            <span className="ip-empty-ico" aria-hidden>
+              <Download size={28} strokeWidth={1.5} />
+            </span>
+            <p>Brak pobrań{q.trim() ? ' dla tego zapytania' : ''}</p>
+            <span className="muted">Pliki z kart normalnych pojawią się tutaj.</span>
           </div>
         )}
         {groups.map((g) => (
