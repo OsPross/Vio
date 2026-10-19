@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import { Segmented } from '../../ui';
+import { ColorPicker, Segmented } from '../../ui';
 import {
   THEMES,
   useStore,
@@ -92,10 +92,10 @@ export function AppearanceSection() {
                   onClick={() => patchSettings({ accent: c })}
                 />
               ))}
-              <input
-                type="color"
+              <ColorPicker
                 value={settings.accent}
-                onChange={(e) => patchSettings({ accent: e.target.value })}
+                onChange={(accent) => patchSettings({ accent })}
+                aria-label="Własny kolor akcentu"
               />
             </div>
           </Row>

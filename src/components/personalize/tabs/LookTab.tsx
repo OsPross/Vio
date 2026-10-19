@@ -6,7 +6,7 @@ import {
   type HomeWidgetStyle,
   type ThemeId,
 } from '../../../store';
-import { Slider } from '../../ui';
+import { ColorPicker, Slider } from '../../ui';
 import { ThemeCard } from '../minis/ThemeCard';
 import { BgStyleCard } from '../minis/BgStyleCard';
 import { WidgetStyleCard } from '../minis/WidgetStyleCard';
@@ -126,6 +126,11 @@ export function LookTab() {
               onClick={() => patchSettings({ useThemeAccent: false, accent: s.value })}
             />
           ))}
+          <ColorPicker
+            value={settings.accent}
+            onChange={(accent) => patchSettings({ useThemeAccent: false, accent })}
+            aria-label="Własny kolor akcentu"
+          />
         </div>
       </section>
 

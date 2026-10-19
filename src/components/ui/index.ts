@@ -7,3 +7,4 @@ export type { SelectOption, SelectGroup } from './Select';
 export { OptionCard } from './OptionCard';
 export { Slider } from './Slider';
 export { Input } from './Input';
+export { ColorPicker } from './ColorPicker';

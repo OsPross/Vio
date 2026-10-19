@@ -907,12 +907,9 @@
   border-color: color-mix(in srgb, var(--fg) 55%, transparent);
 }
 
-.settings-page .sswatches input[type='color'] {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  background: transparent;
+.settings-page .sswatches .ui-color-trigger {
+  width: 22px;
+  height: 22px;
 }
 
 /* Lists / forms inside groups */

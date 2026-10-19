@@ -646,3 +646,149 @@
   opacity: 0.45;
   cursor: default;
 }
+
+/* In-app color picker (replaces native Windows <input type="color">) */
+.ui-color {
+  display: inline-flex;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ui-color-trigger {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--fg) 18%, transparent);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 25%, transparent);
+}
+
+.ui-color-trigger:hover,
+.ui-color-trigger.on {
+  border-color: color-mix(in srgb, var(--fg) 45%, transparent);
+}
+
+.ui-color-trigger:focus-visible {
+  outline: 1.5px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.ui-color-pop {
+  position: fixed;
+  z-index: 10050;
+  width: 240px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 96%, #000);
+  box-shadow:
+    0 12px 40px color-mix(in srgb, #000 45%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--fg) 4%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.ui-color-sv {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+  border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+}
+
+.ui-color-sv-white,
+.ui-color-sv-black {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ui-color-sv-white {
+  background: linear-gradient(to right, #fff, transparent);
+}
+
+.ui-color-sv-black {
+  background: linear-gradient(to top, #000, transparent);
+}
+
+.ui-color-sv-thumb {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #000 45%, transparent);
+  pointer-events: none;
+}
+
+.ui-color-hue {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: none;
+  background: linear-gradient(
+    to right,
+    #f00 0%,
+    #ff0 17%,
+    #0f0 33%,
+    #0ff 50%,
+    #00f 67%,
+    #f0f 83%,
+    #f00 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+}
+
+.ui-color-hue-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid color-mix(in srgb, var(--bg-elev, #111) 80%, #fff);
+  box-shadow: 0 1px 3px color-mix(in srgb, #000 40%, transparent);
+  pointer-events: none;
+}
+
+.ui-color-hex-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ui-color-preview {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.ui-color-hex {
+  flex: 1;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  color: var(--fg);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  outline: none;
+  text-transform: lowercase;
+}
+
+.ui-color-hex:focus {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}

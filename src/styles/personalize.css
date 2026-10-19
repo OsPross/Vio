@@ -425,6 +425,10 @@
   border: 2px solid transparent;
   box-sizing: border-box;
 }
+.pz-accent-row .ui-color {
+  align-self: center;
+}
+
 .pz-accent-row .ui-swatch.on {
   border-color: var(--fg);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
