@@ -42,3 +42,6 @@ dev-app-update.yml
 
 graphify-out/
 .claude/
+
+# Local-only (nie wrzucać na wspólne repo)
+beats/
