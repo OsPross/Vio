@@ -3,7 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
 import { useStore } from '../../../store';
-import { FieldRow, Row, SettingsGroup, Toggle } from '../SettingsControls';
+import { FieldRow, Row, SettingsDisclosure, SettingsGroup, Toggle } from '../SettingsControls';
 
 function SitePermissionsSection() {
   const [list, setList] = useState<Record<string, Record<string, string>>>({});
@@ -322,35 +322,38 @@ export function PrivacySection() {
       </SettingsGroup>
 
       <SettingsGroup title="Wyjątki ochrony">
-        <p className="muted" style={{ margin: '0 0 8px', fontSize: 12 }}>
-          Domeny z wyłączoną ochroną (tarcza w omniboxie).
-        </p>
-        <div className="slist">
-          {(settings.privacySiteExceptions || []).map((d) => (
-            <div key={d} className="slist-row">
-              <span className="grow">{d}</span>
-              <button
-                type="button"
-                className="icon-btn sm"
-                onClick={() => {
-                  patchSettings({
-                    privacySiteExceptions: settings.privacySiteExceptions.filter(
-                      (x) => x !== d,
-                    ),
-                  });
-                  void window.shell?.privacyExceptionRemove?.(d);
-                }}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-          {!settings.privacySiteExceptions?.length && (
-            <p className="muted" style={{ margin: 0, fontSize: 12 }}>
-              Brak wyjątków
-            </p>
-          )}
-        </div>
+        <SettingsDisclosure
+          title="Domeny bez tarczy"
+          summary="Wyłączone z popupu tarczy w omniboxie"
+          badge={settings.privacySiteExceptions?.length ?? 0}
+          defaultOpen={(settings.privacySiteExceptions?.length ?? 0) > 0}
+        >
+          <div className="sdense">
+            {(settings.privacySiteExceptions || []).map((d) => (
+              <div key={d} className="sdense-row">
+                <span className="sdense-label mono truncate grow">{d}</span>
+                <button
+                  type="button"
+                  className="icon-btn sm"
+                  aria-label={`Usuń wyjątek ${d}`}
+                  onClick={() => {
+                    patchSettings({
+                      privacySiteExceptions: settings.privacySiteExceptions.filter(
+                        (x) => x !== d,
+                      ),
+                    });
+                    void window.shell?.privacyExceptionRemove?.(d);
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            {!settings.privacySiteExceptions?.length ? (
+              <p className="snote">Brak — dodawane z tarczy przy stronie.</p>
+            ) : null}
+          </div>
+        </SettingsDisclosure>
       </SettingsGroup>
 
       <SettingsGroup title="Historia przeglądania">

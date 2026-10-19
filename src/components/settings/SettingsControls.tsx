@@ -1,4 +1,5 @@
-import { type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Switch } from '../ui';
 
 export function SettingsGroup({ title, children }: { title: string; children: ReactNode }) {
@@ -7,6 +8,69 @@ export function SettingsGroup({ title, children }: { title: string; children: Re
       <span className="sg-label">{title}</span>
       <div className="sg-block">{children}</div>
     </section>
+  );
+}
+
+/** Collapsible block inside a settings group — use for long lists. */
+export function SettingsDisclosure({
+  title,
+  summary,
+  badge,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  summary?: string;
+  badge?: string | number;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <details
+      className={`sfold${open ? ' is-open' : ''}`}
+      open={open}
+      onToggle={(e) => {
+        const next = (e.currentTarget as HTMLDetailsElement).open;
+        setOpen(next);
+      }}
+    >
+      <summary className="sfold-sum">
+        <span className="sfold-sum-copy">
+          <span className="sfold-title">{title}</span>
+          {summary ? <span className="sfold-desc">{summary}</span> : null}
+        </span>
+        {badge != null && badge !== '' ? <span className="sfold-badge">{badge}</span> : null}
+        <ChevronDown size={16} strokeWidth={1.75} className="sfold-chevron" aria-hidden />
+      </summary>
+      <div className="sfold-body">{children}</div>
+    </details>
+  );
+}
+
+/** One-line toggle for dense lists (exceptions, filter lists). */
+export function CompactToggle({
+  label,
+  detail,
+  on,
+  onChange,
+}: {
+  label: string;
+  detail?: string;
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  const showDetail = Boolean(detail && detail !== label);
+
+  return (
+    <div className={`sdense-row${on ? ' on' : ''}`}>
+      <div className="sdense-copy sdense-copy-inline">
+        <span className="sdense-label truncate">{label}</span>
+        {showDetail ? <span className="sdense-detail mono truncate">{detail}</span> : null}
+      </div>
+      <Switch on={on} onChange={onChange} aria-label={label} />
+    </div>
   );
 }
 

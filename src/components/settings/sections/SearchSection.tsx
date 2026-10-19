@@ -3,7 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
 import { SEARCH_ENGINES, useStore, type SearchEngine } from '../../../store';
-import { FieldRow, Row, SettingsGroup, Toggle } from '../SettingsControls';
+import { FieldRow, Row, SettingsDisclosure, SettingsGroup, Toggle } from '../SettingsControls';
 
 export function SearchSection() {
   const settings = useStore((s) => s.settings);
@@ -222,58 +222,70 @@ export function SearchSection() {
       </SettingsGroup>
 
       <SettingsGroup title="Bangs">
-        <div className="slist">
-          {bangs.map((b) => (
-            <div key={b.key} className="slist-row">
-              <code>!{b.key}</code>
-              <span className="grow">{b.label}</span>
-              <span className="muted mono truncate">{b.url}</span>
-              <button
-                type="button"
-                className="icon-btn sm"
-                onClick={() => removeBang(b.key)}
-                title="Usuń"
-              >
-                <Trash2 size={14} strokeWidth={1.75} />
-              </button>
-            </div>
-          ))}
-        </div>
-        <div className="sform">
-          <Input
-            placeholder="klucz"
-            value={bangKey}
-            onChange={(e) => setBangKey(e.target.value)}
-          />
-          <Input
-            placeholder="nazwa"
-            value={bangLabel}
-            onChange={(e) => setBangLabel(e.target.value)}
-          />
-          <Input
-            className="grow"
-            placeholder="https://…?q=%s"
-            value={bangUrl}
-            onChange={(e) => setBangUrl(e.target.value)}
-          />
-          <button
-            type="button"
-            className="sbtn primary"
-            onClick={() => {
-              if (!bangKey.trim() || !bangUrl.includes('%s')) return;
-              addBang({
-                key: bangKey.trim(),
-                label: bangLabel.trim() || bangKey,
-                url: bangUrl.trim(),
-              });
-              setBangKey('');
-              setBangLabel('');
-              setBangUrl('');
-            }}
-          >
-            <Plus size={14} strokeWidth={1.75} /> Dodaj
-          </button>
-        </div>
+        <SettingsDisclosure
+          title="Twoje bangs"
+          summary="Skróty !klucz w omniboxie"
+          badge={bangs.length}
+          defaultOpen={bangs.length > 0 && bangs.length <= 10}
+        >
+          <div className="sdense">
+            {bangs.map((b) => (
+              <div key={b.key} className="sdense-row">
+                <div className="sdense-copy">
+                  <span className="sdense-label">
+                    <code>!{b.key}</code>
+                    <span className="sdense-inline-sep">{b.label}</span>
+                  </span>
+                  <span className="sdense-detail mono truncate">{b.url}</span>
+                </div>
+                <button
+                  type="button"
+                  className="icon-btn sm"
+                  onClick={() => removeBang(b.key)}
+                  aria-label={`Usuń bang !${b.key}`}
+                >
+                  <Trash2 size={14} strokeWidth={1.75} />
+                </button>
+              </div>
+            ))}
+            {!bangs.length ? <p className="snote">Brak własnych bangów.</p> : null}
+          </div>
+          <div className="sfold-footer">
+            <Input
+              placeholder="klucz"
+              value={bangKey}
+              onChange={(e) => setBangKey(e.target.value)}
+            />
+            <Input
+              placeholder="nazwa"
+              value={bangLabel}
+              onChange={(e) => setBangLabel(e.target.value)}
+            />
+            <Input
+              className="grow"
+              placeholder="https://…?q=%s"
+              value={bangUrl}
+              onChange={(e) => setBangUrl(e.target.value)}
+            />
+            <button
+              type="button"
+              className="sbtn primary"
+              onClick={() => {
+                if (!bangKey.trim() || !bangUrl.includes('%s')) return;
+                addBang({
+                  key: bangKey.trim(),
+                  label: bangLabel.trim() || bangKey,
+                  url: bangUrl.trim(),
+                });
+                setBangKey('');
+                setBangLabel('');
+                setBangUrl('');
+              }}
+            >
+              <Plus size={14} strokeWidth={1.75} /> Dodaj
+            </button>
+          </div>
+        </SettingsDisclosure>
       </SettingsGroup>
     </div>
   );

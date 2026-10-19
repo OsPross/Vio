@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Input } from '../../ui/Input';
 import { Select } from '../../ui/Select';
 import { useStore } from '../../../store';
-import { FieldRow, Row, SettingsGroup, Toggle } from '../SettingsControls';
+import {
+  CompactToggle,
+  Row,
+  SettingsDisclosure,
+  SettingsGroup,
+  Toggle,
+} from '../SettingsControls';
 
 type ListRow = {
   id: string;
@@ -19,6 +25,32 @@ type BuiltinRow = {
   enabled: boolean;
 };
 
+/** Human labels + groups for built-in allowlist (id → meta). */
+const BUILTIN_META: Record<string, { label: string; group: string }> = {
+  'consent.google.com': { label: 'Zgoda cookies (Google)', group: 'Google i YouTube' },
+  'consent.youtube.com': { label: 'Zgoda cookies (YouTube)', group: 'Google i YouTube' },
+  'accounts.google.com': { label: 'Logowanie Google', group: 'Google i YouTube' },
+  'accounts.youtube.com': { label: 'Logowanie YouTube', group: 'Google i YouTube' },
+  'myaccount.google.com': { label: 'Konto Google', group: 'Google i YouTube' },
+  '*.gstatic.com': { label: 'Zasoby Google (gstatic)', group: 'Google i YouTube' },
+  '*.googleapis.com': { label: 'API Google', group: 'Google i YouTube' },
+  'login.microsoftonline.com': { label: 'Logowanie Microsoft 365', group: 'Kontrola dostępu' },
+  'login.live.com': { label: 'Logowanie Microsoft', group: 'Kontrola dostępu' },
+  'appleid.apple.com': { label: 'Apple ID', group: 'Kontrola dostępu' },
+  'github.com/login': { label: 'Logowanie GitHub', group: 'Kontrola dostępu' },
+  'challenges.cloudflare.com': { label: 'Weryfikacja Cloudflare', group: 'Captcha i boty' },
+  'hcaptcha.com': { label: 'hCaptcha', group: 'Captcha i boty' },
+  '*.recaptcha.net': { label: 'reCAPTCHA (recaptcha.net)', group: 'Captcha i boty' },
+  'google.com/recaptcha': { label: 'reCAPTCHA (Google)', group: 'Captcha i boty' },
+  '*.paypal.com': { label: 'PayPal', group: 'Płatności' },
+  '*.stripe.com': { label: 'Stripe', group: 'Płatności' },
+  '*.przelewy24.pl': { label: 'Przelewy24', group: 'Płatności' },
+  '*.payu.com': { label: 'PayU', group: 'Płatności' },
+  '*.blik.com': { label: 'BLIK', group: 'Płatności' },
+};
+
+const GROUP_ORDER = ['Google i YouTube', 'Kontrola dostępu', 'Captcha i boty', 'Płatności', 'Inne'];
+
 function formatUpdated(at: number | null) {
   if (!at) return 'brak lokalnej kopii';
   try {
@@ -29,6 +61,10 @@ function formatUpdated(at: number | null) {
   } catch {
     return '—';
   }
+}
+
+function builtinDetail(b: BuiltinRow): string {
+  return b.pathPrefix ? `${b.pattern}${b.pathPrefix}` : b.pattern;
 }
 
 export function AdblockSection() {
@@ -99,6 +135,24 @@ export function AdblockSection() {
     setExceptionDraft('');
   };
 
+  const builtinGroups = useMemo(() => {
+    const map = new Map<string, BuiltinRow[]>();
+    for (const b of builtins) {
+      const group = BUILTIN_META[b.id]?.group ?? 'Inne';
+      const list = map.get(group) ?? [];
+      list.push(b);
+      map.set(group, list);
+    }
+    return GROUP_ORDER.filter((g) => map.has(g)).map((g) => ({
+      name: g,
+      items: map.get(g)!,
+    }));
+  }, [builtins]);
+
+  const builtinsOn = builtins.filter((b) => b.enabled).length;
+  const customCount = settings.adblockExceptions?.length ?? 0;
+  const listsOn = lists.filter((l) => settings.adblockListsEnabled?.[l.id] !== false).length;
+
   return (
     <div className="settings-stack">
       <SettingsGroup title="Blokada reklam">
@@ -111,9 +165,9 @@ export function AdblockSection() {
             pushEngine({ enabled: v });
           }}
         />
-        <FieldRow
+        <Row
           label="Poziom"
-          desc="Standardowy nie blokuje żądań tej samej domeny (eTLD+1). Ścisły stosuje też jawne filtry first-party z list."
+          desc="Standardowy omija first-party. Ścisły stosuje też jawne filtry tej samej domeny."
         >
           <Select
             aria-label="Poziom adblocka"
@@ -128,7 +182,7 @@ export function AdblockSection() {
               { value: 'strict', label: 'Ścisły' },
             ]}
           />
-        </FieldRow>
+        </Row>
         <Toggle
           label="Blokuj żądania sieciowe"
           on={settings.adblockNetwork}
@@ -146,7 +200,8 @@ export function AdblockSection() {
           }}
         />
         <Toggle
-          label="Filtry kosmetyczne (ukrywaj elementy na stronie)"
+          label="Filtry kosmetyczne"
+          hint="Ukrywa elementy reklamowe na stronie"
           on={settings.adblockCosmetic}
           onChange={(v) => {
             patchSettings({ adblockCosmetic: v });
@@ -154,7 +209,7 @@ export function AdblockSection() {
           }}
         />
         <Toggle
-          label="Aktualizuj listy filtrów raz dziennie"
+          label="Aktualizuj listy raz dziennie"
           on={settings.adblockUpdateLists}
           onChange={(v) => {
             patchSettings({ adblockUpdateLists: v });
@@ -164,23 +219,32 @@ export function AdblockSection() {
       </SettingsGroup>
 
       <SettingsGroup title="Listy filtrów">
-        {lists.length === 0 && (
+        {lists.length === 0 ? (
           <p className="snote">Brak danych o listach — silnik jeszcze się ładuje.</p>
+        ) : (
+          <SettingsDisclosure
+            title="Aktywne listy"
+            summary="Włącz lub wyłącz źródła filtrów"
+            badge={`${listsOn}/${lists.length}`}
+            defaultOpen={lists.length <= 4}
+          >
+            <div className="sdense">
+              {lists.map((l) => (
+                <CompactToggle
+                  key={l.id}
+                  label={l.name}
+                  detail={`Aktualizacja: ${formatUpdated(l.updatedAt)}`}
+                  on={settings.adblockListsEnabled?.[l.id] !== false}
+                  onChange={(v) => {
+                    const listsEnabled = { ...settings.adblockListsEnabled, [l.id]: v };
+                    patchSettings({ adblockListsEnabled: listsEnabled });
+                    pushEngine({ listsEnabled, forceLists: true });
+                  }}
+                />
+              ))}
+            </div>
+          </SettingsDisclosure>
         )}
-        {lists.map((l) => (
-          <div key={l.id} className="slist-row" style={{ flexWrap: 'wrap', gap: 8 }}>
-            <Toggle
-              label={l.name}
-              hint={`Aktualizacja: ${formatUpdated(l.updatedAt)}`}
-              on={settings.adblockListsEnabled?.[l.id] !== false}
-              onChange={(v) => {
-                const listsEnabled = { ...settings.adblockListsEnabled, [l.id]: v };
-                patchSettings({ adblockListsEnabled: listsEnabled });
-                pushEngine({ listsEnabled, forceLists: true });
-              }}
-            />
-          </div>
-        ))}
         <Row label="Pobierz listy teraz">
           <button
             type="button"
@@ -200,70 +264,80 @@ export function AdblockSection() {
       </SettingsGroup>
 
       <SettingsGroup title="Wyjątki">
-        <p className="muted" style={{ margin: '0 0 8px', fontSize: 12 }}>
-          Adblock nie blokuje żądań do tych domen — ochrona prywatności dalej działa.
+        <p className="snote">
+          Te domeny nie są blokowane przez adblock — logowanie, captcha i płatności działają
+          normalnie. Ochrona prywatności (tarcza) działa osobno.
         </p>
-        <p className="muted" style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600 }}>
-          Domyślne (wyłączalne)
-        </p>
-        <div className="slist">
-          {builtins.map((b) => (
-            <div key={b.id} className="slist-row">
-              <Toggle
-                label={b.id}
-                hint={b.pathPrefix ? `${b.pattern}${b.pathPrefix}` : b.pattern}
-                on={b.enabled}
-                onChange={(v) => {
-                  const disabled = new Set(settings.adblockBuiltinDisabled || []);
-                  if (v) disabled.delete(b.id);
-                  else disabled.add(b.id);
-                  const builtinDisabled = [...disabled];
-                  patchSettings({ adblockBuiltinDisabled: builtinDisabled });
-                  pushEngine({ builtinDisabled });
-                }}
-              />
-            </div>
-          ))}
-          {!builtins.length && (
-            <p className="muted" style={{ margin: 0, fontSize: 12 }}>
-              Załaduj silnik, aby zobaczyć listę domyślną.
-            </p>
-          )}
-        </div>
 
-        <p className="muted" style={{ margin: '12px 0 6px', fontSize: 12, fontWeight: 600 }}>
-          Twoje wyjątki
-        </p>
-        <div className="slist">
-          {(settings.adblockExceptions || []).map((d) => (
-            <div key={d} className="slist-row">
-              <span className="grow">{d}</span>
-              <button
-                type="button"
-                className="icon-btn sm"
-                title="Usuń"
-                onClick={() => {
-                  const next = settings.adblockExceptions.filter((x) => x !== d);
-                  patchSettings({ adblockExceptions: next });
-                  pushEngine({ exceptions: next });
-                }}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-          {!settings.adblockExceptions?.length && (
-            <p className="muted" style={{ margin: 0, fontSize: 12 }}>
-              Brak własnych wyjątków
-            </p>
+        <SettingsDisclosure
+          title="Domyślne wyjątki"
+          summary="Logowanie, captcha, płatności — możesz wyłączyć pojedynczo"
+          badge={builtins.length ? `${builtinsOn}/${builtins.length}` : '…'}
+          defaultOpen={false}
+        >
+          {!builtins.length ? (
+            <p className="snote">Załaduj silnik, aby zobaczyć listę domyślną.</p>
+          ) : (
+            builtinGroups.map((g) => (
+              <div key={g.name} className="sdense-group">
+                <span className="sdense-group-label">{g.name}</span>
+                <div className="sdense">
+                  {g.items.map((b) => (
+                    <CompactToggle
+                      key={b.id}
+                      label={BUILTIN_META[b.id]?.label ?? b.id}
+                      detail={builtinDetail(b)}
+                      on={b.enabled}
+                      onChange={(v) => {
+                        const disabled = new Set(settings.adblockBuiltinDisabled || []);
+                        if (v) disabled.delete(b.id);
+                        else disabled.add(b.id);
+                        const builtinDisabled = [...disabled];
+                        patchSettings({ adblockBuiltinDisabled: builtinDisabled });
+                        pushEngine({ builtinDisabled });
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
           )}
-        </div>
-        <FieldRow label="Dodaj wyjątek" desc="Domena, np. example.com lub *.cdn.example.com">
-          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+        </SettingsDisclosure>
+
+        <SettingsDisclosure
+          title="Twoje wyjątki"
+          summary="Domeny, które sam dodałeś"
+          badge={customCount}
+          defaultOpen={customCount > 0 && customCount <= 8}
+        >
+          <div className="sdense">
+            {(settings.adblockExceptions || []).map((d) => (
+              <div key={d} className="sdense-row">
+                <span className="sdense-label mono truncate grow">{d}</span>
+                <button
+                  type="button"
+                  className="icon-btn sm"
+                  title="Usuń"
+                  aria-label={`Usuń wyjątek ${d}`}
+                  onClick={() => {
+                    const next = settings.adblockExceptions.filter((x) => x !== d);
+                    patchSettings({ adblockExceptions: next });
+                    pushEngine({ exceptions: next });
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            {!customCount ? (
+              <p className="snote">Brak własnych wyjątków — dodaj domenę poniżej.</p>
+            ) : null}
+          </div>
+          <div className="sfold-footer">
             <Input
               value={exceptionDraft}
               onChange={(e) => setExceptionDraft(e.target.value)}
-              placeholder="example.com"
+              placeholder="example.com lub *.cdn.example.com"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
@@ -275,36 +349,7 @@ export function AdblockSection() {
               Dodaj
             </button>
           </div>
-        </FieldRow>
-
-        <p className="muted" style={{ margin: '12px 0 6px', fontSize: 12, fontWeight: 600 }}>
-          Wyłączone z tarczy (ochrona per domena)
-        </p>
-        <div className="slist">
-          {(settings.privacySiteExceptions || []).map((d) => (
-            <div key={d} className="slist-row">
-              <span className="grow">{d}</span>
-              <button
-                type="button"
-                className="icon-btn sm"
-                title="Usuń wyjątek tarczy"
-                onClick={() => {
-                  patchSettings({
-                    privacySiteExceptions: settings.privacySiteExceptions.filter((x) => x !== d),
-                  });
-                  void window.shell?.privacyExceptionRemove?.(d);
-                }}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-          {!settings.privacySiteExceptions?.length && (
-            <p className="muted" style={{ margin: 0, fontSize: 12 }}>
-              Brak — dodawane z popupu tarczy
-            </p>
-          )}
-        </div>
+        </SettingsDisclosure>
       </SettingsGroup>
 
       <SettingsGroup title="Statystyki">
@@ -333,24 +378,31 @@ export function AdblockSection() {
         </Row>
       </SettingsGroup>
 
-      <SettingsGroup title="Własne reguły">
-        <FieldRow label="Filtry" desc="Jedna reguła na linię (składnia EasyList)">
-          <textarea
-            className="stextarea"
-            rows={4}
-            value={settings.adblockCustomRules}
-            onChange={(e) => {
-              const value = e.target.value;
-              patchSettings({ adblockCustomRules: value });
-              const rules = value
-                .split(/\r?\n/)
-                .map((l) => l.trim())
-                .filter(Boolean);
-              pushEngine({ customRules: rules });
-            }}
-            spellCheck={false}
-          />
-        </FieldRow>
+      <SettingsGroup title="Zaawansowane">
+        <SettingsDisclosure
+          title="Własne reguły filtrów"
+          summary="Składnia EasyList — jedna reguła na linię"
+          defaultOpen={Boolean(settings.adblockCustomRules?.trim())}
+        >
+          <div className="sfold-pad">
+            <textarea
+              className="stextarea"
+              rows={5}
+              value={settings.adblockCustomRules}
+              onChange={(e) => {
+                const value = e.target.value;
+                patchSettings({ adblockCustomRules: value });
+                const rules = value
+                  .split(/\r?\n/)
+                  .map((l) => l.trim())
+                  .filter(Boolean);
+                pushEngine({ customRules: rules });
+              }}
+              spellCheck={false}
+              placeholder={'||ads.example.com^\n##.ad-banner'}
+            />
+          </div>
+        </SettingsDisclosure>
       </SettingsGroup>
     </div>
   );
