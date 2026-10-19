@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Shield, ShieldOff, Trash2, X } from 'lucide-react';
 import { Switch } from './ui/Switch';
@@ -27,6 +27,7 @@ export function ShieldPanel({
   onForget,
 }: Props) {
   const [blocked, setBlocked] = useState<{ host: string; url: string }[]>([]);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const settings = useStore((s) => s.settings);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
   const motionOff = isMotionOff(settings);
@@ -44,6 +45,27 @@ export function ShieldPanel({
       if (Array.isArray(list)) setBlocked(list.slice(0, 80));
     });
   }, [open, blockedToday]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPtr = (e: PointerEvent) => {
+      const t = e.target as Node | null;
+      if (!t) return;
+      if (panelRef.current?.contains(t)) return;
+      if ((t as Element).closest?.('.adblock-btn') || (t as Element).closest?.('.bar-shield-wrap > .icon-btn'))
+        return;
+      onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('pointerdown', onPtr, true);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('pointerdown', onPtr, true);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [open, onClose]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, number>();
@@ -63,7 +85,8 @@ export function ShieldPanel({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="shield-panel motion-popup"
+          ref={panelRef}
+          className="shield-panel chrome-flyout motion-popup"
           role="dialog"
           aria-label="Ochrona prywatności"
           initial={popMotion.initial}

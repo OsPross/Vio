@@ -1,0 +1,138 @@
+/* Shared chrome toolbar flyouts — downloads / shield / extensions */
+
+.chrome-flyout {
+  z-index: 80;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  background: color-mix(in srgb, var(--bg-elev, #14161c) 86%, transparent);
+  backdrop-filter: blur(22px) saturate(1.2);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--fg) 5%, transparent) inset,
+    0 20px 56px rgba(0, 0, 0, 0.48);
+  color: var(--fg);
+  overflow: hidden;
+}
+
+.dl-panel.chrome-flyout {
+  width: min(360px, 92vw);
+  max-height: min(440px, 72vh);
+  padding: 0;
+  overflow: auto;
+}
+
+.shield-panel.chrome-flyout,
+.ext-menu-panel.chrome-flyout {
+  width: min(340px, 92vw);
+}
+
+.dl-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
+  position: sticky;
+  top: 0;
+  background: color-mix(in srgb, var(--bg-elev, #14161c) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 1;
+}
+
+.dl-panel-head strong {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.dl-panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+}
+
+.dl-panel-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border-bottom: 0;
+}
+
+.dl-panel-row:hover {
+  background: color-mix(in srgb, var(--fg) 4.5%, transparent);
+}
+
+.dl-panel-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--fg-2);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+.dl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  margin: 0;
+  padding: 36px 20px 40px;
+  color: var(--fg-3);
+}
+
+.dl-empty svg {
+  opacity: 0.55;
+  margin-bottom: 4px;
+}
+
+.dl-empty p {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 550;
+  color: var(--fg-2);
+}
+
+.dl-empty span {
+  font-size: 12px;
+  line-height: 1.45;
+  max-width: 220px;
+  color: var(--fg-3);
+}
+
+.dl-name {
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+.dl-meta {
+  font-size: 11px;
+  margin-top: 3px;
+  line-height: 1.35;
+}
+
+.dl-bar {
+  height: 2px;
+  margin-top: 8px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  overflow: hidden;
+}
+
+.dl-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}

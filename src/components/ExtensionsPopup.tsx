@@ -63,7 +63,7 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
       {open && (
         <motion.div
           ref={panelRef}
-          className="ext-menu-panel motion-popup"
+          className="ext-menu-panel chrome-flyout motion-popup"
           role="dialog"
           aria-label="Rozszerzenia"
           initial={popMotion.initial}

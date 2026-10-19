@@ -154,6 +154,7 @@ export function BrowserChrome({
   const setView = useStore((s) => s.setView);
   const patchSettings = useStore((s) => s.patchSettings);
   const [extMenuOpen, setExtMenuOpen] = useState(false);
+  const [downloadsOpen, setDownloadsOpen] = useState(false);
 
   const menuActions = useAppMenuActions({
     activeIsTor,
@@ -390,6 +391,7 @@ export function BrowserChrome({
                   aria-expanded={extMenuOpen}
                   onClick={() => {
                     setShieldOpen(false);
+                    setDownloadsOpen(false);
                     setExtMenuOpen((v) => !v);
                   }}
                 >
@@ -416,6 +418,7 @@ export function BrowserChrome({
               }
               onClick={() => {
                 setExtMenuOpen(false);
+                setDownloadsOpen(false);
                 setShieldOpen((v) => !v);
               }}
             >
@@ -501,8 +504,17 @@ export function BrowserChrome({
           </div>
           <SoulIndicator />
           <DownloadsButton
+            open={downloadsOpen}
+            onOpenChange={(next) => {
+              if (next) {
+                setShieldOpen(false);
+                setExtMenuOpen(false);
+              }
+              setDownloadsOpen(next);
+            }}
             onOpenAll={() => {
               if (activeIsTor) return;
+              setDownloadsOpen(false);
               navigateActive(DOWNLOADS_URL);
             }}
           />

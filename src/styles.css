@@ -4564,58 +4564,11 @@ html.side-panel-resizing .app {
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-  width: min(380px, 92vw);
-  max-height: min(420px, 70vh);
-  overflow: auto;
-  padding: 10px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--bg-elev) 94%, #000 6%);
-  border: 1px solid var(--line);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-  z-index: 60;
-}
-.dl-panel-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.dl-panel-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.dl-panel-row {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--line);
-}
-.dl-panel-row:last-child {
-  border-bottom: 0;
 }
 .dl-name {
-  font-size: 13px;
   display: flex;
   gap: 6px;
   align-items: center;
-}
-.dl-meta {
-  font-size: 11px;
-  margin-top: 2px;
-}
-.dl-bar {
-  height: 3px;
-  margin-top: 6px;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--fg) 10%, transparent);
-  overflow: hidden;
-}
-.dl-bar i {
-  display: block;
-  height: 100%;
-  background: var(--accent);
 }
 .dl-actions {
   display: flex;
@@ -4632,10 +4585,6 @@ html.side-panel-resizing .app {
 }
 .dl-risk {
   background: color-mix(in srgb, #e55 25%, transparent);
-}
-.dl-empty {
-  margin: 12px 4px;
-  font-size: 12px;
 }
 .dl-ring {
   display: block;

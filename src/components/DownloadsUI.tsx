@@ -295,10 +295,19 @@ function onDragMouseDown(e: ReactMouseEvent, rec: DownloadRow) {
 
 type ButtonProps = {
   onOpenAll: () => void;
+  /** Controlled — parent closes sibling chrome flyouts (shield / extensions). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function DownloadsButton({ onOpenAll }: ButtonProps) {
-  const [open, setOpen] = useState(false);
+export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: ButtonProps) {
+  const [uncontrolled, setUncontrolled] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? Boolean(openProp) : uncontrolled;
+  const setOpen = (next: boolean) => {
+    if (!controlled) setUncontrolled(next);
+    onOpenChange?.(next);
+  };
   const [rows, setRows] = useState<DownloadRow[]>([]);
   const wrapRef = useRef<HTMLDivElement>(null);
   const settings = useStore((s) => s.settings);
@@ -320,8 +329,15 @@ export function DownloadsButton({ onOpenAll }: ButtonProps) {
     const close = (e: MouseEvent) => {
       if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
     document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', onKey);
+    };
   }, [open]);
 
   const active = rows.filter((r) => r.state === 'progressing' || r.state === 'paused');
@@ -339,9 +355,11 @@ export function DownloadsButton({ onOpenAll }: ButtonProps) {
     <div className="dl-btn-wrap" ref={wrapRef}>
       <button
         type="button"
-        className={`icon-btn dl-btn ${active.length ? 'busy' : 'idle'}`}
+        className={`icon-btn dl-btn ${active.length ? 'busy' : ''} ${open ? 'on' : ''}`}
         title={active.length ? `Pobrania (${active.length})` : 'Pobrania'}
-        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        data-dl-menu-btn
+        onClick={() => setOpen(!open)}
       >
         {active.length ? (
           <ProgressRing value={ringValue} />
@@ -353,52 +371,68 @@ export function DownloadsButton({ onOpenAll }: ButtonProps) {
       <AnimatePresence>
         {open && (
           <motion.div
-            className="dl-panel motion-popup"
+            className="dl-panel chrome-flyout motion-popup"
+            role="dialog"
+            aria-label="Pobrania"
             initial={popMotion.initial}
             animate={popMotion.animate}
             exit={popMotion.exit}
             transition={popMotion.transition}
             style={{ transformOrigin: 'top right' }}
           >
-          <div className="dl-panel-head">
-            <strong>Pobrania</strong>
-            <button type="button" className="sbtn" onClick={onOpenAll}>
-              Wszystkie pobrania
-            </button>
-          </div>
-          {!recent.length && <p className="muted dl-empty">Brak pobrań</p>}
-          <ul className="dl-panel-list">
-            {recent.map((r) => {
-              const pct = progressPct(r);
-              const hint = stateHint(r);
-              return (
-                <li key={r.id} className="dl-panel-row">
-                  <div className="dl-panel-icon">
-                    <FileTypeIcon filename={r.filename} size={15} />
-                  </div>
-                  <div className="grow">
-                    <div className={`dl-name ${r.fileMissing ? 'dl-missing' : ''}`}>
-                      {r.filename}
-                      {r.tor ? <em className="dl-tor">Tor</em> : null}
-                      {r.risky ? <em className="dl-risk">!</em> : null}
-                    </div>
-                    <div className="dl-meta muted" title={r.url}>
-                      {r.state === 'progressing' || r.state === 'paused'
-                        ? `${pct}% · ${fmtBytes(r.receivedBytes)} / ${fmtBytes(r.totalBytes)} · ${fmtSpeed(r.speedBps)}${fmtEta(r) ? ` · ${fmtEta(r)}` : ''}`
-                        : `${fmtBytes(r.receivedBytes)}${hint ? ` · ${hint}` : ''}`}
-                      {r.url ? <span className="dl-url"> · {sourceLabel(r.url)}</span> : null}
-                    </div>
-                    {(r.state === 'progressing' || r.state === 'paused') && (
-                      <div className="dl-bar">
-                        <i style={{ width: `${pct}%` }} />
+            <div className="dl-panel-head">
+              <strong>Pobrania</strong>
+              <button
+                type="button"
+                className="sbtn text"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenAll();
+                }}
+              >
+                Wszystkie
+              </button>
+            </div>
+            {!recent.length ? (
+              <div className="dl-empty">
+                <Download size={22} strokeWidth={1.5} aria-hidden />
+                <p>Brak pobrań</p>
+                <span>Pliki pojawią się tutaj po starcie pobierania</span>
+              </div>
+            ) : (
+              <ul className="dl-panel-list">
+                {recent.map((r) => {
+                  const pct = progressPct(r);
+                  const hint = stateHint(r);
+                  return (
+                    <li key={r.id} className="dl-panel-row">
+                      <div className="dl-panel-icon">
+                        <FileTypeIcon filename={r.filename} size={15} />
                       </div>
-                    )}
-                  </div>
-                  <RowActions rec={r} compact />
-                </li>
-              );
-            })}
-          </ul>
+                      <div className="grow">
+                        <div className={`dl-name ${r.fileMissing ? 'dl-missing' : ''}`}>
+                          {r.filename}
+                          {r.tor ? <em className="dl-tor">Tor</em> : null}
+                          {r.risky ? <em className="dl-risk">!</em> : null}
+                        </div>
+                        <div className="dl-meta muted" title={r.url}>
+                          {r.state === 'progressing' || r.state === 'paused'
+                            ? `${pct}% · ${fmtBytes(r.receivedBytes)} / ${fmtBytes(r.totalBytes)} · ${fmtSpeed(r.speedBps)}${fmtEta(r) ? ` · ${fmtEta(r)}` : ''}`
+                            : `${fmtBytes(r.receivedBytes)}${hint ? ` · ${hint}` : ''}`}
+                          {r.url ? <span className="dl-url"> · {sourceLabel(r.url)}</span> : null}
+                        </div>
+                        {(r.state === 'progressing' || r.state === 'paused') && (
+                          <div className="dl-bar">
+                            <i style={{ width: `${pct}%` }} />
+                          </div>
+                        )}
+                      </div>
+                      <RowActions rec={r} compact />
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
