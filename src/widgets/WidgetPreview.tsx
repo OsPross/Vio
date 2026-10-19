@@ -5,10 +5,11 @@ import { sizePx, WIDGET_REGISTRY, type WidgetSizeId } from './registry';
 import { WidgetBody, WIDGET_ICONS } from './WidgetStrip';
 import { WidgetFrame } from './WidgetFrame';
 
-export function widgetPreviewDims(size: WidgetSizeId) {
+export function widgetPreviewDims(size: WidgetSizeId, type?: HomeWidgetType) {
+  const cells = widgetSizeCells(size, type);
   return {
-    width: sizePx(size),
-    height: widgetSizeCells(size).h * HOME_GRID_PX,
+    width: type === 'spotify' ? cells.w * HOME_GRID_PX : sizePx(size),
+    height: cells.h * HOME_GRID_PX,
   };
 }
 
@@ -23,7 +24,7 @@ export function WidgetPreview({
 }) {
   const meta = WIDGET_REGISTRY[type];
   const Icon = WIDGET_ICONS[type];
-  const { width, height } = widgetPreviewDims(size);
+  const { width, height } = widgetPreviewDims(size, type);
   const widget: HomeWidget = {
     id: `preview-${type}`,
     type,

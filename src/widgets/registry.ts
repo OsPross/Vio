@@ -68,6 +68,13 @@ export const WIDGET_REGISTRY: Record<HomeWidgetType, WidgetMeta> = {
     sizes: SML,
     defaultSize: 'M',
   },
+  spotify: {
+    type: 'spotify',
+    label: 'Spotify',
+    description: 'Now Playing — co grasz, play/pauza, przewijanie (Premium)',
+    sizes: SML,
+    defaultSize: 'M',
+  },
 };
 
 export function sizePx(size: WidgetSizeId): number {

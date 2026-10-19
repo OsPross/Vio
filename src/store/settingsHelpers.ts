@@ -1,4 +1,5 @@
 import { DEFAULT_BANGS, resolveBang, type Bang } from '../lib/bangs';
+import { nativeThemeSource } from '../lib/page-scrollbars';
 import type { PerfMode, SearchEngine, Settings } from './types';
 import { HOME_URL, SEARCH_ENGINES, THEMES } from './constants';
 
@@ -229,7 +230,8 @@ export function applyThemeToDom(settings: Settings) {
       symbolColor: t.fg2,
       height: 32,
     });
-    void window.shell?.setNativeTheme?.(settings.theme === 'paper' ? 'light' : 'dark');
+    // nativeTheme = prefers-color-scheme w webview — NIE motyw chrome UI
+    void window.shell?.setNativeTheme?.(nativeThemeSource(settings.pageColorScheme || 'system'));
   };
 
   const reduce =

@@ -261,7 +261,8 @@ function cspForSession(isDev) {
       "media-src 'self' blob:",
       "object-src 'none'",
       "base-uri 'self'",
-      "frame-src 'none'",
+      // Spotify home widget embed
+      "frame-src https://open.spotify.com https://embed.spotify.com",
     ].join('; ');
   }
   return [
@@ -274,7 +275,7 @@ function cspForSession(isDev) {
     "media-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
-    "frame-src 'none'",
+    "frame-src https://open.spotify.com https://embed.spotify.com",
     "form-action 'self'",
   ].join('; ');
 }

@@ -1,6 +1,12 @@
 import { Check } from 'lucide-react';
 import { Segmented } from '../../ui';
-import { THEMES, useStore, type ThemeId, type UiDensity } from '../../../store';
+import {
+  THEMES,
+  useStore,
+  type PageColorScheme,
+  type ThemeId,
+  type UiDensity,
+} from '../../../store';
 import { Row, SettingsGroup, SliderRow, Toggle } from '../SettingsControls';
 
 export function AppearanceSection() {
@@ -96,12 +102,29 @@ export function AppearanceSection() {
         )}
       </SettingsGroup>
 
-      <SettingsGroup title="Glass i UI">
+      <SettingsGroup title="Strony WWW">
+        <Row
+          label="Wygląd stron"
+          desc="Osobno od motywu przeglądarki — ciemny chrome nie psuje jasnych witryn"
+        >
+          <Segmented
+            value={settings.pageColorScheme || 'system'}
+            options={[
+              { id: 'system', label: 'System' },
+              { id: 'light', label: 'Jasny' },
+              { id: 'dark', label: 'Ciemny' },
+            ]}
+            onChange={(v) => patchSettings({ pageColorScheme: v as PageColorScheme })}
+          />
+        </Row>
         <Toggle
           label="Ciemne paski przewijania na stronach"
           on={settings.darkPageScrollbars}
           onChange={(v) => patchSettings({ darkPageScrollbars: v })}
         />
+      </SettingsGroup>
+
+      <SettingsGroup title="Glass i UI">
         <Toggle
           label="Efekt glass (blur + przezroczystość)"
           on={settings.uiGlass}

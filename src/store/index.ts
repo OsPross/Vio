@@ -233,6 +233,7 @@ export type {
   StartupMode,
   Tab,
   ThemeId,
+  PageColorScheme,
   UiDensity,
 } from './types';
 

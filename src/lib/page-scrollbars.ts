@@ -1,4 +1,5 @@
 import type { ThemeId } from '../store';
+import type { PageColorScheme } from '../store/types';
 
 /** Injected into guest pages when darkPageScrollbars is on (not Tor). */
 export function pageScrollbarCss(theme: ThemeId): string {
@@ -43,6 +44,13 @@ html::-webkit-scrollbar-corner, body::-webkit-scrollbar-corner {
 `.trim();
 }
 
-export function nativeThemeSource(theme: ThemeId): 'dark' | 'light' {
+/** Mapuje ustawienie stron → Electron nativeTheme (wpływa na prefers-color-scheme w webview). */
+export function nativeThemeSource(scheme: PageColorScheme): 'dark' | 'light' | 'system' {
+  if (scheme === 'light' || scheme === 'dark') return scheme;
+  return 'system';
+}
+
+/** @deprecated Używaj nativeThemeSource(pageColorScheme) — motyw chrome ≠ wygląd stron */
+export function nativeThemeSourceFromChromeTheme(theme: ThemeId): 'dark' | 'light' {
   return theme === 'paper' ? 'light' : 'dark';
 }

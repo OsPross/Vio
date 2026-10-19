@@ -17,8 +17,13 @@ export type CanvasMetrics = {
 /** Left/right edge inset used by CSS `hw-place-left` / `hw-place-right` (10%). */
 export const EDGE_INSET_RATIO = 0.1;
 
-export function sizeToPx(size: HomeWidgetSize) {
-  return { w: sizePx(size), h: widgetSizeCells(size).h * HOME_GRID_PX };
+export function sizeToPx(size: HomeWidgetSize, type?: HomeWidget['type']) {
+  const cells = widgetSizeCells(size, type);
+  // Spotify ma własne proporcje (szersza / niższa); reszta — jak w registry ≈ cells×grid
+  if (type === 'spotify') {
+    return { w: cells.w * HOME_GRID_PX, h: cells.h * HOME_GRID_PX };
+  }
+  return { w: sizePx(size), h: cells.h * HOME_GRID_PX };
 }
 
 /** Anchor axis X in canvas pixels — mirrors CSS place rules. */
@@ -55,7 +60,7 @@ export function widgetToPx(
   w: HomeWidget,
   metrics: CanvasMetrics,
 ): { left: number; top: number; width: number; height: number } {
-  const { w: width, h: height } = sizeToPx(w.size);
+  const { w: width, h: height } = sizeToPx(w.size, w.type);
   return {
     left: placeLeftPx(w.anchor, w.x, width, metrics.width),
     top: placeTopPx(w.y),

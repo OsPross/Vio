@@ -1,5 +1,13 @@
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { Settings2, X, type LucideIcon } from 'lucide-react';
+
+/** Lucide icons or custom SVGs that accept the same size/className props. */
+export type WidgetFrameIcon = ComponentType<{
+  size?: number;
+  strokeWidth?: number;
+  className?: string;
+  'aria-hidden'?: boolean | 'true';
+}>;
 
 export function WidgetFrame({
   title,
@@ -13,7 +21,7 @@ export function WidgetFrame({
   bare,
 }: {
   title: string;
-  icon: LucideIcon;
+  icon: WidgetFrameIcon;
   editMode?: boolean;
   locked?: boolean;
   onRemove?: () => void;

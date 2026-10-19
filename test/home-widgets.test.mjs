@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 
-const EXTRA = new Set(['weather', 'notes', 'todo', 'calendar', 'recent', 'downloads', 'resources']);
+const EXTRA = new Set(['weather', 'notes', 'todo', 'calendar', 'recent', 'downloads', 'resources', 'spotify']);
 const SIZE_W = { S: 28, M: 38, L: 58 };
 const HOME_GRID_PX = 8;
 const SIZE_PX = { S: 220, M: 300, L: 460 };

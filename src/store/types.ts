@@ -93,6 +93,8 @@ export type ThemeId =
   | 'slate'
   | 'paper';
 export type UiDensity = 'comfortable' | 'compact';
+/** Wygląd stron WWW (prefers-color-scheme) — osobno od motywu chrome UI */
+export type PageColorScheme = 'system' | 'light' | 'dark';
 export type HomeAppsStyle = 'icons' | 'list';
 export type PerfMode = 'balanced' | 'performance' | 'saver';
 
@@ -103,7 +105,8 @@ export type HomeWidgetType =
   | 'calendar'
   | 'recent'
   | 'downloads'
-  | 'resources';
+  | 'resources'
+  | 'spotify';
 
 export type HomeWidgetSize = 'S' | 'M' | 'L';
 export type HomeWidgetAnchor = 'center' | 'left' | 'right';
@@ -283,6 +286,11 @@ export type Settings = {
   showBookmarksBar: boolean;
   /** Ciemne paski przewijania w treści stron (webview) */
   darkPageScrollbars: boolean;
+  /**
+   * Kolorystyka stron (nie chrome).
+   * `system` = jak OS; nie wiązać z motywem UI — inaczej ciemny chrome psuje jasne strony.
+   */
+  pageColorScheme: PageColorScheme;
   /** Enter PiP when switching away from a tab with playing video */
   autoPipOnTabSwitch: boolean;
 };

@@ -689,6 +689,58 @@ declare global {
           label: string;
         }[];
       }>;
+      spotifyStatus: () => Promise<{
+        ok: boolean;
+        connected: boolean;
+        configured: boolean;
+        usesBuiltin?: boolean;
+        needsAuthorSetup?: boolean;
+        displayName?: string | null;
+        redirectUri: string;
+      }>;
+      spotifySetClientId: (clientId: string) => Promise<{ ok: boolean; error?: string; redirectUri?: string }>;
+      spotifyLogin: () => Promise<{ ok: boolean; error?: string; displayName?: string | null }>;
+      spotifyLogout: (opts?: { wipeClientId?: boolean }) => Promise<{ ok: boolean }>;
+      spotifyPlayback: () => Promise<{
+        ok: boolean;
+        error?: string;
+        premium?: boolean;
+        idle?: boolean;
+        playing?: boolean;
+        progressMs?: number;
+        durationMs?: number;
+        shuffle?: boolean;
+        repeat?: string;
+        fetchedAt?: number;
+        device?: {
+          name?: string;
+          volume?: number | null;
+          type?: string;
+          supportsVolume?: boolean;
+        } | null;
+        item?: {
+          id: string;
+          uri: string;
+          name: string;
+          artists: string[];
+          album?: string;
+          art?: string | null;
+          url?: string | null;
+          type?: string;
+        } | null;
+      }>;
+      spotifyPlay: () => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
+      spotifyPause: () => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
+      spotifyNext: () => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
+      spotifyPrev: () => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
+      spotifySeek: (positionMs: number) => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
+      spotifyVolume: (percent: number) => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
+      spotifyShuffle: (state: boolean) => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
+      spotifyRepeat: (state: 'off' | 'track' | 'context') => Promise<{
+        ok: boolean;
+        error?: string;
+        premium?: boolean;
+      }>;
       homeBgPick: () => Promise<{
         ok: boolean;
         canceled?: boolean;

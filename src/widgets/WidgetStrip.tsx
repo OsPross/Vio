@@ -46,6 +46,8 @@ import { CalendarWidget } from './CalendarWidget';
 import { RecentWidget } from './RecentWidget';
 import { DownloadsWidget } from './DownloadsWidget';
 import { ResourcesWidget } from './ResourcesWidget';
+import { SpotifyWidget } from './SpotifyWidget';
+import { SpotifyGlyph } from './SpotifyGlyph';
 import { ClockWidget } from './ClockWidget';
 import { SearchWidget } from './SearchWidget';
 import { ShortcutsWidget } from './ShortcutsWidget';
@@ -62,8 +64,9 @@ import {
   type GuideLine,
 } from './snapMath';
 import { WidgetSettingsPopover, type SettingsTarget } from './WidgetSettingsPopover';
+import type { WidgetFrameIcon } from './WidgetFrame';
 
-export const WIDGET_ICONS: Record<HomeWidgetType, LucideIcon> = {
+export const WIDGET_ICONS: Record<HomeWidgetType, WidgetFrameIcon> = {
   weather: CloudSun,
   notes: StickyNote,
   todo: CheckSquare,
@@ -71,6 +74,7 @@ export const WIDGET_ICONS: Record<HomeWidgetType, LucideIcon> = {
   recent: History,
   downloads: Download,
   resources: Activity,
+  spotify: SpotifyGlyph,
 };
 
 const CHROME_META: Record<HomeChromeId, { label: string; icon: LucideIcon }> = {
@@ -120,6 +124,20 @@ export function WidgetBody({
       return <DownloadsWidget size={size} preview={preview} />;
     case 'resources':
       return <ResourcesWidget size={size} preview={preview} />;
+    case 'spotify':
+      return (
+        <SpotifyWidget
+          widget={widget}
+          size={size}
+          preview={preview}
+          onGo={onGo}
+          onPatchSettings={
+            onPatchWidgetSettings
+              ? (settings) => onPatchWidgetSettings(widget.id, settings)
+              : undefined
+          }
+        />
+      );
     default:
       return null;
   }
@@ -379,7 +397,7 @@ export function WidgetStrip({
       } else {
         const w = widgets.find((x) => x.id === d.key);
         if (!w) return;
-        const dim = sizeToPx(w.size);
+        const dim = sizeToPx(w.size, w.type);
         width = dim.w;
         height = dim.h;
       }
@@ -443,7 +461,7 @@ export function WidgetStrip({
     } else {
       const w = widgets.find((x) => x.id === d.key);
       if (!w) return;
-      const dim = sizeToPx(w.size);
+      const dim = sizeToPx(w.size, w.type);
       width = dim.w;
       height = dim.h;
       const resolved = resolveCollision(d.left, d.top, width, height, allOtherBoxes(d.key, m), m);
@@ -647,8 +665,9 @@ export function WidgetStrip({
         {widgets.map((w) => {
           const meta = WIDGET_REGISTRY[w.type];
           const Icon = WIDGET_ICONS[w.type];
-          const px = sizePx(w.size);
-          const h = widgetSizeCells(w.size).h * HOME_GRID_PX;
+          const cells = widgetSizeCells(w.size, w.type);
+          const px = w.type === 'spotify' ? cells.w * HOME_GRID_PX : sizePx(w.size);
+          const h = cells.h * HOME_GRID_PX;
           const resolvedStyle = (w.style || widgetStyle) as HomeWidgetStyle;
           // Hide weather on home until a city is set (configure in Personalize → Widgets)
           if (

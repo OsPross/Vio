@@ -311,6 +311,7 @@ export const DEFAULT_SETTINGS: Settings = {
   zoomFactors: {},
   showBookmarksBar: false,
   darkPageScrollbars: true,
+  pageColorScheme: 'system',
   autoPipOnTabSwitch: false,
 };
 

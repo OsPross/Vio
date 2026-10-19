@@ -126,6 +126,10 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
   if (!s.zoomFactors || typeof s.zoomFactors !== 'object') s.zoomFactors = {};
   if (typeof s.showBookmarksBar !== 'boolean') s.showBookmarksBar = false;
   if (typeof s.darkPageScrollbars !== 'boolean') s.darkPageScrollbars = true;
+  if (s.pageColorScheme !== 'system' && s.pageColorScheme !== 'light' && s.pageColorScheme !== 'dark') {
+    // Legacy: ciemny chrome wymuszał dark na stronach i psuł layout — domyślnie system
+    s.pageColorScheme = 'system';
+  }
   if (typeof s.autoPipOnTabSwitch !== 'boolean') s.autoPipOnTabSwitch = false;
   if (s.adblockLevel !== 'standard' && s.adblockLevel !== 'strict') s.adblockLevel = 'standard';
   if (!Array.isArray(s.adblockExceptions)) s.adblockExceptions = [];

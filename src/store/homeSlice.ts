@@ -18,6 +18,7 @@ const EXTRA_WIDGET_TYPES = new Set<HomeWidgetType>([
   'recent',
   'downloads',
   'resources',
+  'spotify',
 ]);
 
 function isExtraWidgetType(t: string): t is HomeWidgetType {
@@ -39,8 +40,12 @@ const widgetUid = () => `w-${Math.random().toString(36).slice(2, 10)}`;
 
 const SIZE_W_CELLS: Record<HomeWidgetSize, number> = { S: 28, M: 38, L: 58 }; // ~220/300/460 at 8px
 const SIZE_H_CELLS: Record<HomeWidgetSize, number> = { S: 18, M: 20, L: 22 };
+/** Spotify — szersza / niższa karta (landscape), bez pustego dołu. */
+const SPOTIFY_W_CELLS: Record<HomeWidgetSize, number> = { S: 34, M: 44, L: 58 }; // ~272/352/464
+const SPOTIFY_H_CELLS: Record<HomeWidgetSize, number> = { S: 17, M: 19, L: 23 }; // ~136/152/184
 
-export function widgetSizeCells(size: HomeWidgetSize) {
+export function widgetSizeCells(size: HomeWidgetSize, type?: HomeWidgetType) {
+  if (type === 'spotify') return { w: SPOTIFY_W_CELLS[size], h: SPOTIFY_H_CELLS[size] };
   return { w: SIZE_W_CELLS[size], h: SIZE_H_CELLS[size] };
 }
 
@@ -186,7 +191,7 @@ export function placeNewHomeWidget(
   const scBottom = (shortcuts?.y ?? 44) + Math.ceil(chromeSizeToPx('shortcuts').h / HOME_GRID_PX);
   let y = scBottom + 3; // 24px
   for (const w of existing) {
-    const bottom = w.y + widgetSizeCells(w.size).h;
+    const bottom = w.y + widgetSizeCells(w.size, w.type).h;
     if (bottom + 3 > y) y = bottom + 3;
   }
   if (y < 3) y = 3;
