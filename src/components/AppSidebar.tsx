@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent as RE } from 'react';
 import { LayoutGroup, motion } from 'motion/react';
 import {
   ExternalLink,
@@ -12,6 +12,13 @@ import {
   X,
 } from 'lucide-react';
 import { useStore, type SideApp } from '../store';
+
+const PANEL_W_MIN = 280;
+const PANEL_W_MAX = 720;
+
+function clampPanelWidth(n: number) {
+  return Math.round(Math.min(PANEL_W_MAX, Math.max(PANEL_W_MIN, n)));
+}
 
 type WebviewEl = HTMLElement & {
   src: string;
@@ -66,6 +73,12 @@ function SideAppIcon({ app }: { app: SideApp }) {
   return <span className="side-rail-letter">{app.label.slice(0, 1)}</span>;
 }
 
+/** Sites that serve a desktop UI useless in a ~400px panel — use mobile Chrome UA. */
+function wantsCompactSideUa(app: SideApp) {
+  const key = `${app.id} ${app.url}`.toLowerCase();
+  return /gmail|mail\.google\.com/.test(key);
+}
+
 function SideWebview({
   app,
   active,
@@ -77,18 +90,29 @@ function SideWebview({
 }) {
   const local = useRef<WebviewEl | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const compact = wantsCompactSideUa(app);
 
   useEffect(() => {
     const el = local.current;
     if (!el) return;
     const onStop = () => setLoaded(true);
+    const onReady = () => {
+      setLoaded(true);
+      if (!compact) return;
+      // Narrow viewport hint — helps some Google UIs beyond UA alone.
+      void el
+        .insertCSS(
+          'html,body{min-width:0!important;} body{-webkit-text-size-adjust:100%;}',
+        )
+        .catch(() => {});
+    };
     el.addEventListener('did-stop-loading', onStop);
-    el.addEventListener('dom-ready', onStop);
+    el.addEventListener('dom-ready', onReady);
     return () => {
       el.removeEventListener('did-stop-loading', onStop);
-      el.removeEventListener('dom-ready', onStop);
+      el.removeEventListener('dom-ready', onReady);
     };
-  }, [app.id]);
+  }, [app.id, compact]);
 
   return (
     <div className={`side-webview-wrap ${active ? 'on' : ''}`}>
@@ -101,6 +125,8 @@ function SideWebview({
         className="side-webview"
         src={app.url}
         partition="persist:main"
+        // Marker read by electron/security.cjs → mobile Chrome UA (Gmail etc.)
+        {...(compact ? { useragent: 'VioSideCompact' } : {})}
         allowpopups={'true' as unknown as boolean}
       />
     </div>
@@ -122,6 +148,7 @@ export function AppSidebar({
   const setSettingsTab = useStore((s) => s.setSettingsTab);
   const views = useRef<Record<string, WebviewEl | null>>({});
   const [mounted, setMounted] = useState<Record<string, boolean>>({});
+  const resizeRef = useRef<{ startX: number; startW: number } | null>(null);
 
   const active = sideApps.find((a) => a.id === settings.activeSideAppId) ?? null;
   const panelOpen = settings.sidePanelOpen && !!active;
@@ -141,6 +168,54 @@ export function AppSidebar({
       setMounted((m) => (m[active.id] ? m : { ...m, [active.id]: true }));
     }
   }, [panelOpen, active]);
+
+  const applyPanelWidth = useCallback(
+    (w: number) => {
+      const next = clampPanelWidth(w);
+      const app = document.querySelector('.app') as HTMLElement | null;
+      if (app) {
+        app.style.setProperty('--panel-w', `${next}px`);
+        if (app.classList.contains('side-panel-open') && !app.classList.contains('no-side')) {
+          app.style.setProperty('--side-total', `${56 + next}px`);
+        }
+      }
+      return next;
+    },
+    [],
+  );
+
+  const onResizePointerDown = (e: RE<HTMLDivElement>) => {
+    if (!panelOpen) return;
+    e.preventDefault();
+    e.stopPropagation();
+    resizeRef.current = { startX: e.clientX, startW: settings.sidePanelWidth };
+    document.documentElement.classList.add('side-panel-resizing');
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* */
+    }
+  };
+
+  const onResizePointerMove = (e: RE<HTMLDivElement>) => {
+    const drag = resizeRef.current;
+    if (!drag) return;
+    applyPanelWidth(drag.startW + (e.clientX - drag.startX));
+  };
+
+  const onResizePointerUp = (e: RE<HTMLDivElement>) => {
+    const drag = resizeRef.current;
+    if (!drag) return;
+    resizeRef.current = null;
+    document.documentElement.classList.remove('side-panel-resizing');
+    const next = applyPanelWidth(drag.startW + (e.clientX - drag.startX));
+    patchSettings({ sidePanelWidth: next });
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* */
+    }
+  };
 
   return (
     <div
@@ -299,7 +374,7 @@ export function AppSidebar({
               {sideApps.map((app) =>
                 mounted[app.id] ? (
                   <SideWebview
-                    key={app.id}
+                    key={wantsCompactSideUa(app) ? `${app.id}-compact` : app.id}
                     app={app}
                     active={panelOpen && app.id === active.id}
                     webRef={(el) => {
@@ -309,6 +384,22 @@ export function AppSidebar({
                 ) : null,
               )}
             </div>
+
+            <div
+              className="side-panel-resize"
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Zmień szerokość panelu"
+              title="Przeciągnij, żeby zmienić szerokość"
+              onPointerDown={onResizePointerDown}
+              onPointerMove={onResizePointerMove}
+              onPointerUp={onResizePointerUp}
+              onPointerCancel={onResizePointerUp}
+              onDoubleClick={() => {
+                const next = applyPanelWidth(420);
+                patchSettings({ sidePanelWidth: next });
+              }}
+            />
           </>
         )}
       </section>

@@ -138,7 +138,10 @@ export function App() {
     setPageHasVideo,
   } = useTabLifecycle({ taskMgrOpen, isHome });
 
-  const { crashOffer, setCrashOffer } = useSessionPersist({ guestWc, windowMode });
+  const { crashOffer, acceptCrashRestore, declineCrashRestore } = useSessionPersist({
+    guestWc,
+    windowMode,
+  });
   useAutomationBridge(guestWc, settings.automationEnabled);
 
   useShellEffects({
@@ -361,7 +364,8 @@ export function App() {
               aboutInfo={aboutInfo}
               setAboutInfo={setAboutInfo}
               crashOffer={crashOffer}
-              setCrashOffer={setCrashOffer}
+              acceptCrashRestore={acceptCrashRestore}
+              declineCrashRestore={declineCrashRestore}
               torProgress={torProgress}
               torError={torError}
               setTorError={setTorError}

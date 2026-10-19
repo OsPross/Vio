@@ -49,6 +49,12 @@ function buildChromeUa() {
   return brands.buildChromeUa(chromeFull());
 }
 
+/** Mobile Chrome UA — side-panel apps (Gmail) that need a narrow layout. */
+function buildMobileChromeUa() {
+  const chrome = chromeFull();
+  return `Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chrome} Mobile Safari/537.36`;
+}
+
 function userAgentMetadata() {
   return brands.userAgentMetadataFromFull(chromeFull());
 }
@@ -183,6 +189,7 @@ async function applyToWebContents(wc, opts = {}) {
 
 module.exports = {
   buildChromeUa,
+  buildMobileChromeUa,
   chromeFull,
   chromeMajor,
   clientHintHeaders,

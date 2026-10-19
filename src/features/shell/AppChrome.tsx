@@ -112,7 +112,8 @@ export type AppChromeProps = {
   aboutInfo: AboutInfo | null;
   setAboutInfo: Dispatch<SetStateAction<AboutInfo | null>>;
   crashOffer: boolean;
-  setCrashOffer: Dispatch<SetStateAction<boolean>>;
+  acceptCrashRestore: () => void;
+  declineCrashRestore: () => void;
   torProgress: string | null;
   torError: string | null;
   setTorError: Dispatch<SetStateAction<string | null>>;
@@ -206,7 +207,8 @@ export function AppChrome({
   aboutInfo,
   setAboutInfo,
   crashOffer,
-  setCrashOffer,
+  acceptCrashRestore,
+  declineCrashRestore,
   torProgress,
   torError,
   setTorError,
@@ -227,8 +229,6 @@ export function AppChrome({
   const newTab = useStore((s) => s.newTab);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
   const patchSettings = useStore((s) => s.patchSettings);
-  const restoreSessionTabs = useStore((s) => s.restoreSessionTabs);
-  const setSessionReady = useStore((s) => s.setSessionReady);
 
   const pageUrlForShare =
     active &&
@@ -449,9 +449,8 @@ export function AppChrome({
           )}
           <CrashRestoreOffer
             crashOffer={crashOffer}
-            setCrashOffer={setCrashOffer}
-            restoreSessionTabs={restoreSessionTabs}
-            setSessionReady={setSessionReady}
+            onAccept={acceptCrashRestore}
+            onDecline={declineCrashRestore}
           />
           {sidebarMenu && (
             <div

@@ -2,15 +2,34 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { buildSessionSnapshot } from '../lib/sessionSnapshot';
 import { isTorTab, useStore, type Tab } from '../store';
 
+type SavedSession = NonNullable<Awaited<ReturnType<NonNullable<Window['shell']>['sessionLoad']>>>;
+
 export type UseSessionPersistArgs = {
   guestWc: Record<string, number>;
   windowMode: 'normal' | 'private' | 'tor';
 };
 
+function tabsFromSaved(saved: SavedSession, opts?: { discardInactive?: boolean }) {
+  const lazy = opts?.discardInactive !== false && useStore.getState().settings.perfLazyTabs !== false;
+  return saved.tabs.map((t) => ({
+    id: t.id,
+    url: t.url,
+    title: t.title,
+    favicon: t.favicon,
+    pinned: Boolean(t.pinned),
+    navHistory: t.navHistory || null,
+    mode: 'normal' as const,
+    discarded: lazy && t.id !== saved.activeId,
+  }));
+}
+
 export function useSessionPersist({ guestWc, windowMode }: UseSessionPersistArgs) {
   const [crashOffer, setCrashOffer] = useState(false);
   const navHistoryRef = useRef<Record<string, Tab['navHistory']>>({});
   const sessionBooted = useRef(false);
+  /** Snapshot z bootu — autosave nie może go nadpisać zanim user kliknie Przywróć. */
+  const pendingCrashRef = useRef<SavedSession | null>(null);
+  const crashOfferRef = useRef(false);
 
   const tabs = useStore((s) => s.tabs);
   const activeId = useStore((s) => s.activeId);
@@ -34,7 +53,7 @@ export function useSessionPersist({ guestWc, windowMode }: UseSessionPersistArgs
         }
         if (Array.isArray(boot?.restoreTabs) && boot.restoreTabs.length) {
           const lazy = useStore.getState().settings.perfLazyTabs !== false;
-          const tabs = boot.restoreTabs.map((t, i) => ({
+          const bootTabs = boot.restoreTabs.map((t, i) => ({
             id: Math.random().toString(36).slice(2, 10),
             url: t.url,
             title: t.title || t.url,
@@ -45,7 +64,7 @@ export function useSessionPersist({ guestWc, windowMode }: UseSessionPersistArgs
             discarded: lazy && i !== 0,
             lastActiveAt: Date.now(),
           }));
-          restoreSessionTabs(tabs, tabs[0]?.id || null, []);
+          restoreSessionTabs(bootTabs, bootTabs[0]?.id || null, []);
           setSessionReady(true);
           return;
         }
@@ -59,33 +78,22 @@ export function useSessionPersist({ guestWc, windowMode }: UseSessionPersistArgs
           .filter(Boolean);
 
         if (status?.dirtyExit && saved?.tabs?.length && mode === 'session') {
+          // Zamroź snapshot i NIE włączaj sessionReady — inaczej debounce
+          // nadpisze session.json pustą „Nową kartą” zanim user kliknie Przywróć.
+          pendingCrashRef.current = saved;
+          crashOfferRef.current = true;
           setCrashOffer(true);
-          setSessionReady(true);
           return;
         }
 
         if (mode === 'session' && saved?.tabs?.length) {
-          const lazy = useStore.getState().settings.perfLazyTabs !== false;
-          restoreSessionTabs(
-            saved.tabs.map((t) => ({
-              id: t.id,
-              url: t.url,
-              title: t.title,
-              favicon: t.favicon,
-              pinned: Boolean(t.pinned),
-              navHistory: t.navHistory || null,
-              mode: 'normal' as const,
-              discarded: lazy && t.id !== saved.activeId,
-            })),
-            saved.activeId,
-            saved.closedTabs || [],
-          );
+          restoreSessionTabs(tabsFromSaved(saved), saved.activeId, saved.closedTabs || []);
           return;
         }
 
         if (mode === 'pages' && pages.length) {
           const lazy = useStore.getState().settings.perfLazyTabs !== false;
-          const tabs = pages.map((url, i) => ({
+          const pageTabs = pages.map((url, i) => ({
             id: Math.random().toString(36).slice(2, 10),
             url,
             title: url,
@@ -94,7 +102,7 @@ export function useSessionPersist({ guestWc, windowMode }: UseSessionPersistArgs
             discarded: lazy && i !== 0,
             lastActiveAt: Date.now(),
           }));
-          restoreSessionTabs(tabs, tabs[0].id, saved?.closedTabs || []);
+          restoreSessionTabs(pageTabs, pageTabs[0].id, saved?.closedTabs || []);
           return;
         }
 
@@ -114,7 +122,9 @@ export function useSessionPersist({ guestWc, windowMode }: UseSessionPersistArgs
 
   const persistSessionNow = useCallback(async () => {
     if (windowMode === 'private' || windowMode === 'tor') return;
+    if (crashOfferRef.current) return;
     const st = useStore.getState();
+    if (!st.sessionReady) return;
     // Refresh nav history for live guests
     const navMap = { ...navHistoryRef.current };
     await Promise.all(
@@ -134,14 +144,40 @@ export function useSessionPersist({ guestWc, windowMode }: UseSessionPersistArgs
     await window.shell?.sessionSave?.(snap);
   }, [guestWc, windowMode]);
 
+  const acceptCrashRestore = useCallback(() => {
+    const saved = pendingCrashRef.current;
+    pendingCrashRef.current = null;
+    crashOfferRef.current = false;
+    setCrashOffer(false);
+    void window.shell?.sessionDismissCrash?.();
+    // Nie sessionMarkClean — to jest na prawdziwy clean quit; inaczej
+    // osłabiamy wykrywanie crashy w tej sesji.
+    if (saved?.tabs?.length) {
+      restoreSessionTabs(tabsFromSaved(saved), saved.activeId, saved.closedTabs || []);
+    } else {
+      setSessionReady(true);
+    }
+  }, [restoreSessionTabs, setSessionReady]);
+
+  const declineCrashRestore = useCallback(() => {
+    pendingCrashRef.current = null;
+    crashOfferRef.current = false;
+    setCrashOffer(false);
+    void (async () => {
+      await window.shell?.sessionClear?.();
+      void window.shell?.sessionDismissCrash?.();
+      setSessionReady(true);
+    })();
+  }, [setSessionReady]);
+
   // Debounced session save
   useEffect(() => {
-    if (!sessionReady) return;
+    if (!sessionReady || crashOffer) return;
     const t = setTimeout(() => {
       void persistSessionNow();
     }, 1000);
     return () => clearTimeout(t);
-  }, [tabs, activeId, closedTabs, sessionReady, persistSessionNow]);
+  }, [tabs, activeId, closedTabs, sessionReady, crashOffer, persistSessionNow]);
 
   // Flush on page hide / before unload
   useEffect(() => {
@@ -156,5 +192,11 @@ export function useSessionPersist({ guestWc, windowMode }: UseSessionPersistArgs
     };
   }, [persistSessionNow]);
 
-  return { crashOffer, setCrashOffer, persistSessionNow };
+  return {
+    crashOffer,
+    setCrashOffer,
+    acceptCrashRestore,
+    declineCrashRestore,
+    persistSessionNow,
+  };
 }

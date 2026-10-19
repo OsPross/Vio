@@ -27,9 +27,10 @@ export function SidebarSection() {
         />
         <SliderRow
           label="Szerokość panelu aplikacji"
+          desc="Albo przeciągnij prawą krawędź otwartego panelu"
           value={`${settings.sidePanelWidth} px`}
-          min={320}
-          max={560}
+          min={280}
+          max={720}
           valueNum={settings.sidePanelWidth}
           disabled={!settings.showSidebar}
           onChange={(n) => patchSettings({ sidePanelWidth: n })}

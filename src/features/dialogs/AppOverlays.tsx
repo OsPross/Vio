@@ -7,7 +7,6 @@ import { KeyRound, Puzzle, TriangleAlert } from 'lucide-react';
 import { FindBar } from '../../components/FindBar';
 import { Switch } from '../../components/ui/Switch';
 import type { CertWarn, ExtInstallAsk, HttpsWarn, PermAsk } from '../../hooks/useIpcEvents';
-import type { ClosedTab, Tab } from '../../store';
 import type { SaveOffer } from '../tabs';
 import { AboutDialog, ClearDataDialog, QrShareDialog } from './lazy';
 
@@ -159,17 +158,11 @@ export function ChromeOverlays({
 
 export type CrashRestoreOfferProps = {
   crashOffer: boolean;
-  setCrashOffer: Dispatch<SetStateAction<boolean>>;
-  restoreSessionTabs: (tabs: Tab[], activeId: string | null, closedTabs?: ClosedTab[]) => void;
-  setSessionReady: (ready: boolean) => void;
+  onAccept: () => void;
+  onDecline: () => void;
 };
 
-export function CrashRestoreOffer({
-  crashOffer,
-  setCrashOffer,
-  restoreSessionTabs,
-  setSessionReady,
-}: CrashRestoreOfferProps) {
+export function CrashRestoreOffer({ crashOffer, onAccept, onDecline }: CrashRestoreOfferProps) {
   if (!crashOffer) return null;
   return (
     <div className="session-crash-banner" role="alertdialog">
@@ -178,51 +171,10 @@ export function CrashRestoreOffer({
         <span> Przywrócić karty?</span>
       </div>
       <div className="session-crash-actions">
-        <button
-          type="button"
-          className="sbtn"
-          onClick={() => {
-            void (async () => {
-              const saved = await window.shell?.sessionLoad?.();
-              void window.shell?.sessionDismissCrash?.();
-              void window.shell?.sessionMarkClean?.();
-              setCrashOffer(false);
-              if (saved?.tabs?.length) {
-                restoreSessionTabs(
-                  saved.tabs.map((t) => ({
-                    id: t.id,
-                    url: t.url,
-                    title: t.title,
-                    favicon: t.favicon,
-                    pinned: Boolean(t.pinned),
-                    navHistory: t.navHistory || null,
-                    mode: 'normal' as const,
-                    discarded: true,
-                  })),
-                  saved.activeId,
-                  saved.closedTabs || [],
-                );
-              } else {
-                setSessionReady(true);
-              }
-            })();
-          }}
-        >
+        <button type="button" className="sbtn" onClick={onAccept}>
           Przywróć
         </button>
-        <button
-          type="button"
-          className="sbtn danger-text"
-          onClick={() => {
-            void (async () => {
-              await window.shell?.sessionClear?.();
-              void window.shell?.sessionDismissCrash?.();
-              void window.shell?.sessionMarkClean?.();
-              setCrashOffer(false);
-              setSessionReady(true);
-            })();
-          }}
-        >
+        <button type="button" className="sbtn danger-text" onClick={onDecline}>
           Nie
         </button>
       </div>

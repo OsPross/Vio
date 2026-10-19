@@ -401,6 +401,7 @@ button {
 }
 
 .side-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -421,6 +422,45 @@ button {
   opacity: 1;
   pointer-events: auto;
   border-left-color: var(--line);
+}
+
+.side-panel-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  margin-right: -3px;
+  cursor: ew-resize;
+  z-index: 6;
+  touch-action: none;
+  background: transparent;
+}
+.side-panel-resize::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.12s ease;
+}
+.side-panel-resize:hover::after,
+html.side-panel-resizing .side-panel-resize::after {
+  background: color-mix(in srgb, var(--accent, #6b9eff) 70%, transparent);
+}
+html.side-panel-resizing,
+html.side-panel-resizing * {
+  cursor: ew-resize !important;
+  user-select: none !important;
+}
+html.side-panel-resizing .side-panel {
+  transition: none;
+}
+html.side-panel-resizing .app {
+  transition: none;
 }
 
 .side-panel-bar {

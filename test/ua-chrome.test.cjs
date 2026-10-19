@@ -39,4 +39,11 @@ assert.equal(meta.platform, 'Windows');
 assert.equal(meta.fullVersion, full);
 assert.deepEqual(meta.brands, brands);
 
+const { buildMobileChromeUa } = require('../electron/ua-chrome.cjs');
+const mua = buildMobileChromeUa();
+assert.match(mua, /Android/);
+assert.match(mua, /Mobile Safari/);
+assert.match(mua, /Chrome\//);
+assert.equal(/Electron/i.test(mua), false);
+
 console.log('ua-chrome.test.cjs: ok');

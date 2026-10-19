@@ -329,10 +329,14 @@ function attachWebviewGuard(ses, preloadPath) {
         webPreferences.allowRunningInsecureContent = false;
         webPreferences.preload = preloadPath;
         delete webPreferences.preloadURL;
-        // webview has its own UA — set before first navigation (session alone is not enough)
+        // webview has its own UA — set before first navigation (session alone is not enough).
+        // Marker from host <webview useragent="VioSideCompact"> → mobile Chrome for narrow panels.
         try {
           const uaChrome = require('./ua-chrome.cjs');
-          params.useragent = uaChrome.buildChromeUa();
+          const wantCompact = /VioSideCompact/i.test(String(params.useragent || ''));
+          params.useragent = wantCompact
+            ? uaChrome.buildMobileChromeUa()
+            : uaChrome.buildChromeUa();
         } catch {
           /* */
         }
