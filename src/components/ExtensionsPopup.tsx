@@ -72,9 +72,9 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
           transition={popMotion.transition}
           style={{ transformOrigin: 'top right' }}
         >
-          <header className="ext-menu-head">
-            <div className="ext-menu-title">
-              <Puzzle size={16} strokeWidth={1.75} />
+          <header className="chrome-flyout-head">
+            <div className="chrome-flyout-head-label">
+              <Puzzle size={14} strokeWidth={1.75} />
               <strong>Rozszerzenia</strong>
             </div>
             <button type="button" className="icon-btn sm" onClick={onClose} title="Zamknij">
@@ -83,10 +83,11 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
           </header>
 
           {rows.length === 0 ? (
-            <p className="ext-menu-empty muted">
-              Brak zainstalowanych rozszerzeń. Zainstalujesz je ze sklepu Chrome albo ze strony
-              zarządzania.
-            </p>
+            <div className="chrome-flyout-empty">
+              <Puzzle size={22} strokeWidth={1.5} aria-hidden />
+              <p>Brak rozszerzeń</p>
+              <span>Zainstalujesz je ze sklepu Chrome albo ze strony zarządzania</span>
+            </div>
           ) : (
             <ul className="ext-menu-list">
               {rows.map((ext) => (
@@ -124,7 +125,7 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
             </ul>
           )}
 
-          <footer className="ext-menu-foot">
+          <footer className="chrome-flyout-foot">
             <button
               type="button"
               className="sbtn ghost"
@@ -134,7 +135,7 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
               }}
             >
               <Settings2 size={14} strokeWidth={1.75} />
-              Zarządzaj rozszerzeniami
+              Zarządzaj
             </button>
           </footer>
         </motion.div>

@@ -52,7 +52,10 @@ export function ShieldPanel({
       const t = e.target as Node | null;
       if (!t) return;
       if (panelRef.current?.contains(t)) return;
-      if ((t as Element).closest?.('.adblock-btn') || (t as Element).closest?.('.bar-shield-wrap > .icon-btn'))
+      if (
+        (t as Element).closest?.('.adblock-btn') ||
+        (t as Element).closest?.('.bar-shield-wrap > .icon-btn')
+      )
         return;
       onClose();
     };
@@ -95,84 +98,83 @@ export function ShieldPanel({
           transition={popMotion.transition}
           style={{ transformOrigin: 'top right' }}
         >
-          <header className="shield-panel-head">
-            <div className="shield-panel-title">
+          <header className="chrome-flyout-head">
+            <div className="chrome-flyout-head-label">
               {protectionOn ? (
-                <Shield size={16} strokeWidth={1.75} />
+                <Shield size={14} strokeWidth={1.75} />
               ) : (
-                <ShieldOff size={16} strokeWidth={1.75} />
+                <ShieldOff size={14} strokeWidth={1.75} />
               )}
-              <strong>{host || 'Strona'}</strong>
+              <strong title={host || 'Ochrona'}>{host || 'Ochrona'}</strong>
             </div>
             <button type="button" className="icon-btn sm" onClick={onClose} title="Zamknij">
               <X size={14} />
             </button>
           </header>
 
-          <div className="shield-panel-stats">
-            <div>
-              <em>Zablokowane dziś</em>
-              <strong>{blockedToday}</strong>
+          <div className="chrome-flyout-body">
+            <div className="shield-panel-stats">
+              <div>
+                <em>Dziś</em>
+                <strong>{blockedToday}</strong>
+              </div>
+              <div>
+                <em>Domeny</em>
+                <strong>{grouped.length}</strong>
+              </div>
             </div>
-            <div>
-              <em>Unikalne domeny</em>
-              <strong>{grouped.length}</strong>
-            </div>
-          </div>
 
-          <label className="shield-toggle">
-            <Switch
-              on={protectionOn}
-              onChange={onToggleProtection}
-              aria-label="Ochrona dla tej strony"
-            />
-            <span>Ochrona dla tej strony</span>
-          </label>
-          <p className="shield-hint muted">
-            {protectionOn
-              ? 'Coś nie działa? Wyłącz ochronę dla tej strony — zapamiętamy wyjątek per domena.'
-              : 'Ochrona wyłączona dla tej domeny (wyjątek zapisany).'}
-          </p>
+            <label className="shield-toggle">
+              <Switch
+                on={protectionOn}
+                onChange={onToggleProtection}
+                aria-label="Ochrona dla tej strony"
+              />
+              <span>Ochrona dla tej strony</span>
+            </label>
+            <p className="shield-hint">
+              {protectionOn
+                ? 'Coś nie działa? Wyłącz ochronę — zapamiętamy wyjątek per domena.'
+                : 'Ochrona wyłączona dla tej domeny (wyjątek zapisany).'}
+            </p>
 
-          {protectionOn && (
-            <button
-              type="button"
-              className="sbtn primary shield-disable-site"
-              onClick={onDisableOnThisPage}
-            >
-              Wyłącz na tej stronie
-            </button>
-          )}
-
-          <button type="button" className="sbtn ghost shield-forget" onClick={onForget}>
-            <Trash2 size={14} strokeWidth={1.75} /> Zapomnij tę stronę
-          </button>
-
-          {visible.length > 0 && (
-            <div className="shield-blocked-list">
-              <span className="shield-blocked-label">Ostatnio zablokowane</span>
-              <ul>
-                {visible.map((b) => (
-                  <li key={b.host} title={b.host}>
-                    {b.count > 1 ? `${b.host} ×${b.count}` : b.host}
-                  </li>
-                ))}
-              </ul>
-              {hasMore && (
-                <button
-                  type="button"
-                  className="sbtn ghost"
-                  style={{ width: '100%', marginTop: 6 }}
-                  onClick={() => {
-                    onClose();
-                    setSettingsTab('adblock');
-                  }}
-                >
-                  Pokaż wszystkie
+            <div className="shield-actions">
+              {protectionOn && (
+                <button type="button" className="sbtn ghost" onClick={onDisableOnThisPage}>
+                  Wyłącz na tej stronie
                 </button>
               )}
+              <button type="button" className="sbtn text" onClick={onForget}>
+                <Trash2 size={13} strokeWidth={1.75} /> Zapomnij tę stronę
+              </button>
             </div>
-          )}
+
+            {visible.length > 0 && (
+              <div className="shield-blocked">
+                <span className="shield-blocked-label">Ostatnio zablokowane</span>
+                <ul>
+                  {visible.map((b) => (
+                    <li key={b.host} title={b.host}>
+                      {b.count > 1 ? `${b.host} ×${b.count}` : b.host}
+                    </li>
+                  ))}
+                </ul>
+                {hasMore && (
+                  <button
+                    type="button"
+                    className="sbtn text"
+                    style={{ marginTop: 6 }}
+                    onClick={() => {
+                      onClose();
+                      setSettingsTab('adblock');
+                    }}
+                  >
+                    Pokaż wszystkie
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

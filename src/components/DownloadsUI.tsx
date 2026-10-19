@@ -380,8 +380,11 @@ export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: But
             transition={popMotion.transition}
             style={{ transformOrigin: 'top right' }}
           >
-            <div className="dl-panel-head">
-              <strong>Pobrania</strong>
+            <div className="chrome-flyout-head">
+              <div className="chrome-flyout-head-label">
+                <Download size={14} strokeWidth={1.75} aria-hidden />
+                <strong>Pobrania</strong>
+              </div>
               <button
                 type="button"
                 className="sbtn text"
@@ -394,7 +397,7 @@ export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: But
               </button>
             </div>
             {!recent.length ? (
-              <div className="dl-empty">
+              <div className="chrome-flyout-empty">
                 <Download size={22} strokeWidth={1.5} aria-hidden />
                 <p>Brak pobrań</p>
                 <span>Pliki pojawią się tutaj po starcie pobierania</span>
