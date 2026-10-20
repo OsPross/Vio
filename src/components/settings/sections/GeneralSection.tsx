@@ -36,12 +36,6 @@ export function GeneralSection() {
             placeholder="about:home"
           />
         </FieldRow>
-        <FieldRow label={t('settings.general.omniboxPlaceholder')}>
-          <Input
-            value={settings.omniboxPlaceholder}
-            onChange={(e) => patchSettings({ omniboxPlaceholder: e.target.value })}
-          />
-        </FieldRow>
       </SettingsGroup>
 
       <SettingsGroup title={t('settings.general.downloads')}>

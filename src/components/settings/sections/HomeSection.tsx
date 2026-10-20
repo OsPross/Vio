@@ -36,12 +36,6 @@ export function HomeSection() {
             placeholder={t('settings.home.sublinePlaceholder')}
           />
         </FieldRow>
-        <FieldRow label={t('settings.home.searchPlaceholder')}>
-          <Input
-            value={settings.homePlaceholder}
-            onChange={(e) => patchSettings({ homePlaceholder: e.target.value })}
-          />
-        </FieldRow>
       </SettingsGroup>
 
       <SettingsGroup title={t('settings.home.layoutGroup')}>

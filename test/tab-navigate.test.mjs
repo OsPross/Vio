@@ -14,6 +14,7 @@ import { HOME_URL, HISTORY_URL, TOR_HOME_URL } from '../src/store/index.ts';
 assert.equal(titleForInternalUrl(HISTORY_URL, false), 'Historia');
 assert.equal(titleForInternalUrl(HOME_URL, true), 'Tor');
 assert.equal(titleForInternalUrl(HOME_URL, false), 'Nowa karta');
+assert.equal(titleForInternalUrl(HOME_URL, false, true), 'Nowa karta prywatna');
 assert.equal(titleForInternalUrl('https://example.com', false), '…');
 assert.equal(isInternalPageUrl(HISTORY_URL), true);
 assert.equal(isInternalPageUrl('https://example.com'), false);

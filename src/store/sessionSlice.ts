@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand';
+import { t } from '../i18n/core';
 import { HOME_URL, MAX_CLOSED_TABS, MAX_CLOSED_WINDOWS } from './constants';
 import { isPrivateTab, isTorTab, sortTabsPinnedFirst } from './tabHelpers';
 import type { StoreState } from './storeState';
@@ -36,7 +37,7 @@ export const createSessionSlice: StateCreator<StoreState, [], [], SessionSlice> 
       const tab: Tab = {
         id,
         url: entry.url,
-        title: entry.title || 'Karta',
+        title: entry.title || t('tabs.untitled'),
         favicon: entry.favicon,
         pinned: Boolean(entry.pinned),
         navHistory: entry.navHistory || null,
@@ -94,7 +95,7 @@ export const createSessionSlice: StateCreator<StoreState, [], [], SessionSlice> 
     if (!tabs.length) {
       const nid = uid();
       set({
-        tabs: [{ id: nid, title: 'Nowa karta', url: HOME_URL, mode: 'normal', pinned: false }],
+        tabs: [{ id: nid, title: t('pages.newTab'), url: HOME_URL, mode: 'normal', pinned: false }],
         activeId: nid,
         closedTabs: (closed || []).slice(0, MAX_CLOSED_TABS),
         sessionReady: true,

@@ -331,10 +331,7 @@ export function SearchWidget({
   ]);
 
   const showSuggest = !inPreview && focused && suggestions.length > 0;
-  const engineName = engineLabel(settings.searchEngine);
-  const placeholder =
-    settings.homePlaceholder?.trim() ||
-    t('widgets.ui.searchPlaceholder', { engine: engineName });
+  const placeholder = t('home.searchPlaceholder');
 
   const run = (title?: string, fill?: string) => {
     if (fill) {

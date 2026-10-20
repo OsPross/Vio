@@ -278,7 +278,7 @@ export function BrowserChrome({
             }}
             torMode={activeIsTor}
             placeholder={
-              activeIsTor ? t('chrome.torOmniboxPlaceholder') : settings.omniboxPlaceholder
+              activeIsTor ? t('chrome.torOmniboxPlaceholder') : t('chrome.omniboxPlaceholder')
             }
             bangs={bangs}
             shortcuts={shortcuts}

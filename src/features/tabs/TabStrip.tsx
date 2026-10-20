@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { PerfGate } from '../../components/PerfGate';
 import { useT } from '../../i18n';
 import { formatUrlPlain } from '../../lib/url-display';
+import { isInternalPageUrl, titleForInternalUrl } from '../../lib/tabNavigate';
 import { isPrivateTab, isTorTab, useStore } from '../../store';
 
 export type TabMenuState = { x: number; y: number; tabId: string } | null;
@@ -177,7 +178,9 @@ export function TabStrip({
                   )}
                   <span className="tab-title">
                     {t.discarded && t.id !== activeId ? '○ ' : ''}
-                    {t.title || tr('tabs.untitled')}
+                    {isInternalPageUrl(t.url)
+                      ? titleForInternalUrl(t.url, isTorTab(t), isPrivateTab(t))
+                      : t.title || tr('tabs.untitled')}
                   </span>
                   {!t.pinned && (hotTabs[t.id] || 0) >= 3 && !t.discarded && (
                     <span className="tab-cpu-hint" title={tr('tabs.highCpuSleep')}>

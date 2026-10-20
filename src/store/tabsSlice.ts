@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand';
+import { t } from '../i18n/core';
 import { getWindowPartition } from '../lib/windowBoot';
 import { HOME_URL, MAX_CLOSED_TABS, TOR_HOME_URL } from './constants';
 import { isTorTab, sortTabsPinnedFirst } from './tabHelpers';
@@ -32,7 +33,7 @@ export type TabsSlice = {
 export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set, get) => {
   const first = uid();
   return {
-    tabs: [{ id: first, title: 'Nowa karta', url: HOME_URL }],
+    tabs: [{ id: first, title: t('pages.newTab'), url: HOME_URL }],
     activeId: first,
 
     newTab: (url, opts) => {
@@ -45,7 +46,12 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
       set((st) => {
         const tab: Tab = {
           id,
-          title: u === HOME_URL ? 'Nowa karta' : '…',
+          title:
+            u === HOME_URL
+              ? asPrivate
+                ? t('pages.newPrivateTab')
+                : t('pages.newTab')
+              : '…',
           url: u,
           lastActiveAt: Date.now(),
           discarded: false,
@@ -85,7 +91,7 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
           ...st.tabs,
           {
             id,
-            title: u === HOME_URL ? 'Nowa karta prywatna' : '…',
+            title: u === HOME_URL ? t('pages.newPrivateTab') : '…',
             url: u,
             lastActiveAt: Date.now(),
             discarded: false,
@@ -114,7 +120,7 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
           ...st.tabs,
           {
             id,
-            title: 'Tor',
+            title: t('pages.tor'),
             url: u,
             lastActiveAt: Date.now(),
             discarded: false,
@@ -143,7 +149,9 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
         }
         const nid = uid();
         set({
-          tabs: [{ id: nid, title: 'Nowa karta', url: HOME_URL, mode: 'normal', pinned: false }],
+          tabs: [
+            { id: nid, title: t('pages.newTab'), url: HOME_URL, mode: 'normal', pinned: false },
+          ],
           activeId: nid,
           closedTabs: nextClosed,
         });

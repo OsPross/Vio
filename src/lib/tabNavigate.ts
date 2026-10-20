@@ -12,13 +12,17 @@ import {
   TOR_HOME_URL,
 } from '../store';
 
-export function titleForInternalUrl(url: string, tor: boolean): string {
+export function titleForInternalUrl(url: string, tor: boolean, priv = false): string {
   if (url === HISTORY_URL) return t('pages.history');
   if (url === DOWNLOADS_URL) return t('pages.downloads');
   if (url === BOOKMARKS_URL) return t('pages.bookmarks');
   if (url === EXTENSIONS_URL) return t('pages.extensions');
   if (url === ABOUT_URL || url === 'about:about') return t('pages.aboutVio');
-  if (url === HOME_URL || url === TOR_HOME_URL) return tor ? t('pages.tor') : t('pages.newTab');
+  if (url === HOME_URL || url === TOR_HOME_URL) {
+    if (tor) return t('pages.tor');
+    if (priv) return t('pages.newPrivateTab');
+    return t('pages.newTab');
+  }
   return '…';
 }
 
