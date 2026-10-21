@@ -206,6 +206,8 @@ const LIMITED_PERMS = new Set([
   'userscripts',
   'tabgroups',
   'devtools',
+  'tabcapture',
+  'desktopcapture',
 ]);
 
 function assessCompatibility(rec, raw) {
@@ -542,11 +544,13 @@ async function init() {
 }
 
 function list() {
-  return records.map((r) => {
+  let storeDirty = false;
+  const out = records.map((r) => {
     let icon = null;
     let limitedSupport = false;
     let warnings = [];
     let displayName = r.name;
+    let hasPopup = false;
     try {
       if (fs.existsSync(r.path)) {
         const meta = readManifest(r.path);
@@ -554,7 +558,15 @@ function list() {
         const assessed = assessCompatibility(r, meta.raw);
         limitedSupport = assessed.limitedSupport;
         warnings = assessed.warnings;
-        if (meta.name && !meta.name.startsWith('__MSG_')) displayName = meta.name;
+        if (meta.name && !meta.name.startsWith('__MSG_')) {
+          displayName = meta.name;
+          if (r.name !== displayName) {
+            r.name = displayName;
+            storeDirty = true;
+          }
+        }
+        const action = meta.raw?.action || meta.raw?.browser_action;
+        hasPopup = Boolean(action && typeof action === 'object' && action.default_popup);
       }
     } catch {
       /* */
@@ -568,12 +580,15 @@ function list() {
       icon,
       limitedSupport,
       warnings,
+      hasPopup,
       canUpdate: Boolean(
         (r.chromeId && isChromeExtensionId(r.chromeId)) ||
           (isChromeExtensionId(r.id) && String(r.source || '').startsWith('cws:')),
       ),
     };
   });
+  if (storeDirty) saveStore();
+  return out;
 }
 
 function findManifestDir(root) {
@@ -890,6 +905,8 @@ async function setEnabled(id, enabled) {
   const rec = records.find((r) => r.id === id);
   if (!rec) return { ok: false, error: 'not_found' };
   rec.enabled = Boolean(enabled);
+  // Turning on → pin to toolbar so the user has a visible icon to click
+  if (rec.enabled && !rec.pinned) rec.pinned = true;
   saveStore();
   if (rec.enabled) {
     await loadOneMain(rec);

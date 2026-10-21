@@ -417,6 +417,12 @@ export function BrowserChrome({
                     open={extMenuOpen}
                     onClose={() => setExtMenuOpen(false)}
                     onManage={() => navigateActive(EXTENSIONS_URL)}
+                    tabId={guestWc[activeId] || null}
+                    partition={
+                      windowMode === 'private' && getWindowPartition()
+                        ? getWindowPartition()!
+                        : 'persist:main'
+                    }
                   />
                 </Suspense>
               </div>

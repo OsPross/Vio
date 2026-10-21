@@ -963,6 +963,7 @@ declare global {
           warnings?: string[];
           canUpdate?: boolean;
           usesWebRequest?: boolean;
+          hasPopup?: boolean;
         }[];
       }>;
       extensionsInstallFolder: () => Promise<{

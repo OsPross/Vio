@@ -16,21 +16,66 @@ type ExtRow = {
   manifestVersion?: number;
   icon?: string | null;
   limitedSupport?: boolean;
+  hasPopup?: boolean;
+  chromeId?: string;
+  electronId?: string | null;
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onManage: () => void;
+  /** Guest webContents id for the active tab (chrome.tabs / browserAction). */
+  tabId?: number | null;
+  partition?: string;
 };
 
-export function ExtensionsPopup({ open, onClose, onManage }: Props) {
+declare global {
+  interface Window {
+    browserAction?: {
+      activate: (
+        partition: string,
+        details: {
+          eventType: string;
+          extensionId: string;
+          tabId: number;
+          alignment?: string;
+          anchorRect: { x: number; y: number; width: number; height: number };
+        },
+      ) => void | Promise<void>;
+    };
+  }
+}
+
+function openExtensionAction(
+  ext: ExtRow,
+  opts: { partition: string; tabId: number; anchor: DOMRect },
+) {
+  const extensionId = String(ext.electronId || ext.chromeId || ext.id || '');
+  if (!extensionId || !window.browserAction?.activate) return false;
+  void window.browserAction.activate(opts.partition, {
+    eventType: 'click',
+    extensionId,
+    tabId: opts.tabId,
+    alignment: 'bottom left',
+    anchorRect: {
+      x: opts.anchor.left,
+      y: opts.anchor.top,
+      width: opts.anchor.width,
+      height: opts.anchor.height,
+    },
+  });
+  return true;
+}
+
+export function ExtensionsPopup({ open, onClose, onManage, tabId, partition }: Props) {
   const t = useT();
   const [rows, setRows] = useState<ExtRow[]>([]);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const settings = useStore((s) => s.settings);
   const motionOff = isMotionOff(settings);
   const popMotion = popupTransition(motionOff);
+  const part = partition || 'persist:main';
 
   const reload = useCallback(async () => {
     const res = await window.shell?.extensionsList?.();
@@ -61,6 +106,34 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
       window.removeEventListener('keydown', onKey, true);
     };
   }, [open, onClose]);
+
+  const openExt = async (ext: ExtRow, el: HTMLElement) => {
+    const anchor = el.getBoundingClientRect();
+    const wcId = typeof tabId === 'number' && tabId > 0 ? tabId : -1;
+    let current = ext;
+    const wasOff = !ext.enabled || !ext.loaded;
+    if (!ext.enabled) {
+      await window.shell?.extensionsSetEnabled?.(ext.id, true);
+    }
+    if (typeof tabId === 'number' && tabId > 0) {
+      void window.shell?.extensionsSelectTab?.(tabId);
+    }
+    const refresh = async () => {
+      const res = await window.shell?.extensionsList?.();
+      if (res?.ok && Array.isArray(res.extensions)) {
+        setRows(res.extensions as ExtRow[]);
+        const next = (res.extensions as ExtRow[]).find((x) => x.id === ext.id);
+        if (next) current = next;
+      }
+    };
+    await refresh();
+    const tryOpen = () => {
+      const ok = openExtensionAction(current, { partition: part, tabId: wcId, anchor });
+      if (ok) onClose();
+    };
+    if (wasOff) window.setTimeout(tryOpen, 400);
+    else tryOpen();
+  };
 
   return (
     <AnimatePresence>
@@ -96,30 +169,40 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
             <ul className="ext-menu-list">
               {rows.map((ext) => (
                 <li key={ext.id} className={`ext-menu-row ${ext.enabled ? '' : 'off'}`}>
-                  <span className="ext-menu-ico" aria-hidden>
-                    {ext.icon ? (
-                      <img src={ext.icon} alt="" width={18} height={18} />
-                    ) : (
-                      <Puzzle size={14} strokeWidth={1.5} />
-                    )}
-                  </span>
-                  <div className="ext-menu-meta">
-                    <strong title={ext.name}>
-                      {ext.name}
-                      {ext.limitedSupport ? (
-                        <AlertTriangle
-                          size={11}
-                          className="ext-menu-warn-ico"
-                          aria-label={t('internal.extLimitedSupport')}
-                        />
-                      ) : null}
-                    </strong>
-                    <span className="muted">
-                      v{ext.version}
-                      {ext.manifestVersion ? ` · MV${ext.manifestVersion}` : ''}
-                      {ext.loaded ? '' : ext.enabled ? t('chrome.extStarting') : ''}
+                  <button
+                    type="button"
+                    className="ext-menu-open"
+                    title={t('chrome.openExtension', { name: ext.name })}
+                    onClick={(e) => {
+                      void openExt(ext, e.currentTarget);
+                    }}
+                  >
+                    <span className="ext-menu-ico" aria-hidden>
+                      {ext.icon ? (
+                        <img src={ext.icon} alt="" width={18} height={18} />
+                      ) : (
+                        <Puzzle size={14} strokeWidth={1.5} />
+                      )}
                     </span>
-                  </div>
+                    <div className="ext-menu-meta">
+                      <strong title={ext.name}>
+                        {ext.name.startsWith('__MSG_') ? ext.id.slice(0, 8) : ext.name}
+                        {ext.limitedSupport ? (
+                          <AlertTriangle
+                            size={11}
+                            className="ext-menu-warn-ico"
+                            aria-label={t('internal.extLimitedSupport')}
+                          />
+                        ) : null}
+                      </strong>
+                      <span className="muted">
+                        v{ext.version}
+                        {ext.manifestVersion ? ` · MV${ext.manifestVersion}` : ''}
+                        {ext.loaded ? '' : ext.enabled ? t('chrome.extStarting') : ''}
+                        {ext.enabled ? ` · ${t('chrome.extClickToOpen')}` : ` · ${t('chrome.extClickToEnable')}`}
+                      </span>
+                    </div>
+                  </button>
                   <button
                     type="button"
                     className={`icon-btn sm ${ext.pinned ? 'on' : ''}`}
