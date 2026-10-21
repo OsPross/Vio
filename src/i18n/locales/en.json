@@ -686,6 +686,8 @@
     "openExtension": "Open {{name}}",
     "extClickToOpen": "click to open",
     "extClickToEnable": "click to enable",
+    "extOpening": "opening…",
+    "extOpenFailed": "Could not open the extension",
     "manage": "Manage",
     "extStarting": " · starting…",
     "soulReady": "ready",

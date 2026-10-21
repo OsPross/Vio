@@ -686,6 +686,8 @@
     "openExtension": "Otwórz {{name}}",
     "extClickToOpen": "kliknij, by otworzyć",
     "extClickToEnable": "kliknij, by włączyć",
+    "extOpening": "otwieranie…",
+    "extOpenFailed": "Nie udało się otworzyć rozszerzenia",
     "manage": "Zarządzaj",
     "extStarting": " · start…",
     "soulReady": "gotowy",

@@ -1000,6 +1000,12 @@ declare global {
         error?: string;
         extension?: unknown;
       }>;
+      extensionsOpenAction: (
+        id: string,
+        opts?: {
+          anchorRect?: { x: number; y: number; width?: number; height?: number };
+        },
+      ) => Promise<{ ok: boolean; error?: string; url?: string }>;
       extensionsSelectTab: (webContentsId: number) => Promise<{ ok: boolean }>;
       onExtensionsInstallAsk: (
         cb: (payload: { askId: string; extensionId: string; sourceUrl?: string }) => void,

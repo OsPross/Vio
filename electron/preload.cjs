@@ -128,6 +128,7 @@ contextBridge.exposeInMainWorld('shell', {
   extensionsSetPinned: (id, pinned) => ipcRenderer.invoke('shell:extensions-set-pinned', id, pinned),
   extensionsRemove: (id) => ipcRenderer.invoke('shell:extensions-remove', id),
   extensionsUpdate: (id) => ipcRenderer.invoke('shell:extensions-update', id),
+  extensionsOpenAction: (id, opts) => ipcRenderer.invoke('shell:extensions-open-action', id, opts),
   onExtensionsInstallAsk: (cb) => {
     const handler = (_e, payload) => cb(payload);
     ipcRenderer.on('shell:extensions-install-ask', handler);

@@ -25,57 +25,19 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onManage: () => void;
-  /** Guest webContents id for the active tab (chrome.tabs / browserAction). */
   tabId?: number | null;
   partition?: string;
 };
 
-declare global {
-  interface Window {
-    browserAction?: {
-      activate: (
-        partition: string,
-        details: {
-          eventType: string;
-          extensionId: string;
-          tabId: number;
-          alignment?: string;
-          anchorRect: { x: number; y: number; width: number; height: number };
-        },
-      ) => void | Promise<void>;
-    };
-  }
-}
-
-function openExtensionAction(
-  ext: ExtRow,
-  opts: { partition: string; tabId: number; anchor: DOMRect },
-) {
-  const extensionId = String(ext.electronId || ext.chromeId || ext.id || '');
-  if (!extensionId || !window.browserAction?.activate) return false;
-  void window.browserAction.activate(opts.partition, {
-    eventType: 'click',
-    extensionId,
-    tabId: opts.tabId,
-    alignment: 'bottom left',
-    anchorRect: {
-      x: opts.anchor.left,
-      y: opts.anchor.top,
-      width: opts.anchor.width,
-      height: opts.anchor.height,
-    },
-  });
-  return true;
-}
-
-export function ExtensionsPopup({ open, onClose, onManage, tabId, partition }: Props) {
+export function ExtensionsPopup({ open, onClose, onManage }: Props) {
   const t = useT();
   const [rows, setRows] = useState<ExtRow[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const settings = useStore((s) => s.settings);
   const motionOff = isMotionOff(settings);
   const popMotion = popupTransition(motionOff);
-  const part = partition || 'persist:main';
 
   const reload = useCallback(async () => {
     const res = await window.shell?.extensionsList?.();
@@ -84,6 +46,7 @@ export function ExtensionsPopup({ open, onClose, onManage, tabId, partition }: P
 
   useEffect(() => {
     if (!open) return;
+    setErr(null);
     void reload();
   }, [open, reload]);
 
@@ -108,31 +71,29 @@ export function ExtensionsPopup({ open, onClose, onManage, tabId, partition }: P
   }, [open, onClose]);
 
   const openExt = async (ext: ExtRow, el: HTMLElement) => {
-    const anchor = el.getBoundingClientRect();
-    const wcId = typeof tabId === 'number' && tabId > 0 ? tabId : -1;
-    let current = ext;
-    const wasOff = !ext.enabled || !ext.loaded;
-    if (!ext.enabled) {
-      await window.shell?.extensionsSetEnabled?.(ext.id, true);
-    }
-    if (typeof tabId === 'number' && tabId > 0) {
-      void window.shell?.extensionsSelectTab?.(tabId);
-    }
-    const refresh = async () => {
-      const res = await window.shell?.extensionsList?.();
-      if (res?.ok && Array.isArray(res.extensions)) {
-        setRows(res.extensions as ExtRow[]);
-        const next = (res.extensions as ExtRow[]).find((x) => x.id === ext.id);
-        if (next) current = next;
+    setErr(null);
+    setBusyId(ext.id);
+    try {
+      const rect = el.getBoundingClientRect();
+      const res = await window.shell?.extensionsOpenAction?.(ext.id, {
+        anchorRect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+      });
+      await reload();
+      if (!res?.ok) {
+        setErr(res?.error || t('chrome.extOpenFailed'));
+        return;
       }
-    };
-    await refresh();
-    const tryOpen = () => {
-      const ok = openExtensionAction(current, { partition: part, tabId: wcId, anchor });
-      if (ok) onClose();
-    };
-    if (wasOff) window.setTimeout(tryOpen, 400);
-    else tryOpen();
+      onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : t('chrome.extOpenFailed'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const displayName = (ext: ExtRow) => {
+    if (!ext.name || ext.name.startsWith('__MSG_')) return ext.chromeId || ext.id;
+    return ext.name;
   };
 
   return (
@@ -159,6 +120,8 @@ export function ExtensionsPopup({ open, onClose, onManage, tabId, partition }: P
             </button>
           </header>
 
+          {err ? <p className="ext-menu-err">{err}</p> : null}
+
           {rows.length === 0 ? (
             <div className="chrome-flyout-empty">
               <Puzzle size={22} strokeWidth={1.5} aria-hidden />
@@ -172,7 +135,8 @@ export function ExtensionsPopup({ open, onClose, onManage, tabId, partition }: P
                   <button
                     type="button"
                     className="ext-menu-open"
-                    title={t('chrome.openExtension', { name: ext.name })}
+                    disabled={busyId === ext.id}
+                    title={t('chrome.openExtension', { name: displayName(ext) })}
                     onClick={(e) => {
                       void openExt(ext, e.currentTarget);
                     }}
@@ -185,8 +149,8 @@ export function ExtensionsPopup({ open, onClose, onManage, tabId, partition }: P
                       )}
                     </span>
                     <div className="ext-menu-meta">
-                      <strong title={ext.name}>
-                        {ext.name.startsWith('__MSG_') ? ext.id.slice(0, 8) : ext.name}
+                      <strong title={displayName(ext)}>
+                        {displayName(ext)}
                         {ext.limitedSupport ? (
                           <AlertTriangle
                             size={11}
@@ -198,8 +162,9 @@ export function ExtensionsPopup({ open, onClose, onManage, tabId, partition }: P
                       <span className="muted">
                         v{ext.version}
                         {ext.manifestVersion ? ` · MV${ext.manifestVersion}` : ''}
-                        {ext.loaded ? '' : ext.enabled ? t('chrome.extStarting') : ''}
-                        {ext.enabled ? ` · ${t('chrome.extClickToOpen')}` : ` · ${t('chrome.extClickToEnable')}`}
+                        {busyId === ext.id
+                          ? ` · ${t('chrome.extOpening')}`
+                          : ` · ${t('chrome.extClickToOpen')}`}
                       </span>
                     </div>
                   </button>
@@ -223,8 +188,8 @@ export function ExtensionsPopup({ open, onClose, onManage, tabId, partition }: P
                     }}
                     aria-label={
                       ext.enabled
-                        ? t('chrome.disableExtension', { name: ext.name })
-                        : t('chrome.enableExtension', { name: ext.name })
+                        ? t('chrome.disableExtension', { name: displayName(ext) })
+                        : t('chrome.enableExtension', { name: displayName(ext) })
                     }
                   />
                 </li>

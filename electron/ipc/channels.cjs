@@ -48,6 +48,7 @@ module.exports = Object.freeze({
   EXTENSIONS_SET_PINNED: 'shell:extensions-set-pinned',
   EXTENSIONS_SET_PRIVATE: 'shell:extensions-set-private',
   EXTENSIONS_UPDATE: 'shell:extensions-update',
+  EXTENSIONS_OPEN_ACTION: 'shell:extensions-open-action',
   FAVICON_CACHE_GET: 'shell:favicon-cache-get',
   FAVICON_CACHE_PUT: 'shell:favicon-cache-put',
   HISTORY_CLEAR: 'shell:history-clear',

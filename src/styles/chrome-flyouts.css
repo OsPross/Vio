@@ -303,6 +303,16 @@
   width: min(360px, 92vw);
 }
 
+.ext-menu-err {
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #f0b4b4;
+  background: color-mix(in srgb, #d93025 18%, transparent);
+}
+
 .ext-menu-list {
   list-style: none;
   margin: 0;

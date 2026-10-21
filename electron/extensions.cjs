@@ -101,7 +101,9 @@ function askInstallConfirm(opts) {
 
 function loadStore() {
   try {
-    const raw = JSON.parse(fs.readFileSync(storeFile(), 'utf8'));
+    let text = fs.readFileSync(storeFile(), 'utf8');
+    if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+    const raw = JSON.parse(text);
     records = Array.isArray(raw?.extensions)
       ? raw.extensions.map((r) => ({
           ...r,
@@ -112,6 +114,25 @@ function loadStore() {
           chromeId: typeof r.chromeId === 'string' ? r.chromeId : undefined,
         }))
       : [];
+    // Resolve __MSG_* names left over from older installs
+    let dirty = false;
+    for (const rec of records) {
+      try {
+        if (!rec.path || !fs.existsSync(rec.path)) continue;
+        const meta = readManifest(rec.path);
+        if (meta.name && !meta.name.startsWith('__MSG_') && rec.name !== meta.name) {
+          rec.name = meta.name;
+          dirty = true;
+        }
+        if (!rec.iconRel && meta.iconRel) {
+          rec.iconRel = meta.iconRel;
+          dirty = true;
+        }
+      } catch {
+        /* */
+      }
+    }
+    if (dirty) saveStore();
   } catch {
     records = [];
   }
@@ -964,6 +985,172 @@ async function remove(id) {
   return { ok: true };
 }
 
+/** @type {import('electron').BrowserWindow | null} */
+let actionPopupWin = null;
+
+/**
+ * Open an extension's browser_action / action popup in a real window.
+ * Does not depend on electron-chrome-extensions tab tracking (which often fails
+ * for webview guests) — loads chrome-extension:// via persist:main session.
+ */
+async function openAction(id, opts = {}) {
+  const key = String(id || '');
+  const rec = records.find((r) => r.id === key || r.chromeId === key);
+  if (!rec) return { ok: false, error: 'Nie znaleziono rozszerzenia' };
+
+  if (!rec.enabled) {
+    const en = await setEnabled(rec.id, true);
+    if (!en?.ok) return { ok: false, error: en?.error || 'Nie udało się włączyć' };
+  } else if (!loadedMain.has(rec.id)) {
+    await loadOneMain(rec);
+  }
+  if (!rec.pinned) {
+    rec.pinned = true;
+    saveStore();
+  }
+
+  let popupRel = '';
+  try {
+    const meta = readManifest(rec.path);
+    const action = meta.raw?.action || meta.raw?.browser_action;
+    if (action && typeof action === 'object' && typeof action.default_popup === 'string') {
+      popupRel = action.default_popup.replace(/^\//, '');
+    }
+  } catch (err) {
+    return { ok: false, error: err?.message || 'Błąd odczytu manifestu' };
+  }
+  if (!popupRel) {
+    return {
+      ok: false,
+      error: 'To rozszerzenie nie ma okna popup — działa w tle albo dopiero na stronie',
+    };
+  }
+
+  const loaded = loadedMain.get(rec.id);
+  const extId = loaded?.id || rec.chromeId || rec.id;
+  const url = `chrome-extension://${extId}/${popupRel}`;
+  const filePopup = path.join(rec.path, popupRel);
+
+  const { BrowserWindow, screen } = require('electron');
+  const parent = getMainWindow?.() || BrowserWindow.getFocusedWindow();
+  if (!parent || parent.isDestroyed()) {
+    return { ok: false, error: 'Brak okna przeglądarki' };
+  }
+
+  // Preferred path: electron-chrome-extensions PopupView (needs a tracked tab).
+  try {
+    if (chromeExtApi?.api?.browserAction?.activateClick) {
+      try {
+        chromeExtApi.addTab(parent.webContents, parent);
+        chromeExtApi.selectTab(parent.webContents, parent);
+      } catch {
+        /* already tracked or session mismatch */
+      }
+      const anchor = opts?.anchorRect || { x: 0, y: 48, width: 28, height: 28 };
+      chromeExtApi.api.browserAction.activateClick({
+        extensionId: extId,
+        tabId: parent.webContents.id,
+        anchorRect: {
+          x: Number(anchor.x) || 0,
+          y: Number(anchor.y) || 48,
+          width: Number(anchor.width) || 28,
+          height: Number(anchor.height) || 28,
+        },
+        alignment: 'bottom left',
+      });
+      return { ok: true, via: 'browserAction' };
+    }
+  } catch (err) {
+    console.warn('[ext] browserAction.activateClick', err && err.message);
+  }
+
+  try {
+    if (actionPopupWin && !actionPopupWin.isDestroyed()) {
+      actionPopupWin.close();
+    }
+  } catch {
+    /* */
+  }
+  actionPopupWin = null;
+
+  const anchor = opts?.anchorRect || null;
+  let x;
+  let y;
+  try {
+    const pb = parent.getBounds();
+    if (anchor && typeof anchor.x === 'number') {
+      x = Math.round(pb.x + anchor.x + (anchor.width || 0) / 2 - 180);
+      y = Math.round(pb.y + anchor.y + (anchor.height || 28) + 8);
+    } else {
+      x = Math.round(pb.x + pb.width - 400);
+      y = Math.round(pb.y + 80);
+    }
+    const disp = screen.getDisplayMatching(pb);
+    const wa = disp.workArea;
+    x = Math.min(Math.max(wa.x + 8, x), wa.x + wa.width - 360);
+    y = Math.min(Math.max(wa.y + 8, y), wa.y + wa.height - 200);
+  } catch {
+    /* */
+  }
+
+  const win = new BrowserWindow({
+    width: 360,
+    height: 520,
+    x,
+    y,
+    show: false,
+    frame: true,
+    autoHideMenuBar: true,
+    parent,
+    modal: false,
+    resizable: true,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    backgroundColor: '#1e1f24',
+    webPreferences: {
+      session: mainSession(),
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      webviewTag: false,
+    },
+  });
+  actionPopupWin = win;
+  win.on('closed', () => {
+    if (actionPopupWin === win) actionPopupWin = null;
+  });
+
+  try {
+    try {
+      await win.loadURL(url);
+    } catch (crxErr) {
+      // Some MV3 extensions fail chrome-extension:// after SW crash — fall back to file.
+      if (!fs.existsSync(filePopup)) throw crxErr;
+      console.warn('[ext] chrome-extension popup failed, file fallback', crxErr && crxErr.message);
+      await win.loadFile(filePopup);
+    }
+    win.show();
+    try {
+      win.focus();
+    } catch {
+      /* */
+    }
+    return { ok: true, url };
+  } catch (err) {
+    try {
+      if (!win.isDestroyed()) win.close();
+    } catch {
+      /* */
+    }
+    return {
+      ok: false,
+      error: `Nie udało się otworzyć popupu: ${err?.message || err}`,
+    };
+  }
+}
+
 function register(ipcMain, wrapApp, wrapAppOrGuest) {
   const wrapAnyGuest = typeof wrapAppOrGuest === 'function' ? wrapAppOrGuest : wrapApp;
   // Guests may only call from the Web Store page (preload gates too; this is the main-side check).
@@ -1026,6 +1213,10 @@ function register(ipcMain, wrapApp, wrapAppOrGuest) {
   ipcMain.handle(
     'shell:extensions-update',
     wrapApp((_e, id) => updateFromStore(String(id || ''))),
+  );
+  ipcMain.handle(
+    'shell:extensions-open-action',
+    wrapApp((_e, id, opts) => openAction(String(id || ''), opts && typeof opts === 'object' ? opts : {})),
   );
   ipcMain.handle(
     'shell:extensions-select-tab',
@@ -1202,6 +1393,7 @@ module.exports = {
   setAllowPrivate,
   setPinned,
   remove,
+  openAction,
   register,
   attachToPrivateSession,
   unpackedRoot,
