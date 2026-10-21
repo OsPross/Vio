@@ -3,6 +3,7 @@ import { App } from './App';
 import { useStore } from './store';
 import { PerfGate } from './components/PerfGate';
 import { installPerfGlobals } from './lib/perfProbe';
+/** First-paint fonts + chrome (home / omnibox / widgets). */
 import '@fontsource/instrument-sans/400.css';
 import '@fontsource/instrument-sans/500.css';
 import '@fontsource/instrument-sans/600.css';
@@ -11,25 +12,32 @@ import '@fontsource/manrope/400.css';
 import '@fontsource/manrope/500.css';
 import '@fontsource/manrope/600.css';
 import '@fontsource/manrope/700.css';
-import '@fontsource/jetbrains-mono/400.css';
-import '@fontsource/jetbrains-mono/500.css';
 import './styles.css';
 import './styles/scrollbars.css';
 import './styles/motion.css';
 import './styles/personalize.css';
 import './styles/ui.css';
-import './styles/passwords.css';
-import './styles/resources.css';
-import './styles/permissions.css';
-import './styles/extensions-menu.css';
-import './styles/chrome-flyouts.css';
-import './styles/tor.css';
-import './styles/soul.css';
-import './styles/privacy-extra.css';
 import './styles/chrome-layout.css';
 import './styles/widgets.css';
-import './styles/chrome-pages.css';
-import './styles/settings.css';
+
+/** Secondary surfaces — load after first paint (settings, vault, Tor, about pages…). */
+function loadDeferredStyles() {
+  void import('@fontsource/jetbrains-mono/400.css');
+  void import('@fontsource/jetbrains-mono/500.css');
+  void import('./styles/passwords.css');
+  void import('./styles/resources.css');
+  void import('./styles/permissions.css');
+  void import('./styles/extensions-menu.css');
+  void import('./styles/chrome-flyouts.css');
+  void import('./styles/tor.css');
+  void import('./styles/soul.css');
+  void import('./styles/privacy-extra.css');
+  void import('./styles/chrome-pages.css');
+  void import('./styles/settings.css');
+}
+requestAnimationFrame(() => {
+  requestAnimationFrame(loadDeferredStyles);
+});
 
 declare global {
   interface Window {
