@@ -340,6 +340,7 @@ export function App() {
               pwForPage={pwForPage}
               shieldOpen={shieldOpen}
               setShieldOpen={setShieldOpen}
+              paletteOpen={paletteOpen}
               blockedToday={blockedToday}
               torInfo={torInfo}
               requestNewIdentity={requestNewIdentity}

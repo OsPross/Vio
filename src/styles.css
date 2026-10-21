@@ -4197,7 +4197,16 @@ html.side-panel-resizing .app {
   grid-template-columns: 20px minmax(0, 1fr) auto;
 }
 .app.sidebar-auto {
+  /* Overlay only — never steal a grid column (avoids content reflow / "spill"). */
   grid-template-columns: 1fr;
+}
+/*
+ * Electron <webview> paints above HTML z-index for hit-testing. Leave an 8px HTML
+ * strip so sidebar-edge-hit actually receives mouseenter (www + home).
+ */
+.app.sidebar-auto .stage {
+  margin-left: 8px;
+  width: calc(100% - 8px);
 }
 .app.sidebar-auto .sidebar-edge-hit {
   position: fixed;
@@ -4205,8 +4214,9 @@ html.side-panel-resizing .app {
   /* Below tabs + toolbar — never cover chrome */
   top: calc(var(--tabs-h) + var(--bar-h));
   bottom: 0;
-  width: 6px;
-  z-index: 45;
+  width: 8px;
+  z-index: 50;
+  pointer-events: auto;
 }
 .app.sidebar-auto .sidebar-ctx-host {
   display: block;
@@ -4214,7 +4224,7 @@ html.side-panel-resizing .app {
   left: 0;
   top: calc(var(--tabs-h) + var(--bar-h));
   bottom: 0;
-  z-index: 46;
+  z-index: 51;
   width: auto;
   max-width: min(100vw, calc(56px + var(--panel-w, 0px)));
   pointer-events: none;
@@ -4232,8 +4242,8 @@ html.side-panel-resizing .app {
     width 0.22s ease;
   border-right: 1px solid var(--line);
 }
-.app.sidebar-auto.sidebar-auto-open .sidebar-ctx-host > .side-shell,
-.app.sidebar-auto .sidebar-ctx-host:focus-within > .side-shell {
+/* Open only via JS class — :focus-within alone left the rail stuck out after boot. */
+.app.sidebar-auto.sidebar-auto-open .sidebar-ctx-host > .side-shell {
   transform: translateX(0);
 }
 @media (prefers-reduced-motion: reduce) {

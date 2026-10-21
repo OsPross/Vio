@@ -1,6 +1,8 @@
 import {
   lazy,
   Suspense,
+  useEffect,
+  useRef,
   type CSSProperties,
   type Dispatch,
   type MutableRefObject,
@@ -86,6 +88,7 @@ export type AppChromeProps = {
   pwForPage: number;
   shieldOpen: boolean;
   setShieldOpen: Dispatch<SetStateAction<boolean>>;
+  paletteOpen: boolean;
   blockedToday: number;
   torInfo: TorStatusInfo | null;
   requestNewIdentity: () => void | Promise<void>;
@@ -182,6 +185,7 @@ export function AppChrome({
   pwForPage: _pwForPage,
   shieldOpen,
   setShieldOpen,
+  paletteOpen,
   blockedToday,
   torInfo,
   requestNewIdentity,
@@ -244,6 +248,93 @@ export function AppChrome({
   const pageBookmarked =
     !!active?.url && isBookmarkableUrl(active.url) && bookmarks.some((b) => b.url === active.url);
 
+  const sidebarOpenTimer = useRef<number | null>(null);
+  const tabDraggingRef = useRef(false);
+
+  const clearSidebarTimers = () => {
+    if (sidebarAutoTimer.current) {
+      window.clearTimeout(sidebarAutoTimer.current);
+      sidebarAutoTimer.current = null;
+    }
+    if (sidebarOpenTimer.current) {
+      window.clearTimeout(sidebarOpenTimer.current);
+      sidebarOpenTimer.current = null;
+    }
+  };
+
+  /** Latest hold flags for close-timer (avoid stale menu/drag state). */
+  const sidebarHoldRef = useRef(false);
+  sidebarHoldRef.current = Boolean(
+    settings.sidePanelOpen ||
+      sidebarMenu ||
+      tabMenu ||
+      newTabMenu ||
+      omniMenu ||
+      bookmarkPop ||
+      shieldOpen ||
+      paletteOpen ||
+      tabDraggingRef.current,
+  );
+
+  const scheduleSidebarAutoOpen = () => {
+    if (settings.sidebarMode !== 'auto') return;
+    if (sidebarAutoTimer.current) {
+      window.clearTimeout(sidebarAutoTimer.current);
+      sidebarAutoTimer.current = null;
+    }
+    if (sidebarOpenTimer.current) window.clearTimeout(sidebarOpenTimer.current);
+    sidebarOpenTimer.current = window.setTimeout(() => {
+      sidebarOpenTimer.current = null;
+      setSidebarAutoOpen(true);
+    }, 120);
+  };
+
+  const scheduleSidebarAutoClose = () => {
+    if (settings.sidebarMode !== 'auto') return;
+    if (sidebarOpenTimer.current) {
+      window.clearTimeout(sidebarOpenTimer.current);
+      sidebarOpenTimer.current = null;
+    }
+    if (sidebarHoldRef.current) return;
+    if (sidebarAutoTimer.current) window.clearTimeout(sidebarAutoTimer.current);
+    sidebarAutoTimer.current = window.setTimeout(() => {
+      sidebarAutoTimer.current = null;
+      if (!sidebarHoldRef.current) setSidebarAutoOpen(false);
+    }, 300);
+  };
+
+  // Auto mode always starts collapsed (slide class ignores persisted sidePanelOpen).
+  useEffect(() => {
+    if (settings.sidebarMode !== 'auto') return;
+    setSidebarAutoOpen(false);
+    clearSidebarTimers();
+  }, [settings.sidebarMode, setSidebarAutoOpen]);
+
+  useEffect(() => {
+    const onDragStart = () => {
+      tabDraggingRef.current = true;
+      sidebarHoldRef.current = true;
+    };
+    const onDragEnd = () => {
+      tabDraggingRef.current = false;
+      if (settings.sidebarMode === 'auto') {
+        if (sidebarAutoTimer.current) window.clearTimeout(sidebarAutoTimer.current);
+        sidebarAutoTimer.current = window.setTimeout(() => {
+          sidebarAutoTimer.current = null;
+          if (!sidebarHoldRef.current) setSidebarAutoOpen(false);
+        }, 300);
+      }
+    };
+    window.addEventListener('dragstart', onDragStart, true);
+    window.addEventListener('dragend', onDragEnd, true);
+    window.addEventListener('drop', onDragEnd, true);
+    return () => {
+      window.removeEventListener('dragstart', onDragStart, true);
+      window.removeEventListener('dragend', onDragEnd, true);
+      window.removeEventListener('drop', onDragEnd, true);
+    };
+  }, [settings.sidebarMode, setSidebarAutoOpen]);
+
   return (
     <div
       className={[
@@ -252,9 +343,7 @@ export function AppChrome({
           ? 'no-side'
           : '',
         settings.sidebarMode === 'auto' ? 'sidebar-auto' : '',
-        settings.sidebarMode === 'auto' && (sidebarAutoOpen || settings.sidePanelOpen)
-          ? 'sidebar-auto-open'
-          : '',
+        settings.sidebarMode === 'auto' && sidebarAutoOpen ? 'sidebar-auto-open' : '',
         (settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') && settings.sidePanelOpen
           ? 'side-panel-open'
           : '',
@@ -288,10 +377,8 @@ export function AppChrome({
       {settings.sidebarMode === 'auto' && (
         <div
           className="sidebar-edge-hit"
-          onMouseEnter={() => {
-            setSidebarAutoOpen(true);
-            if (sidebarAutoTimer.current) window.clearTimeout(sidebarAutoTimer.current);
-          }}
+          onMouseEnter={scheduleSidebarAutoOpen}
+          onMouseLeave={scheduleSidebarAutoClose}
         />
       )}
       {(settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') && (
@@ -299,16 +386,17 @@ export function AppChrome({
           className="sidebar-ctx-host"
           onMouseEnter={() => {
             if (settings.sidebarMode !== 'auto') return;
+            if (sidebarOpenTimer.current) {
+              window.clearTimeout(sidebarOpenTimer.current);
+              sidebarOpenTimer.current = null;
+            }
+            if (sidebarAutoTimer.current) {
+              window.clearTimeout(sidebarAutoTimer.current);
+              sidebarAutoTimer.current = null;
+            }
             setSidebarAutoOpen(true);
-            if (sidebarAutoTimer.current) window.clearTimeout(sidebarAutoTimer.current);
           }}
-          onMouseLeave={() => {
-            if (settings.sidebarMode !== 'auto') return;
-            // Keep overlay while a side app panel is open
-            if (settings.sidePanelOpen) return;
-            if (sidebarAutoTimer.current) window.clearTimeout(sidebarAutoTimer.current);
-            sidebarAutoTimer.current = window.setTimeout(() => setSidebarAutoOpen(false), 300);
-          }}
+          onMouseLeave={scheduleSidebarAutoClose}
           onContextMenu={(e) => {
             const t = e.target as HTMLElement;
             if (
