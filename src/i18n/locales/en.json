@@ -110,7 +110,9 @@
       "openExternalInApp": "Open external links in-app",
       "openExternalInAppHint": "Instead of the system browser",
       "autoPip": "Picture-in-picture when switching tabs",
-      "autoPipHint": "When you leave a tab with playing video, enable PiP (Alt+P or omnibox icon)."
+      "autoPipHint": "When you leave a tab with playing video, enable PiP (Alt+P or omnibox icon).",
+      "linkPreview": "Link preview (Shift + hover)",
+      "linkPreviewHint": "Hold Shift over an http(s) link to peek the page. Disabled in Tor and private tabs."
     },
     "search": {
       "engine": "Engine",
@@ -1273,5 +1275,10 @@
     "reopenClosed": "Reopen closed tab",
     "renderProcessGone": "The page render process was terminated.",
     "renderProcessReason": "Page process: {{reason}}"
+  },
+  "linkPreview": {
+    "aria": "Link preview",
+    "openTab": "Open in new tab",
+    "close": "Close preview"
   }
 }

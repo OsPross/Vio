@@ -109,6 +109,12 @@ export function GeneralSection() {
           on={settings.autoPipOnTabSwitch}
           onChange={(v) => patchSettings({ autoPipOnTabSwitch: v })}
         />
+        <Toggle
+          label={t('settings.general.linkPreview')}
+          hint={t('settings.general.linkPreviewHint')}
+          on={settings.linkPreviewEnabled !== false}
+          onChange={(v) => patchSettings({ linkPreviewEnabled: v })}
+        />
       </SettingsGroup>
     </div>
   );

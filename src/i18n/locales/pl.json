@@ -110,7 +110,9 @@
       "openExternalInApp": "Linki zewnętrzne w aplikacji",
       "openExternalInAppHint": "Zamiast systemowej przeglądarki",
       "autoPip": "Obraz w obrazie przy zmianie karty",
-      "autoPipHint": "Gdy wychodzisz z karty z odtwarzanym wideo, włącz PiP (Alt+P lub ikona omniboxa)."
+      "autoPipHint": "Gdy wychodzisz z karty z odtwarzanym wideo, włącz PiP (Alt+P lub ikona omniboxa).",
+      "linkPreview": "Podgląd linku (Shift + najechanie)",
+      "linkPreviewHint": "Przytrzymaj Shift nad linkiem http(s), by zobaczyć miniaturę strony. Wyłączone w kartach Tor i prywatnych."
     },
     "search": {
       "engine": "Silnik",
@@ -1273,5 +1275,10 @@
     "reopenClosed": "Otwórz ponownie zamkniętą",
     "renderProcessGone": "Proces renderowania strony został zakończony.",
     "renderProcessReason": "Proces strony: {{reason}}"
+  },
+  "linkPreview": {
+    "aria": "Podgląd linku",
+    "openTab": "Otwórz w nowej karcie",
+    "close": "Zamknij podgląd"
   }
 }

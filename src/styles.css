@@ -4007,6 +4007,102 @@ html.side-panel-resizing .app {
   font-style: italic;
 }
 
+/* Shift+hover link preview */
+.link-preview-pop {
+  position: fixed;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-elev) 94%, #000 6%);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
+}
+.link-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 88%, transparent);
+}
+.link-preview-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.link-preview-meta strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.link-preview-meta span {
+  font-size: 11px;
+  color: var(--fg-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.link-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.link-preview-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 7px;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.link-preview-open:hover {
+  filter: brightness(1.08);
+}
+.link-preview-x {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-3);
+  cursor: pointer;
+}
+.link-preview-x:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+}
+.link-preview-body {
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+}
+.link-preview-webview {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
 /* App hamburger menu */
 .app-menu {
   position: relative;
