@@ -75,6 +75,18 @@ export function applyOneShotLocalFlags(
   } catch {
     /* */
   }
+  // Previous ship defaulted bookmarks bar to "never" — enable once so it appears under omnibox.
+  try {
+    if (!storage.getItem('djxxr-bookmarks-bar-always-v1')) {
+      if (out.bookmarksBarMode === 'never' || out.showBookmarksBar === false) {
+        out.bookmarksBarMode = 'always';
+        out.showBookmarksBar = true;
+      }
+      storage.setItem('djxxr-bookmarks-bar-always-v1', '1');
+    }
+  } catch {
+    /* */
+  }
   return out;
 }
 
