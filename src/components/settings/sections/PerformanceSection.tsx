@@ -65,21 +65,39 @@ export function PerformanceSection() {
           on={settings.perfLazyTabs}
           onChange={(v) => patchSettings({ perfLazyTabs: v })}
         />
-        <Toggle
-          label={t('settings.perf.discardTabs')}
-          hint={t('settings.perf.discardTabsHint')}
-          on={settings.perfDiscardTabs}
-          onChange={(v) => patchSettings({ perfDiscardTabs: v })}
-        />
-        <SliderRow
-          label={t('settings.perf.discardAfter')}
-          value={`${settings.perfDiscardMinutes} min`}
-          min={2}
-          max={60}
-          valueNum={settings.perfDiscardMinutes}
-          disabled={!settings.perfDiscardTabs}
-          onChange={(n) => patchSettings({ perfDiscardMinutes: n })}
-        />
+        <Row label={t('settings.perf.discardAfter')} desc={t('settings.perf.discardTabsHint')}>
+          <Select
+            aria-label={t('settings.perf.discardAfterAria')}
+            value={
+              settings.perfDiscardTabs ? String(settings.perfDiscardMinutes || 30) : 'off'
+            }
+            onChange={(v) => {
+              if (v === 'off') {
+                patchSettings({ perfDiscardTabs: false });
+                return;
+              }
+              const n = Number(v);
+              patchSettings({
+                perfDiscardTabs: true,
+                perfDiscardMinutes: n === 15 || n === 60 ? n : 30,
+              });
+            }}
+            options={[
+              { value: 'off', label: t('settings.perf.discardOff') },
+              { value: '15', label: t('settings.perf.discardMin', { n: 15 }) },
+              { value: '30', label: t('settings.perf.discardMin', { n: 30 }) },
+              { value: '60', label: t('settings.perf.discardMin', { n: 60 }) },
+            ]}
+          />
+        </Row>
+        {settings.perfDiscardTabs && (
+          <Toggle
+            label={t('settings.perf.discardKeepPinned')}
+            hint={t('settings.perf.discardKeepPinnedHint')}
+            on={settings.perfDiscardKeepPinned !== false}
+            onChange={(v) => patchSettings({ perfDiscardKeepPinned: v })}
+          />
+        )}
         <SliderRow
           label={t('settings.perf.cacheLimit')}
           value={`${settings.perfCacheMb} MB`}

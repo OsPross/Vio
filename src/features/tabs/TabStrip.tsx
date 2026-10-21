@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { PerfGate } from '../../components/PerfGate';
 import { useT } from '../../i18n';
 import { formatUrlPlain } from '../../lib/url-display';
+import { sleepTabNow } from '../../lib/tabDiscard';
 import { isInternalPageUrl, titleForInternalUrl } from '../../lib/tabNavigate';
 import { isPrivateTab, isTorTab, useStore } from '../../store';
 
@@ -39,7 +40,6 @@ export function TabStrip({
     newTabBeside,
     closeTab,
     setActive,
-    updateTab,
     pinTab,
     muteTab,
     reopenClosedTab,
@@ -57,7 +57,6 @@ export function TabStrip({
       newTabBeside: s.newTabBeside,
       closeTab: s.closeTab,
       setActive: s.setActive,
-      updateTab: s.updateTab,
       pinTab: s.pinTab,
       muteTab: s.muteTab,
       reopenClosedTab: s.reopenClosedTab,
@@ -122,7 +121,7 @@ export function TabStrip({
                 key={t.id}
                 type="button"
                 layout={!motionOff}
-                className={`tab ${t.id === activeId ? 'active' : ''} ${t.mode === 'tor' ? 'tor-tab' : ''} ${t.mode === 'private' ? 'private-tab' : ''} ${t.pinned ? 'pinned' : ''} ${t.muted ? 'muted-tab' : ''}`}
+                className={`tab ${t.id === activeId ? 'active' : ''} ${t.mode === 'tor' ? 'tor-tab' : ''} ${t.mode === 'private' ? 'private-tab' : ''} ${t.pinned ? 'pinned' : ''} ${t.muted ? 'muted-tab' : ''} ${t.discarded && t.id !== activeId ? 'is-discarded' : ''}`}
                 onClick={() => setActive(t.id)}
                 onContextMenu={(e) => {
                   e.preventDefault();
@@ -140,13 +139,17 @@ export function TabStrip({
                 transition={{ duration: motionOff ? 0.12 : 0.2, ease: [0.16, 1, 0.3, 1] }}
                 style={{ originX: 0 }}
                 title={
-                  t.mode === 'tor'
-                    ? tr('tabs.torTabTitle')
-                    : t.pinned
-                      ? t.title
-                      : t.url
-                        ? formatUrlPlain(t.url)
-                        : undefined
+                  t.discarded && t.id !== activeId
+                    ? tr('tabs.discardedTitle', {
+                        title: t.title || formatUrlPlain(t.url) || tr('tabs.untitled'),
+                      })
+                    : t.mode === 'tor'
+                      ? tr('tabs.torTabTitle')
+                      : t.pinned
+                        ? t.title
+                        : t.url
+                          ? formatUrlPlain(t.url)
+                          : undefined
                 }
               >
                 <PerfGate id={`Tab:${t.id}`}>
@@ -177,7 +180,6 @@ export function TabStrip({
                     <Globe size={12} strokeWidth={1.8} />
                   )}
                   <span className="tab-title">
-                    {t.discarded && t.id !== activeId ? '○ ' : ''}
                     {isInternalPageUrl(t.url)
                       ? titleForInternalUrl(t.url, isTorTab(t), isPrivateTab(t))
                       : t.title || tr('tabs.untitled')}
@@ -188,7 +190,7 @@ export function TabStrip({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          updateTab(t.id, { discarded: true });
+                          void sleepTabNow(t.id);
                         }}
                       >
                         <Moon size={11} strokeWidth={1.75} />
@@ -357,6 +359,26 @@ export function TabStrip({
                     }}
                   >
                     {tr('tabs.openInTor')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      !tab ||
+                      tab.id === activeId ||
+                      Boolean(tab.discarded) ||
+                      tor ||
+                      priv ||
+                      !tab.url ||
+                      tab.url.startsWith('about:') ||
+                      tab.url.startsWith('djxxr://')
+                    }
+                    onClick={() => {
+                      const id = tabMenu.tabId;
+                      setTabMenu(null);
+                      void sleepTabNow(id);
+                    }}
+                  >
+                    {tr('tabs.sleepNow')}
                   </button>
                   <hr />
                   <button

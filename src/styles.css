@@ -3990,6 +3990,19 @@ html.side-panel-resizing .app {
 .tab.private-tab {
   opacity: 0.92;
 }
+.tab.is-discarded {
+  opacity: 0.55;
+  color: var(--fg-3);
+}
+.tab.is-discarded .tab-fav,
+.tab.is-discarded .tab-onion {
+  opacity: 0.7;
+  filter: grayscale(0.35);
+}
+.tab.is-discarded:hover {
+  opacity: 0.78;
+  color: var(--fg-2);
+}
 .tab.muted-tab {
   font-style: italic;
 }
