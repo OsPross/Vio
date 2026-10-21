@@ -1221,6 +1221,7 @@
       "allWidgets": "All widgets",
       "editOnPage": "Edit layout on page",
       "drag": "Drag",
+      "dragOrder": "Drag — list order = stack order on page",
       "sizeAria": "Size {{name}}",
       "visibilityAria": "Visibility {{name}}",
       "widgetMenuAria": "Widget menu {{name}}",

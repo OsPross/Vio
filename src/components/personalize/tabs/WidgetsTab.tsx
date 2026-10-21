@@ -173,8 +173,8 @@ function SortableWidgetTile({
         className="pz-widget-grip"
         {...attributes}
         {...listeners}
-        title={t('home.personalize.drag')}
-        aria-label={t('home.personalize.drag')}
+        title={t('home.personalize.dragOrder')}
+        aria-label={t('home.personalize.dragOrder')}
       >
         <GripVertical size={14} />
       </button>

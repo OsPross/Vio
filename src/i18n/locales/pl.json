@@ -1221,6 +1221,7 @@
       "allWidgets": "Wszystkie widżety",
       "editOnPage": "Edytuj układ na stronie",
       "drag": "Przeciągnij",
+      "dragOrder": "Przeciągnij — kolejność = warstwa na stronie",
       "sizeAria": "Rozmiar {{name}}",
       "visibilityAria": "Widoczność {{name}}",
       "widgetMenuAria": "Menu widżetu {{name}}",

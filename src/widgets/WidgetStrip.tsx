@@ -682,20 +682,22 @@ export function WidgetStrip({
           );
         })}
 
-        {widgets.map((w) => {
+        {widgets.map((w, wi) => {
           const meta = WIDGET_REGISTRY[w.type];
           const Icon = WIDGET_ICONS[w.type];
           const cells = widgetSizeCells(w.size, w.type);
           const px = w.type === 'spotify' ? cells.w * HOME_GRID_PX : sizePx(w.size);
           const h = cells.h * HOME_GRID_PX;
           const resolvedStyle = (w.style || widgetStyle) as HomeWidgetStyle;
-          let style: CSSProperties = { width: px, maxWidth: '100%' };
+          // List order in Personalize = stack order on page (later = higher)
+          const stackZ = 2 + wi;
+          let style: CSSProperties = { width: px, maxWidth: '100%', zIndex: stackZ };
           let box: PlaceBox = { left: 0, top: 0, width: px, height: h };
           if (!flexFallback) {
             box = restingBox(w.id, w, 'widget');
             style = {
               ...placeCssVars(w.anchor, w.x, w.y, px, h),
-              zIndex: draggingKey === w.id ? 6 : selectedKey === w.id ? 4 : 2,
+              zIndex: draggingKey === w.id ? 80 : selectedKey === w.id ? 40 : stackZ,
             } as CSSProperties;
           }
           return (
