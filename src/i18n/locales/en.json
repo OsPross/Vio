@@ -1018,6 +1018,7 @@
         "networkError": "Network error",
         "setCity": "Set city",
         "setCityHint": "Set a city in Customize → Widgets.",
+        "setCityHintLive": "Open the card settings (⋮ or edit mode) and enter a city.",
         "privacyOff": "App network requests are off — enable them in Settings → Privacy.",
         "changeCity": "Change city",
         "demoCity": "Warsaw",

@@ -677,15 +677,6 @@ export function WidgetStrip({
           const px = w.type === 'spotify' ? cells.w * HOME_GRID_PX : sizePx(w.size);
           const h = cells.h * HOME_GRID_PX;
           const resolvedStyle = (w.style || widgetStyle) as HomeWidgetStyle;
-          // Hide weather outside edit until a city is set (configure via … / edit mode)
-          if (
-            !preview &&
-            !editMode &&
-            w.type === 'weather' &&
-            !String(w.settings?.location || '').trim()
-          ) {
-            return null;
-          }
           let style: CSSProperties = { width: px, maxWidth: '100%' };
           let box: PlaceBox = { left: 0, top: 0, width: px, height: h };
           if (!flexFallback) {

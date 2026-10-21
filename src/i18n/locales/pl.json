@@ -1018,6 +1018,7 @@
         "networkError": "Błąd sieci",
         "setCity": "Ustaw miasto",
         "setCityHint": "Ustaw miasto w Personalizacja → Widżety.",
+        "setCityHintLive": "Otwórz ustawienia karty (⋮ lub tryb edycji) i wpisz miasto.",
         "privacyOff": "Zapytania aplikacji wyłączone — włącz je w Ustawieniach → Prywatność.",
         "changeCity": "Zmień miasto",
         "demoCity": "Warszawa",

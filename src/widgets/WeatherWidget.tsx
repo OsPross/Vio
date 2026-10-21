@@ -130,17 +130,17 @@ export function WeatherWidget({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location, allowNet, preview]);
 
-  if (!location && !preview) {
-    return null;
-  }
-
-  if (!location && preview) {
+  if (!location.trim()) {
     return (
       <div className={`hw-weather hw-weather-setup hw-size-${size}`}>
         <div className="hw-weather-setup-inner">
           <MapPin size={28} strokeWidth={1.5} className="hw-weather-pin" />
           <p className="hw-weather-setup-title">{t('widgets.ui.weather.setCity')}</p>
-          <p className="hw-muted">{t('widgets.ui.weather.setCityHint')}</p>
+          <p className="hw-muted">
+            {preview
+              ? t('widgets.ui.weather.setCityHint')
+              : t('widgets.ui.weather.setCityHintLive')}
+          </p>
         </div>
       </div>
     );
