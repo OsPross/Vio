@@ -393,6 +393,11 @@
       "discardMin": "{{n}} min",
       "discardKeepPinned": "Keep pinned tabs awake",
       "discardKeepPinnedHint": "Pinned tabs stay in memory (context-menu Sleep still works)",
+      "archiveAfter": "Archive inactive after",
+      "archiveAfterAria": "Idle time before auto-archiving a tab",
+      "archiveOff": "Off",
+      "archiveHours": "{{n}} h",
+      "archiveHint": "Closes long-idle tabs and saves them to the archive (max 200 / 7 days). Skips: active, pinned, audible, sidebar apps, Tor/private. Sleeping tabs can be archived too. Dev: localStorage.vio-archive-ms.",
       "cacheLimit": "Cache limit",
       "cpuRender": "CPU / render",
       "hwAccel": "Hardware acceleration (GPU)",
@@ -577,6 +582,7 @@
     "closeTab": "Close tab",
     "reopenTab": "Reopen closed tab",
     "history": "History",
+    "archivedTabs": "Archived tabs",
     "bookmarks": "Bookmarks",
     "downloads": "Downloads",
     "extensions": "Extensions",
@@ -1121,6 +1127,7 @@
     "bookmarks": "Bookmarks",
     "extensions": "Extensions",
     "taskMgr": "Task manager",
+    "tabArchive": "Archived tabs",
     "passwords": "Password manager",
     "settings": "Settings",
     "settingsPrivacy": "Settings: Privacy",
@@ -1275,6 +1282,14 @@
     "reopenClosed": "Reopen closed tab",
     "renderProcessGone": "The page render process was terminated.",
     "renderProcessReason": "Page process: {{reason}}"
+  },
+  "archive": {
+    "title": "Archived tabs",
+    "hint": "Click to restore with session history. Max 200 entries / 7 days.",
+    "empty": "No archived tabs.",
+    "restoreOne": "Restore tab",
+    "restoreAll": "Restore all",
+    "clear": "Clear"
   },
   "linkPreview": {
     "aria": "Link preview",

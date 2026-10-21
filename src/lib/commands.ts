@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  Archive,
   ClipboardList,
   Download,
   EyeOff,
@@ -74,6 +75,7 @@ type Host = {
   patchSettings: (p: Record<string, unknown>) => void;
   toggleSidebar: () => void;
   openTaskMgr: () => void;
+  openTabArchive: () => void;
   forgetSite: () => void;
   clearData: () => void;
   print: () => void;
@@ -204,6 +206,15 @@ export function getCommands(): CommandDef[] {
       icon: EyeOff,
       group: 'command',
       run: () => host?.openTaskMgr(),
+    },
+    {
+      id: 'tab-archive',
+      titleKey: 'commands.tabArchive',
+      keywords: ['archive', 'archiwum', 'zarchiwizowane'],
+      icon: Archive,
+      group: 'command',
+      when: (c) => !c.tor,
+      run: () => host?.openTabArchive(),
     },
     {
       id: 'passwords',

@@ -11,6 +11,7 @@ import {
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  Archive,
   Bookmark,
   ClipboardCopy,
   Code2,
@@ -71,6 +72,7 @@ export type AppMenuActions = {
   copyLink: () => void;
   showQr: () => void;
   openTaskManager: () => void;
+  openTabArchive: () => void;
   openDevtools: () => void;
   openDevtoolsSettings?: () => void;
   viewSource: () => void;
@@ -204,6 +206,13 @@ export function AppMenu({ actions }: Props) {
         shortcut: acceleratorForMenuId('history'),
         icon: <History size={16} strokeWidth={1.75} />,
         run: () => actions.openHistory(),
+      },
+      {
+        kind: 'action',
+        id: 'archive',
+        label: t('chrome.archivedTabs'),
+        icon: <Archive size={16} strokeWidth={1.75} />,
+        run: () => actions.openTabArchive(),
       },
       {
         kind: 'action',

@@ -98,6 +98,24 @@ export function PerformanceSection() {
             onChange={(v) => patchSettings({ perfDiscardKeepPinned: v })}
           />
         )}
+        <Row label={t('settings.perf.archiveAfter')} desc={t('settings.perf.archiveHint')}>
+          <Select
+            aria-label={t('settings.perf.archiveAfterAria')}
+            value={String(settings.tabArchiveHours ?? 12)}
+            onChange={(v) => {
+              const n = Number(v);
+              patchSettings({
+                tabArchiveHours: n === 0 || n === 6 || n === 24 ? n : 12,
+              });
+            }}
+            options={[
+              { value: '0', label: t('settings.perf.archiveOff') },
+              { value: '6', label: t('settings.perf.archiveHours', { n: 6 }) },
+              { value: '12', label: t('settings.perf.archiveHours', { n: 12 }) },
+              { value: '24', label: t('settings.perf.archiveHours', { n: 24 }) },
+            ]}
+          />
+        </Row>
         <SliderRow
           label={t('settings.perf.cacheLimit')}
           value={`${settings.perfCacheMb} MB`}

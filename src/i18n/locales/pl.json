@@ -393,6 +393,11 @@
       "discardMin": "{{n}} min",
       "discardKeepPinned": "Nie usypiaj przypiętych kart",
       "discardKeepPinnedHint": "Przypięte karty zostają w pamięci (menu „Uśpij teraz” nadal działa)",
+      "archiveAfter": "Archiwizuj nieaktywne po",
+      "archiveAfterAria": "Czas do automatycznego zarchiwizowania karty",
+      "archiveOff": "Wyłączone",
+      "archiveHours": "{{n}} h",
+      "archiveHint": "Zamyka dawno nieużywane karty i zapisuje je w archiwum (max 200 / 7 dni). Pomija: aktywną, przypięte, dźwięk, sidebar, Tor/prywatne. Uśpione też mogą trafić. Dev: localStorage.vio-archive-ms.",
       "cacheLimit": "Limit cache",
       "cpuRender": "CPU / render",
       "hwAccel": "Przyspieszanie sprzętowe (GPU)",
@@ -577,6 +582,7 @@
     "closeTab": "Zamknij kartę",
     "reopenTab": "Przywróć zamkniętą kartę",
     "history": "Historia",
+    "archivedTabs": "Zarchiwizowane karty",
     "bookmarks": "Zakładki",
     "downloads": "Pobrane",
     "extensions": "Rozszerzenia",
@@ -1121,6 +1127,7 @@
     "bookmarks": "Zakładki",
     "extensions": "Rozszerzenia",
     "taskMgr": "Menedżer zadań",
+    "tabArchive": "Zarchiwizowane karty",
     "passwords": "Menedżer haseł",
     "settings": "Ustawienia",
     "settingsPrivacy": "Ustawienia: Prywatność",
@@ -1275,6 +1282,14 @@
     "reopenClosed": "Otwórz ponownie zamkniętą",
     "renderProcessGone": "Proces renderowania strony został zakończony.",
     "renderProcessReason": "Proces strony: {{reason}}"
+  },
+  "archive": {
+    "title": "Zarchiwizowane karty",
+    "hint": "Kliknij, by przywrócić z historią sesji. Max 200 wpisów / 7 dni.",
+    "empty": "Brak zarchiwizowanych kart.",
+    "restoreOne": "Przywróć kartę",
+    "restoreAll": "Przywróć wszystkie",
+    "clear": "Wyczyść"
   },
   "linkPreview": {
     "aria": "Podgląd linku",

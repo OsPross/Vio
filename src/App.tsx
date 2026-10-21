@@ -71,6 +71,7 @@ export function App() {
   const [saveOffer, setSaveOffer] = useState<SaveOffer | null>(null);
   const [pwForPage, setPwForPage] = useState(0);
   const [taskMgrOpen, setTaskMgrOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const {
     torInfo,
     setTorInfo,
@@ -247,6 +248,7 @@ export function App() {
     printActivePage,
     bumpZoom,
     setTaskMgrOpen,
+    setArchiveOpen,
   });
 
   const shell = (node: React.ReactNode) => (
@@ -255,6 +257,8 @@ export function App() {
       <ShellOverlays
         taskMgrOpen={taskMgrOpen}
         setTaskMgrOpen={setTaskMgrOpen}
+        archiveOpen={archiveOpen}
+        setArchiveOpen={setArchiveOpen}
         paletteOpen={paletteOpen}
         setPaletteOpen={setPaletteOpen}
         setDraft={setDraft}
@@ -349,6 +353,7 @@ export function App() {
               printActivePage={printActivePage}
               saveActivePdf={saveActivePdf}
               setTaskMgrOpen={setTaskMgrOpen}
+              setArchiveOpen={setArchiveOpen}
               setClearDataOpen={setClearDataOpen}
               setQrOpen={setQrOpen}
               setFindOpen={setFindOpen}

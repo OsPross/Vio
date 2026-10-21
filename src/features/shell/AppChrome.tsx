@@ -98,6 +98,7 @@ export type AppChromeProps = {
   printActivePage: () => void;
   saveActivePdf: () => void;
   setTaskMgrOpen: Dispatch<SetStateAction<boolean>>;
+  setArchiveOpen: Dispatch<SetStateAction<boolean>>;
   setClearDataOpen: Dispatch<SetStateAction<boolean>>;
   setQrOpen: Dispatch<SetStateAction<boolean>>;
   setFindOpen: Dispatch<SetStateAction<boolean>>;
@@ -195,6 +196,7 @@ export function AppChrome({
   printActivePage,
   saveActivePdf,
   setTaskMgrOpen,
+  setArchiveOpen,
   setClearDataOpen,
   setQrOpen,
   setFindOpen,
@@ -482,6 +484,7 @@ export function AppChrome({
           saveActivePdf={saveActivePdf}
           pageUrlForShare={pageUrlForShare}
           setTaskMgrOpen={setTaskMgrOpen}
+          setArchiveOpen={setArchiveOpen}
           setClearDataOpen={setClearDataOpen}
           setQrOpen={setQrOpen}
           setFindOpen={setFindOpen}

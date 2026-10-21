@@ -17,3 +17,8 @@ export const TaskManagerOverlay = lazy(() =>
     default: m.TaskManagerOverlay,
   })),
 );
+export const TabArchiveOverlay = lazy(() =>
+  import('../../components/TabArchivePanel').then((m) => ({
+    default: m.TabArchiveOverlay,
+  })),
+);

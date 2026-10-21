@@ -18,6 +18,7 @@ export {
   ClearDataDialog,
   CommandPalette,
   QrShareDialog,
+  TabArchiveOverlay,
   TaskManagerOverlay,
 } from './lazy';
 export { useBookmarkHandlers } from './useBookmarkHandlers';

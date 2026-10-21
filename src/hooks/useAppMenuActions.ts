@@ -18,6 +18,7 @@ export type UseBindCommandHostArgs = {
   printActivePage: () => void;
   bumpZoom: (delta: number, pageUrl?: string) => void;
   setTaskMgrOpen: Dispatch<SetStateAction<boolean>>;
+  setArchiveOpen: Dispatch<SetStateAction<boolean>>;
 };
 
 /** Registers command-palette host handlers (same as former App useEffect — every render). */
@@ -27,6 +28,7 @@ export function useBindCommandHost({
   printActivePage,
   bumpZoom,
   setTaskMgrOpen,
+  setArchiveOpen,
 }: UseBindCommandHostArgs) {
   const newTab = useStore((s) => s.newTab);
   const closeTab = useStore((s) => s.closeTab);
@@ -59,6 +61,7 @@ export function useBindCommandHost({
       toggleSidebar: () =>
         patchSettings({ showSidebar: !useStore.getState().settings.showSidebar }),
       openTaskMgr: () => setTaskMgrOpen(true),
+      openTabArchive: () => setArchiveOpen(true),
       forgetSite: () => {
         const url = useStore
           .getState()
@@ -91,6 +94,7 @@ export type UseAppMenuActionsArgs = {
   setFindOpen: Dispatch<SetStateAction<boolean>>;
   setQrOpen: Dispatch<SetStateAction<boolean>>;
   setTaskMgrOpen: Dispatch<SetStateAction<boolean>>;
+  setArchiveOpen: Dispatch<SetStateAction<boolean>>;
 };
 
 /** App hamburger-menu actions (extracted from BrowserChrome). */
@@ -109,6 +113,7 @@ export function useAppMenuActions({
   setFindOpen,
   setQrOpen,
   setTaskMgrOpen,
+  setArchiveOpen,
 }: UseAppMenuActionsArgs): AppMenuActions {
   const settings = useStore((s) => s.settings);
   const newTab = useStore((s) => s.newTab);
@@ -162,6 +167,7 @@ export function useAppMenuActions({
       if (pageUrlForShare) setQrOpen(true);
     },
     openTaskManager: () => setTaskMgrOpen(true),
+    openTabArchive: () => setArchiveOpen(true),
     openDevtools: () => {
       try {
         currentView()?.openDevTools?.();

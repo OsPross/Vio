@@ -94,6 +94,7 @@ export type BrowserChromeProps = {
   saveActivePdf: () => void;
   pageUrlForShare: string;
   setTaskMgrOpen: Dispatch<SetStateAction<boolean>>;
+  setArchiveOpen: Dispatch<SetStateAction<boolean>>;
   setClearDataOpen: Dispatch<SetStateAction<boolean>>;
   setQrOpen: Dispatch<SetStateAction<boolean>>;
   setFindOpen: Dispatch<SetStateAction<boolean>>;
@@ -143,6 +144,7 @@ export function BrowserChrome({
   saveActivePdf,
   pageUrlForShare,
   setTaskMgrOpen,
+  setArchiveOpen,
   setClearDataOpen,
   setQrOpen,
   setFindOpen,
@@ -174,6 +176,7 @@ export function BrowserChrome({
     setFindOpen,
     setQrOpen,
     setTaskMgrOpen,
+    setArchiveOpen,
   });
 
   return (

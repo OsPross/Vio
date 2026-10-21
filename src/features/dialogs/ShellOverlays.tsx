@@ -1,10 +1,12 @@
 import { Suspense, type Dispatch, type SetStateAction } from 'react';
 import { normalizeInput, useStore } from '../../store';
-import { CommandPalette, TaskManagerOverlay } from './lazy';
+import { CommandPalette, TabArchiveOverlay, TaskManagerOverlay } from './lazy';
 
 export type ShellOverlaysProps = {
   taskMgrOpen: boolean;
   setTaskMgrOpen: Dispatch<SetStateAction<boolean>>;
+  archiveOpen: boolean;
+  setArchiveOpen: Dispatch<SetStateAction<boolean>>;
   paletteOpen: boolean;
   setPaletteOpen: Dispatch<SetStateAction<boolean>>;
   setDraft: Dispatch<SetStateAction<string>>;
@@ -14,6 +16,8 @@ export type ShellOverlaysProps = {
 export function ShellOverlays({
   taskMgrOpen,
   setTaskMgrOpen,
+  archiveOpen,
+  setArchiveOpen,
   paletteOpen,
   setPaletteOpen,
   setDraft,
@@ -29,6 +33,9 @@ export function ShellOverlays({
     <>
       <Suspense fallback={null}>
         <TaskManagerOverlay open={taskMgrOpen} onClose={() => setTaskMgrOpen(false)} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <TabArchiveOverlay open={archiveOpen} onClose={() => setArchiveOpen(false)} />
       </Suspense>
       <Suspense fallback={null}>
         <CommandPalette
