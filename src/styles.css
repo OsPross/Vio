@@ -4558,17 +4558,45 @@ html.side-panel-resizing .app {
   font-variant-numeric: tabular-nums;
 }
 
+.ext-browser-actions-wrap {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  overflow: hidden;
+  margin-right: 4px;
+  vertical-align: middle;
+}
 .ext-browser-actions {
   display: inline-flex;
   align-items: center;
-  max-width: 180px;
+  max-width: 220px;
   overflow: hidden;
-  margin-right: 4px;
   vertical-align: middle;
 }
 .ext-browser-actions::part(action) {
   width: 28px;
   height: 28px;
+}
+.ext-menu-ico {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 5px;
+  overflow: hidden;
+  color: var(--fg-3);
+}
+.ext-menu-ico img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.ext-menu-warn-ico {
+  display: inline-block;
+  margin-left: 4px;
+  vertical-align: middle;
+  color: #c9a227;
 }
 .omnibox-zoom-badge {
   font-size: 11px;

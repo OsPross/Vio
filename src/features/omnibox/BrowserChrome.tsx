@@ -47,6 +47,9 @@ const ShieldPanel = lazy(() =>
 const ExtensionsPopup = lazy(() =>
   import('../../components/ExtensionsPopup').then((m) => ({ default: m.ExtensionsPopup })),
 );
+const ExtToolbarActions = lazy(() =>
+  import('../../components/ExtToolbarActions').then((m) => ({ default: m.ExtToolbarActions })),
+);
 
 export type OmniMenuState = { x: number; y: number } | null;
 
@@ -383,16 +386,16 @@ export function BrowserChrome({
         <div className="bar-actions">
           {!activeIsTor ? (
             <>
-              <browser-action-list
-                className="ext-browser-actions"
-                partition={
-                  windowMode === 'private' && getWindowPartition()
-                    ? getWindowPartition()!
-                    : 'persist:main'
-                }
-                tab={String(guestWc[activeId] || '')}
-                alignment="bottom left"
-              />
+              <Suspense fallback={null}>
+                <ExtToolbarActions
+                  partition={
+                    windowMode === 'private' && getWindowPartition()
+                      ? getWindowPartition()!
+                      : 'persist:main'
+                  }
+                  tab={String(guestWc[activeId] || '')}
+                />
+              </Suspense>
               <div className="bar-ext-wrap">
                 <button
                   type="button"
