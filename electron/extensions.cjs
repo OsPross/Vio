@@ -173,10 +173,21 @@ function wantsChromeWebRequest(rec) {
   });
 }
 
+/**
+ * Only real adblockers should displace Ghostery. Helpers that merely declare
+ * webRequest (e.g. Steam Inventory Helper) used to force networkActive=false → 0 blocks.
+ */
+function looksLikeAdblocker(rec) {
+  const blob = `${rec.name || ''} ${rec.id || ''} ${rec.description || ''}`.toLowerCase();
+  return /ublock|adguard|adblock|ghostery|privacy.?badger|noscript|adlocker|adblocker/.test(blob);
+}
+
 function syncAdblockForExtensions() {
   try {
     const adblock = require('./adblock-plus.cjs');
-    const need = records.some((r) => r.enabled && wantsChromeWebRequest(r));
+    const need = records.some(
+      (r) => r.enabled && wantsChromeWebRequest(r) && looksLikeAdblocker(r),
+    );
     if (typeof adblock.setExtensionWebRequestPriority === 'function') {
       adblock.setExtensionWebRequestPriority(need);
     }

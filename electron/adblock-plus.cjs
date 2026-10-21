@@ -684,12 +684,43 @@ function wireBlockerEvents() {
  * Only used when engine.bin cache miss. Ghostery enableBlockingInSession replaces this hook.
  * @param {import('electron').Session} ses
  */
+/**
+ * Electron allows only one session.webRequest.onBeforeRequest listener.
+ * Boot-gate must be cleared before Ghostery enableBlockingInSession, or Ghostery
+ * throws "second handler" and we used to mark the session enabled while still
+ * only running the gate (which then callback({}) → 0 blocks).
+ * @param {import('electron').Session} [ses]
+ */
+function clearBootGate(ses) {
+  if (!bootGateInstalled) return;
+  bootGateInstalled = false;
+  const targets = ses ? [ses] : [...attached];
+  for (const s of targets) {
+    try {
+      s.webRequest.onBeforeRequest(null);
+    } catch {
+      /* */
+    }
+  }
+}
+
 function installBootGate(ses) {
   if (!ses || bootGateInstalled || blocker) return;
   bootGateInstalled = true;
   try {
     ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
+      // Engine already up — hand off to Ghostery path (should be rare; clearBootGate normally runs first).
       if (blocker) {
+        try {
+          clearBootGate(ses);
+          enableGhostery(ses);
+          if (typeof blocker.onBeforeRequest === 'function') {
+            blocker.onBeforeRequest(details, callback);
+            return;
+          }
+        } catch {
+          /* */
+        }
         noteFirstGuestRequest(details.url);
         callback({});
         return;
@@ -701,7 +732,14 @@ function installBootGate(ses) {
           `[adblock+] boot-gate released after ${Date.now() - t0}ms ready=${ok} url=${String(details.url).slice(0, 100)}`,
         );
         try {
-          if (ok) enableGhostery(ses);
+          if (ok) {
+            clearBootGate(ses);
+            enableGhostery(ses);
+            if (typeof blocker.onBeforeRequest === 'function') {
+              blocker.onBeforeRequest(details, callback);
+              return;
+            }
+          }
         } catch {
           /* */
         }
@@ -712,7 +750,7 @@ function installBootGate(ses) {
         }
       });
     });
-    console.log('[adblock+] boot-gate installed (no engine cache)');
+    console.log('[adblock+] boot-gate installed (awaiting engine)');
   } catch (err) {
     console.warn('[adblock+] boot gate', err.message || err);
   }
@@ -864,7 +902,7 @@ function enableGhostery(ses) {
     return;
   }
   if (ghosteryOn.has(ses)) return;
-  try {
+  const tryEnable = () => {
     installRequestGate(blocker);
     if (typeof blocker.disableBlockingInSession === 'function') {
       try {
@@ -873,8 +911,9 @@ function enableGhostery(ses) {
         /* not previously enabled */
       }
     }
+    // Free the single onBeforeRequest slot held by boot-gate (if any).
+    clearBootGate(ses);
     blocker.enableBlockingInSession(ses);
-    // First-request timing (Ghostery owns onBeforeRequest)
     if (!ses.__djxxrFirstReqHook) {
       ses.__djxxrFirstReqHook = true;
       try {
@@ -886,11 +925,23 @@ function enableGhostery(ses) {
       }
     }
     ghosteryOn.add(ses);
+  };
+  try {
+    tryEnable();
   } catch (e) {
     const msg = String(e.message || e);
     if (msg.includes('second handler')) {
-      ghosteryOn.add(ses);
-      return;
+      // Another listener still owns the slot — force-clear and retry once.
+      try {
+        ses.webRequest.onBeforeRequest(null);
+        bootGateInstalled = false;
+        ghosteryOn.delete(ses);
+        tryEnable();
+        return;
+      } catch (e2) {
+        console.warn('[adblock+] enableBlockingInSession retry', e2);
+        return;
+      }
     }
     console.warn('[adblock+] enableBlockingInSession', e);
   }

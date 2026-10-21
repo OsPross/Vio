@@ -191,6 +191,11 @@ contextBridge.exposeInMainWorld('shell', {
     ipcRenderer.on('shell:adblock-blocked', handler);
     return () => ipcRenderer.removeListener('shell:adblock-blocked', handler);
   },
+  onServicesReady: (cb) => {
+    const handler = (_e, payload) => cb(payload || {});
+    ipcRenderer.on('shell:services-ready', handler);
+    return () => ipcRenderer.removeListener('shell:services-ready', handler);
+  },
   onOpenUrl: (cb) => {
     const handler = (_e, payload) => {
       if (typeof payload === 'string') cb({ url: payload, tor: false });

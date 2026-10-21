@@ -209,6 +209,8 @@ declare global {
         blockedCount: number;
         blockedToday: number;
         ruleHosts: number;
+        ready?: boolean;
+        networkActive?: boolean;
         lists?: {
           id: string;
           name: string;
@@ -382,6 +384,7 @@ declare global {
         permission: string,
       ) => Promise<{ ok: boolean }>;
       onAdblockBlocked: (cb: (n: number) => void) => () => void;
+      onServicesReady: (cb: (payload?: { adblock?: unknown; at?: number }) => void) => () => void;
       onOpenUrl: (
         cb: (
           payload: { url: string; tor?: boolean; private?: boolean; background?: boolean } | string,

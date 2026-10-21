@@ -1,6 +1,8 @@
 import {
   lazy,
   Suspense,
+  useEffect,
+  useState,
   type Dispatch,
   type MutableRefObject,
   type SetStateAction,
@@ -126,6 +128,25 @@ export function TabContent({
   const pushHistory = useStore((s) => s.pushHistory);
   const patchSettings = useStore((s) => s.patchSettings);
   const motionOff = isMotionOff(settings);
+  /** Hold guest webviews until Ghostery is bound (boot-gate + enableBlockingInSession). */
+  const [adblockReady, setAdblockReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const mark = () => {
+      if (!cancelled) setAdblockReady(true);
+    };
+    void window.shell?.adblockStatus?.().then((st) => {
+      if (st && (st as { ready?: boolean }).ready) mark();
+    });
+    const off = window.shell?.onServicesReady?.(mark);
+    // Fail-open after 2s so a stuck engine does not blank the browser forever.
+    const t = window.setTimeout(mark, 2000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+      off?.();
+    };
+  }, []);
   // Opacity only — y/scale made about:* ↔ webview (and about↔about) feel like a jump.
   const aboutMotion = {
     initial: { opacity: 0 },
@@ -266,6 +287,7 @@ export function TabContent({
           !t.url.startsWith('djxxr://') &&
           t.url !== ABOUT_URL;
         const keep =
+          adblockReady &&
           t.url !== HOME_URL &&
           t.url !== TOR_HOME_URL &&
           !t.url.startsWith('about:') &&
