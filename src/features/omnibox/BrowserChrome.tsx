@@ -362,6 +362,7 @@ export function BrowserChrome({
                   url={bookmarkPop.url}
                   title={bookmarkPop.title}
                   anchorRef={bookmarkStarRef}
+                  sensitiveSession={windowMode === 'private' || windowMode === 'tor'}
                 />
               ) : null}
             </div>

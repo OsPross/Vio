@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Star } from 'lucide-react';
 import {
   fuzzyHighlight,
   fuzzyScore,
@@ -17,6 +17,7 @@ type Result =
   | { kind: 'command'; cmd: CommandDef; score: number }
   | { kind: 'tab'; tab: Tab; score: number }
   | { kind: 'history'; title: string; url: string; score: number }
+  | { kind: 'bookmark'; title: string; url: string; score: number }
   | { kind: 'bang'; key: string; label: string; score: number }
   | { kind: 'search'; q: string; score: number };
 
@@ -33,6 +34,7 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
   const tabs = useStore((s) => s.tabs);
   const activeId = useStore((s) => s.activeId);
   const bangs = useStore((s) => s.bangs);
+  const bookmarks = useStore((s) => s.bookmarks);
   const settings = useStore((s) => s.settings);
   const closedTabs = useStore((s) => s.closedTabs);
   const active = tabs.find((t) => t.id === activeId);
@@ -80,7 +82,7 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
   };
 
   const prefix = q.trim()[0];
-  const body = ['>', '@', '#', '!', '?'].includes(prefix) ? q.trim().slice(1).trim() : q.trim();
+  const body = ['>', '@', '#', '*', '!', '?'].includes(prefix) ? q.trim().slice(1).trim() : q.trim();
   const mode =
     prefix === '>'
       ? 'commands'
@@ -88,11 +90,13 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
         ? 'tabs'
         : prefix === '#'
           ? 'history'
-          : prefix === '!'
-            ? 'bangs'
-            : prefix === '?'
-              ? 'help'
-              : 'all';
+          : prefix === '*'
+            ? 'bookmarks'
+            : prefix === '!'
+              ? 'bangs'
+              : prefix === '?'
+                ? 'help'
+                : 'all';
 
   const results = useMemo(() => {
     const out: Result[] = [];
@@ -105,7 +109,7 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
           score: 1,
           cmd: {
             id: 'help',
-            title: '> polecenia · @ karty · # historia · ! bangs · ? pomoc',
+            title: '> commands · @ tabs · # history · * bookmarks · ! bangs · ? help',
             icon: Search,
             group: 'command' as const,
             run: () => {},
@@ -151,6 +155,17 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
       }
     }
 
+    if (!tor && (mode === 'all' || mode === 'bookmarks')) {
+      for (const b of bookmarks) {
+        const score = query
+          ? fuzzyScore(query, `${b.title} ${b.url}`)
+          : mode === 'bookmarks'
+            ? 40
+            : -1;
+        if (score >= 0) out.push({ kind: 'bookmark', title: b.title, url: b.url, score });
+      }
+    }
+
     if (!tor && (mode === 'all' || mode === 'bangs')) {
       for (const b of bangs) {
         const score = query ? fuzzyScore(query, `!${b.key} ${b.label}`) : prefix === '!' ? 40 : -1;
@@ -175,16 +190,18 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
               ? `t:${r.tab.id}`
               : r.kind === 'history'
                 ? `h:${r.url}`
-                : r.kind === 'bang'
-                  ? `b:${r.key}`
-                  : `s:${r.q}`;
+                : r.kind === 'bookmark'
+                  ? `bm:${r.url}`
+                  : r.kind === 'bang'
+                    ? `b:${r.key}`
+                    : `s:${r.q}`;
         if (seen.has(key)) return;
         seen.add(key);
         deduped.push(r);
       });
     return deduped.slice(0, 12);
     // settings.uiLocale: getCommandTitle() reads i18n; keep so palette titles refresh on language switch
-  }, [body, mode, tor, tabs, hist, bangs, ctx, prefix, settings.uiLocale]);
+  }, [body, mode, tor, tabs, hist, bookmarks, bangs, ctx, prefix, settings.uiLocale]);
 
   useEffect(() => setIdx(0), [q]);
 
@@ -200,7 +217,7 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
       onClose();
       return;
     }
-    if (r.kind === 'history') {
+    if (r.kind === 'history' || r.kind === 'bookmark') {
       onNavigate(r.url, { newTab });
       onClose();
       return;
@@ -230,6 +247,7 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
     if (recentItems.length) groups.push({ label: t('chrome.cmdGroupRecent'), items: recentItems });
   }
   pushGroup(t('chrome.cmdGroupTabs'), 'tab');
+  pushGroup(t('chrome.cmdGroupBookmarks'), 'bookmark');
   pushGroup(t('chrome.cmdGroupHistory'), 'history');
   pushGroup(t('chrome.cmdGroupBangs'), 'bang');
   pushGroup(t('chrome.cmdGroupCommands'), 'command');
@@ -273,7 +291,7 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
                     ? getCommandTitle(r.cmd)
                     : r.kind === 'tab'
                       ? r.tab.title
-                      : r.kind === 'history'
+                      : r.kind === 'history' || r.kind === 'bookmark'
                         ? r.title
                         : r.kind === 'bang'
                           ? `!${r.key}`
@@ -283,12 +301,13 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
                     ? r.cmd.shortcut || ''
                     : r.kind === 'tab'
                       ? r.tab.url
-                      : r.kind === 'history'
+                      : r.kind === 'history' || r.kind === 'bookmark'
                         ? r.url
                         : r.kind === 'bang'
                           ? r.label
                           : settings.searchEngine;
-                const Ico = r.kind === 'command' ? r.cmd.icon : Search;
+                const Ico =
+                  r.kind === 'command' ? r.cmd.icon : r.kind === 'bookmark' ? Star : Search;
                 return (
                   <button
                     key={`${g.label}-${i}`}

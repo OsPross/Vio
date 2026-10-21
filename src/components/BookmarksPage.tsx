@@ -43,7 +43,6 @@ import {
 import { useT } from '../i18n';
 import { InternalPage } from './InternalPage';
 import { Input } from './ui/Input';
-import { Switch } from './ui/Switch';
 
 type Props = {
   onOpen: (url: string, opts?: { newTab?: boolean }) => void;
@@ -228,7 +227,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
   const reorderBookmarks = useStore((s) => s.reorderBookmarks);
   const moveBookmark = useStore((s) => s.moveBookmark);
   const patchSettings = useStore((s) => s.patchSettings);
-  const showBar = useStore((s) => s.settings.showBookmarksBar);
+  const barMode = useStore((s) => s.settings.bookmarksBarMode);
 
   const [q, setQ] = useState('');
   const [selectedFolder, setSelectedFolder] = useState<FolderKey>('all');
@@ -324,11 +323,32 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  const onImportHtml = async (file: File) => {
+  const onImportFile = async (file: File) => {
     const text = await file.text();
-    const parsed = parseNetscapeBookmarksHtml(text);
-    mergeImportedBookmarks(parsed);
-    setImportOpen(false);
+    const name = (file.name || '').toLowerCase();
+    try {
+      if (name.endsWith('.json') || text.trimStart().startsWith('{')) {
+        const count = countChromeImportPreview(text);
+        if (!count) {
+          window.alert(t('internal.bookmarksImportNone'));
+          return;
+        }
+        if (!window.confirm(t('internal.bookmarksImportConfirm', { n: count }))) return;
+        mergeImportedBookmarks(parseChromeBookmarksJson(text));
+      } else {
+        const parsed = parseNetscapeBookmarksHtml(text);
+        if (!parsed.bookmarks.length) {
+          window.alert(t('internal.bookmarksImportNone'));
+          return;
+        }
+        if (!window.confirm(t('internal.bookmarksImportConfirm', { n: parsed.bookmarks.length })))
+          return;
+        mergeImportedBookmarks(parsed);
+      }
+      setImportOpen(false);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : t('internal.bookmarksImportFailed'));
+    }
   };
 
   const onImportChrome = async (profilePath: string) => {
@@ -498,21 +518,31 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
             <FolderPlus size={14} /> {t('internal.newFolder')}
           </button>
           <label className="bm-toolbar-switch">
-            <Switch
-              on={showBar}
-              onChange={(v) => patchSettings({ showBookmarksBar: v })}
+            <span className="muted" style={{ marginRight: 8 }}>
+              {t('internal.bookmarksShowBar')}
+            </span>
+            <select
+              className="bm-bar-mode"
+              value={barMode || 'never'}
               aria-label={t('internal.bookmarksShowBar')}
-            />
-            {t('internal.bookmarksShowBar')}
+              onChange={(e) => {
+                const v = e.target.value as 'always' | 'newtab' | 'never';
+                patchSettings({ bookmarksBarMode: v, showBookmarksBar: v !== 'never' });
+              }}
+            >
+              <option value="always">{t('settings.look.bookmarksBarAlways')}</option>
+              <option value="newtab">{t('settings.look.bookmarksBarNewtab')}</option>
+              <option value="never">{t('settings.look.bookmarksBarNever')}</option>
+            </select>
           </label>
           <input
             ref={fileRef}
             type="file"
-            accept=".html,text/html"
+            accept=".html,.htm,.json,text/html,application/json"
             hidden
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) void onImportHtml(f);
+              if (f) void onImportFile(f);
               e.target.value = '';
             }}
           />

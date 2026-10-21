@@ -1,4 +1,6 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useT } from '../i18n';
+import { folderTitleById, suggestFolderByDomain } from '../lib/bookmarkFolderSuggest';
 import { BOOKMARKS_BAR_FOLDER_ID, useStore } from '../store';
 import { Select } from './ui/Select';
 
@@ -8,16 +10,32 @@ type Props = {
   url: string;
   title: string;
   anchorRef?: React.RefObject<HTMLElement | null>;
+  /** Tor / private window — confirm before writing to disk */
+  sensitiveSession?: boolean;
 };
 
-export function BookmarkPopover({ open, onClose, url, title, anchorRef }: Props) {
+export function BookmarkPopover({
+  open,
+  onClose,
+  url,
+  title,
+  anchorRef,
+  sensitiveSession,
+}: Props) {
+  const t = useT();
   const popId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const folders = useStore((s) => s.bookmarkFolders);
+  const bookmarks = useStore((s) => s.bookmarks);
   const existing = useStore((s) => s.bookmarks.find((b) => b.url === url));
   const addBookmark = useStore((s) => s.addBookmark);
   const updateBookmark = useStore((s) => s.updateBookmark);
   const removeBookmark = useStore((s) => s.removeBookmark);
+
+  const suggested = useMemo(
+    () => suggestFolderByDomain(url, bookmarks, folders, BOOKMARKS_BAR_FOLDER_ID),
+    [url, bookmarks, folders],
+  );
 
   const [draftTitle, setDraftTitle] = useState(title);
   const [folderId, setFolderId] = useState<string | undefined>(BOOKMARKS_BAR_FOLDER_ID);
@@ -25,8 +43,8 @@ export function BookmarkPopover({ open, onClose, url, title, anchorRef }: Props)
   useEffect(() => {
     if (!open) return;
     setDraftTitle(existing?.title || title);
-    setFolderId(existing?.folderId ?? BOOKMARKS_BAR_FOLDER_ID);
-  }, [open, existing, title]);
+    setFolderId(existing?.folderId ?? suggested ?? BOOKMARKS_BAR_FOLDER_ID);
+  }, [open, existing, title, suggested]);
 
   useEffect(() => {
     if (!open) return;
@@ -34,9 +52,9 @@ export function BookmarkPopover({ open, onClose, url, title, anchorRef }: Props)
       if (e.key === 'Escape') onClose();
     };
     const onClick = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (panelRef.current?.contains(t)) return;
-      if (anchorRef?.current?.contains(t)) return;
+      const target = e.target as Node;
+      if (panelRef.current?.contains(target)) return;
+      if (anchorRef?.current?.contains(target)) return;
       onClose();
     };
     window.addEventListener('keydown', onKey);
@@ -49,12 +67,21 @@ export function BookmarkPopover({ open, onClose, url, title, anchorRef }: Props)
 
   if (!open) return null;
 
+  const hintFolder =
+    !existing && suggested && suggested !== BOOKMARKS_BAR_FOLDER_ID
+      ? folderTitleById(folders, suggested)
+      : '';
+
   const save = () => {
-    const t = draftTitle.trim() || url;
+    if (sensitiveSession && !existing) {
+      const ok = window.confirm(t('bookmarks.sensitiveConfirm'));
+      if (!ok) return;
+    }
+    const nextTitle = draftTitle.trim() || url;
     if (existing) {
-      updateBookmark(existing.id, { title: t, folderId });
+      updateBookmark(existing.id, { title: nextTitle, folderId });
     } else {
-      addBookmark({ title: t, url, folderId });
+      addBookmark({ title: nextTitle, url, folderId });
     }
     onClose();
   };
@@ -66,9 +93,9 @@ export function BookmarkPopover({ open, onClose, url, title, anchorRef }: Props)
 
   return (
     <div className="bookmark-popover" ref={panelRef} role="dialog" aria-labelledby={popId}>
-      <h2 id={popId}>{existing ? 'Edytuj zakładkę' : 'Dodaj zakładkę'}</h2>
+      <h2 id={popId}>{existing ? t('bookmarks.popEdit') : t('bookmarks.popAdd')}</h2>
       <label className="bookmark-field">
-        <span>Tytuł</span>
+        <span>{t('bookmarks.popTitle')}</span>
         <input
           value={draftTitle}
           onChange={(e) => setDraftTitle(e.target.value)}
@@ -82,31 +109,37 @@ export function BookmarkPopover({ open, onClose, url, title, anchorRef }: Props)
         />
       </label>
       <label className="bookmark-field">
-        <span>Folder</span>
+        <span>{t('bookmarks.popFolder')}</span>
         <Select
-          aria-label="Folder zakładki"
+          aria-label={t('bookmarks.popFolder')}
           value={folderId ?? ''}
           onChange={(v) => setFolderId(v || undefined)}
           options={folders.map((f) => ({ value: f.id, label: f.title }))}
         />
       </label>
+      {hintFolder ? (
+        <p className="bookmark-pop-hint muted">{t('bookmarks.popDomainHint', { folder: hintFolder })}</p>
+      ) : null}
+      {sensitiveSession && !existing ? (
+        <p className="bookmark-pop-hint muted">{t('bookmarks.sensitiveHint')}</p>
+      ) : null}
       <p className="bookmark-pop-url muted" title={url}>
         {url}
       </p>
       <div className="bookmark-pop-actions">
         {existing ? (
           <button type="button" className="sbtn danger-text" onClick={remove}>
-            Usuń
+            {t('bookmarks.ctxDelete')}
           </button>
         ) : (
           <span />
         )}
         <div className="bookmark-pop-actions-right">
           <button type="button" className="sbtn ghost" onClick={onClose}>
-            Anuluj
+            {t('bookmarks.popCancel')}
           </button>
           <button type="button" className="sbtn primary" onClick={save}>
-            {existing ? 'Zapisz' : 'Dodaj'}
+            {existing ? t('bookmarks.popSave') : t('bookmarks.popAddBtn')}
           </button>
         </div>
       </div>
