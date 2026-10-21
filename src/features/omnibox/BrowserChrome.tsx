@@ -151,7 +151,6 @@ export function BrowserChrome({
   const shortcuts = useStore((s) => s.shortcuts);
   const tabs = useStore((s) => s.tabs);
   const activeId = useStore((s) => s.activeId);
-  const newTab = useStore((s) => s.newTab);
   const setActive = useStore((s) => s.setActive);
   const setView = useStore((s) => s.setView);
   const patchSettings = useStore((s) => s.patchSettings);

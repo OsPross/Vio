@@ -2,9 +2,6 @@
  * Minimal QR Code (byte mode) → SVG path matrix.
  * Enough for typical page URLs; no network.
  */
-const ECC_CODEWORDS = [
-  // version 1–10 L-level approx tables abbreviated — we use version auto up to 5
-];
 
 function gfMul(a: number, b: number) {
   if (!a || !b) return 0;

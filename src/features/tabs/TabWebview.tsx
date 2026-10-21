@@ -459,7 +459,7 @@ function TabWebviewInner({
     const onWheel = (ev: WheelEvent) => {
       if (!active || !ev.ctrlKey) return;
       ev.preventDefault();
-      let url = '';
+      let url: string;
       try {
         url = el.getURL();
       } catch {

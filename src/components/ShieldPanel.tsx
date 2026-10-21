@@ -34,7 +34,7 @@ export function ShieldPanel({
   const setSettingsTab = useStore((s) => s.setSettingsTab);
   const motionOff = isMotionOff(settings);
   const popMotion = popupTransition(motionOff);
-  let host = '';
+  let host: string;
   try {
     host = new URL(pageUrl).hostname;
   } catch {

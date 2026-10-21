@@ -177,7 +177,7 @@ export function AppChrome({
   bookmarkPop,
   setBookmarkPop,
   bookmarkStarRef,
-  pwForPage,
+  pwForPage: _pwForPage,
   shieldOpen,
   setShieldOpen,
   blockedToday,

@@ -31,6 +31,7 @@ import {
   HISTORY_URL,
   HOME_URL,
   THEMES,
+  useStore,
   type ThemeId,
 } from '../store';
 
@@ -334,8 +335,6 @@ export function getCommands(): CommandDef[] {
 
 function getStoreExceptions(): string[] {
   try {
-    // lazy to avoid circular import at module top in actions
-    const { useStore } = require('../store') as typeof import('../store');
     return useStore.getState().settings.privacySiteExceptions || [];
   } catch {
     return [];

@@ -58,9 +58,9 @@ export function hsvToHex(h: number, s: number, v: number): string {
   const C = v * s;
   const X = C * (1 - Math.abs(((hh / 60) % 2) - 1));
   const m = v - C;
-  let r = 0;
-  let g = 0;
-  let b = 0;
+  let r: number;
+  let g: number;
+  let b: number;
   if (hh < 60) [r, g, b] = [C, X, 0];
   else if (hh < 120) [r, g, b] = [X, C, 0];
   else if (hh < 180) [r, g, b] = [0, C, X];

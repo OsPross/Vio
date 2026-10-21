@@ -16,7 +16,6 @@ export type SettingsTarget =
 
 const POP_W = 248;
 const POP_H = 280;
-const PAD = 8;
 
 /** Flip / shift so popover stays in viewport and prefers not covering the widget. */
 export function placeFloatingPopover(

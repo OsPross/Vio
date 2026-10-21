@@ -159,7 +159,7 @@ function trimTrailingSlash(text: string): string {
   return text.replace(/\/+$/, '') || text;
 }
 
-function internalParts(url: string, maxLen: number): DisplayUrlParts | null {
+function internalParts(url: string, _maxLen: number): DisplayUrlParts | null {
   const key = url.split(/[?#]/)[0].toLowerCase();
   const label = internalLabels()[key];
   if (!label) return null;

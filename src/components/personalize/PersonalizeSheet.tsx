@@ -11,9 +11,7 @@ import { LayoutTab } from './tabs/LayoutTab';
 import { WidgetsTab } from './tabs/WidgetsTab';
 import { ClockSearchTab } from './tabs/ClockSearchTab';
 
-const TAB_IDS = ['look', 'layout', 'widgets', 'clock'] as const;
-
-type TabId = (typeof TAB_IDS)[number];
+type TabId = 'look' | 'layout' | 'widgets' | 'clock';
 
 export function PersonalizeSheet({
   open,

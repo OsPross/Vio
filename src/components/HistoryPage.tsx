@@ -435,8 +435,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
         )}
         {!!flatRows.length && (
           <div className="history-virtual" style={{ paddingTop: padTop, paddingBottom: padBottom }}>
-            {slice.map((row, i) => {
-              const idx = renderStart + i;
+            {slice.map((row) => {
               if (row.kind === 'header') {
                 return (
                   <h2 key={row.key} className="history-day-head" style={{ height: HEADER_H }}>

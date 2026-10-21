@@ -5,7 +5,6 @@ import {
   normalizeHomeChrome,
   placeNewHomeWidget,
   type HomeWidget,
-  type HomeWidgetType,
   useStore,
 } from '../store';
 import { WIDGET_REGISTRY, widgetTypes, type WidgetSizeId } from './registry';
@@ -29,7 +28,7 @@ export function AddWidgetGallery({
   const used = useMemo(() => new Set(widgets.map((w) => w.type)), [widgets]);
   const chromeRaw = useStore((s) => s.settings.homeChrome);
   const chrome = useMemo(() => normalizeHomeChrome(chromeRaw), [chromeRaw]);
-  const allTypes = useMemo(() => widgetTypes(), [t]);
+  const allTypes = useMemo(() => widgetTypes(), []);
 
   if (!open) return null;
 

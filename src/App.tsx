@@ -121,7 +121,7 @@ export function App() {
   const [sidebarAutoOpen, setSidebarAutoOpen] = useState(false);
   const sidebarAutoTimer = useRef<number | null>(null);
   const [windowMode, setWindowMode] = useState<'normal' | 'private' | 'tor'>('normal');
-  const [windowPartition, setWindowPartition] = useState<string | null>(null);
+  const [, setWindowPartition] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [clearDataOpen, setClearDataOpen] = useState(false);
@@ -196,7 +196,7 @@ export function App() {
   useEffect(() => {
     setPopupBlocked(null);
     setPageHasVideo(false);
-  }, [activeId, active?.url, setPopupBlocked]);
+  }, [activeId, active?.url, setPopupBlocked, setPageHasVideo]);
 
   const { saveActivePdf, printActivePage } = usePageActions({ guestWc, currentView });
 

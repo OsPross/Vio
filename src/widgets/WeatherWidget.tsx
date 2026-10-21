@@ -44,14 +44,6 @@ function weatherIcon(code: number) {
   return CloudSun;
 }
 
-type Place = {
-  name: string;
-  country: string;
-  admin1: string;
-  lat: number;
-  lon: number;
-  label: string;
-};
 type WeatherData = Awaited<ReturnType<NonNullable<Window['shell']>['weatherFetch']>>;
 
 export const WEATHER_DEMO: WeatherData = {
@@ -96,8 +88,6 @@ export function WeatherWidget({
   const savedLat = typeof widget.settings.lat === 'number' ? widget.settings.lat : undefined;
   const savedLon = typeof widget.settings.lon === 'number' ? widget.settings.lon : undefined;
 
-  const [draft, setDraft] = useState(location);
-  const [suggests, setSuggests] = useState<Place[]>([]);
   const [data, setData] = useState<WeatherData | null>(preview ? WEATHER_DEMO : null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -139,25 +129,6 @@ export function WeatherWidget({
     if (location.trim()) void fetchWx({ location, lat: savedLat, lon: savedLon });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location, allowNet, preview]);
-
-  useEffect(() => {
-    if (preview || location) return;
-    const q = draft.trim();
-    if (q.length < 2 || !allowNet) {
-      setSuggests([]);
-      return;
-    }
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      void window.shell?.weatherSuggest?.({ q }).then((res) => {
-        if (!cancelled && res?.places) setSuggests(res.places);
-      });
-    }, 300);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [draft, location, allowNet, preview]);
 
   if (!location && !preview) {
     return null;
@@ -234,7 +205,6 @@ export function WeatherWidget({
             title={t('widgets.ui.weather.changeCity')}
             onClick={() => {
               onPatchSettings?.({ location: '', lat: undefined, lon: undefined });
-              setDraft('');
               setData(null);
             }}
           >

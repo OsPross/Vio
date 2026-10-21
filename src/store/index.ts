@@ -79,7 +79,7 @@ type PersistSnapshot = {
 /** Avoid white screen when localStorage JSON is corrupt — backup + reset. */
 const safePersistStorage = {
   getItem: (name: string): PersistSnapshot | null => {
-    let raw: string | null = null;
+    let raw: string | null;
     try {
       raw = localStorage.getItem(name);
     } catch {

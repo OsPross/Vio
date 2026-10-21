@@ -88,7 +88,6 @@ export function WidgetBody({
   widget,
   size,
   onGo,
-  reduced,
   onPatchWidgetSettings,
   preview,
 }: {
@@ -394,8 +393,8 @@ export function WidgetStrip({
         setDraggingKey(d.key);
         cardRefs.current.get(d.key)?.classList.add('is-dragging');
       }
-      let width = 300;
-      let height = 160;
+      let width: number;
+      let height: number;
       if (d.key.startsWith('chrome:')) {
         const id = d.key.slice(7) as HomeChromeId;
         const c = chrome.find((x) => x.id === id);
@@ -451,9 +450,8 @@ export function WidgetStrip({
     guidesRef.current = [];
     if (!m || !d.active) return;
 
-    let width = 300;
-    let height = 160;
-    let anchor: HomeChromeItem['anchor'] = 'center';
+    let width: number;
+    let height: number;
     if (d.key.startsWith('chrome:')) {
       const id = d.key.slice(7) as HomeChromeId;
       const c = chrome.find((x) => x.id === id);
@@ -461,7 +459,7 @@ export function WidgetStrip({
       const box = chromeToPx(c, m);
       width = box.width;
       height = box.height;
-      anchor = c.anchor;
+      const anchor = c.anchor;
       const resolved = resolveCollision(d.left, d.top, width, height, allOtherBoxes(d.key, m), m);
       const pos = pxToWidgetPos(resolved.left, resolved.top, width, height, m, anchor);
       pushUndo(widgets, chrome);
