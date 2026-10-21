@@ -1,10 +1,33 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent as RE } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as RE,
+} from 'react';
 import { LayoutGroup, motion } from 'motion/react';
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   ExternalLink,
   Home,
   MessageCircle,
   PanelLeftClose,
+  Plus,
   RefreshCw,
   Search,
   Settings2,
@@ -12,7 +35,14 @@ import {
   X,
 } from 'lucide-react';
 import { useT } from '../i18n';
-import { useStore, type SideApp } from '../store';
+import {
+  HOME_URL,
+  TOR_HOME_URL,
+  isBookmarkableUrl,
+  useStore,
+  type SideApp,
+} from '../store';
+import { resolveFavicon, faviconImgFallback } from '../lib/favicon';
 
 const PANEL_W_MIN = 280;
 const PANEL_W_MAX = 720;
@@ -25,11 +55,17 @@ type WebviewEl = HTMLElement & {
   src: string;
   reload: () => void;
   insertCSS: (css: string) => Promise<string>;
+  setAudioMuted?: (muted: boolean) => void;
   addEventListener: (type: string, listener: (...args: unknown[]) => void) => void;
   removeEventListener: (type: string, listener: (...args: unknown[]) => void) => void;
 };
 
-import { resolveFavicon, faviconImgFallback } from '../lib/favicon';
+function parseTitleBadge(title: string): number {
+  const m = String(title || '').match(/^\((\d{1,3})\)\s*/) || String(title || '').match(/\((\d{1,3})\)/);
+  if (!m) return 0;
+  const n = Number(m[1]);
+  return Number.isFinite(n) && n > 0 ? Math.min(99, n) : 0;
+}
 
 function SideAppIcon({ app }: { app: SideApp }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -74,7 +110,6 @@ function SideAppIcon({ app }: { app: SideApp }) {
   return <span className="side-rail-letter">{app.label.slice(0, 1)}</span>;
 }
 
-/** Sites that serve a desktop UI useless in a ~400px panel — use mobile Chrome UA. */
 function wantsCompactSideUa(app: SideApp) {
   const key = `${app.id} ${app.url}`.toLowerCase();
   return /gmail|mail\.google\.com/.test(key);
@@ -85,11 +120,13 @@ function SideWebview({
   active,
   webRef,
   loadingLabel,
+  onBadge,
 }: {
   app: SideApp;
   active: boolean;
   webRef: (el: WebviewEl | null) => void;
   loadingLabel: string;
+  onBadge: (id: string, count: number) => void;
 }) {
   const local = useRef<WebviewEl | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -101,21 +138,39 @@ function SideWebview({
     const onStop = () => setLoaded(true);
     const onReady = () => {
       setLoaded(true);
+      try {
+        el.setAudioMuted?.(Boolean(app.muted));
+      } catch {
+        /* */
+      }
       if (!compact) return;
-      // Narrow viewport hint — helps some Google UIs beyond UA alone.
       void el
-        .insertCSS(
-          'html,body{min-width:0!important;} body{-webkit-text-size-adjust:100%;}',
-        )
+        .insertCSS('html,body{min-width:0!important;} body{-webkit-text-size-adjust:100%;}')
         .catch(() => {});
+    };
+    const onTitle = (raw: unknown) => {
+      const title = String((raw as { title?: string })?.title || '');
+      onBadge(app.id, parseTitleBadge(title));
     };
     el.addEventListener('did-stop-loading', onStop);
     el.addEventListener('dom-ready', onReady);
+    el.addEventListener('page-title-updated', onTitle);
     return () => {
       el.removeEventListener('did-stop-loading', onStop);
       el.removeEventListener('dom-ready', onReady);
+      el.removeEventListener('page-title-updated', onTitle);
     };
-  }, [app.id, compact]);
+  }, [app.id, app.muted, compact, onBadge]);
+
+  useEffect(() => {
+    const el = local.current;
+    if (!el) return;
+    try {
+      el.setAudioMuted?.(Boolean(app.muted));
+    } catch {
+      /* */
+    }
+  }, [app.id, app.muted]);
 
   return (
     <div className={`side-webview-wrap ${active ? 'on' : ''}`}>
@@ -128,13 +183,69 @@ function SideWebview({
         className="side-webview"
         src={app.url}
         partition="persist:main"
-        // Marker read by electron/security.cjs → mobile Chrome UA (Gmail etc.)
         {...(compact ? { useragent: 'VioSideCompact' } : {})}
         allowpopups={'true' as unknown as boolean}
       />
     </div>
   );
 }
+
+function SortableAppBtn({
+  app,
+  on,
+  badge,
+  motionOff,
+  onOpen,
+  onContext,
+}: {
+  app: SideApp;
+  on: boolean;
+  badge: number;
+  motionOff: boolean;
+  onOpen: () => void;
+  onContext: (e: ReactMouseEvent) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: app.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      className={`side-rail-btn ${on ? 'on' : ''} ${isDragging ? 'dragging' : ''}`}
+      style={style}
+      data-tip={app.label}
+      title={app.label}
+      onClick={onOpen}
+      onContextMenu={onContext}
+      {...attributes}
+      {...listeners}
+    >
+      {on && !motionOff && (
+        <motion.span
+          className="side-rail-indicator"
+          layoutId="side-rail-active"
+          transition={{ type: 'spring', stiffness: 480, damping: 36 }}
+        />
+      )}
+      {on && motionOff && <span className="side-rail-indicator" />}
+      <span className="side-rail-ico">
+        <SideAppIcon app={app} />
+      </span>
+      {badge > 0 && (
+        <span className={`side-rail-badge ${badge > 9 ? '' : badge === 1 ? 'dot' : ''}`}>
+          {badge > 9 ? (badge > 99 ? '99+' : String(badge)) : badge === 1 ? '' : String(badge)}
+        </span>
+      )}
+    </button>
+  );
+}
+
+type CtxMenu = { x: number; y: number; appId: string } | null;
 
 export function AppSidebar({
   onHome,
@@ -146,12 +257,20 @@ export function AppSidebar({
   const t = useT();
   const settings = useStore((s) => s.settings);
   const sideApps = useStore((s) => s.sideApps);
+  const tabs = useStore((s) => s.tabs);
+  const activeId = useStore((s) => s.activeId);
   const openSideApp = useStore((s) => s.openSideApp);
   const closeSidePanel = useStore((s) => s.closeSidePanel);
+  const addSideApp = useStore((s) => s.addSideApp);
+  const removeSideApp = useStore((s) => s.removeSideApp);
+  const reorderSideApps = useStore((s) => s.reorderSideApps);
+  const setSideAppMuted = useStore((s) => s.setSideAppMuted);
   const patchSettings = useStore((s) => s.patchSettings);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
   const views = useRef<Record<string, WebviewEl | null>>({});
   const [mounted, setMounted] = useState<Record<string, boolean>>({});
+  const [badges, setBadges] = useState<Record<string, number>>({});
+  const [ctx, setCtx] = useState<CtxMenu>(null);
   const resizeRef = useRef<{ startX: number; startW: number } | null>(null);
 
   const active = sideApps.find((a) => a.id === settings.activeSideAppId) ?? null;
@@ -162,10 +281,13 @@ export function AppSidebar({
     (typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
-  const aiApp =
-    sideApps.find((a) => a.id === 'gemini') ??
-    sideApps.find((a) => /gemini|chatgpt|ai/i.test(a.id + a.label));
-  const otherApps = sideApps.filter((a) => a.id !== aiApp?.id);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+
+  const onBadge = useCallback((id: string, count: number) => {
+    setBadges((prev) => (prev[id] === count ? prev : { ...prev, [id]: count }));
+  }, []);
 
   useEffect(() => {
     if (panelOpen && active) {
@@ -173,20 +295,28 @@ export function AppSidebar({
     }
   }, [panelOpen, active]);
 
-  const applyPanelWidth = useCallback(
-    (w: number) => {
-      const next = clampPanelWidth(w);
-      const app = document.querySelector('.app') as HTMLElement | null;
-      if (app) {
-        app.style.setProperty('--panel-w', `${next}px`);
-        if (app.classList.contains('side-panel-open') && !app.classList.contains('no-side')) {
-          app.style.setProperty('--side-total', `${56 + next}px`);
-        }
+  useEffect(() => {
+    if (!ctx) return;
+    const close = () => setCtx(null);
+    window.addEventListener('click', close);
+    window.addEventListener('blur', close);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('blur', close);
+    };
+  }, [ctx]);
+
+  const applyPanelWidth = useCallback((w: number) => {
+    const next = clampPanelWidth(w);
+    const app = document.querySelector('.app') as HTMLElement | null;
+    if (app) {
+      app.style.setProperty('--panel-w', `${next}px`);
+      if (app.classList.contains('side-panel-open') && !app.classList.contains('no-side')) {
+        app.style.setProperty('--side-total', `${56 + next}px`);
       }
-      return next;
-    },
-    [],
-  );
+    }
+    return next;
+  }, []);
 
   const onResizePointerDown = (e: RE<HTMLDivElement>) => {
     if (!panelOpen) return;
@@ -221,6 +351,36 @@ export function AppSidebar({
     }
   };
 
+  const onDragEnd = (ev: DragEndEvent) => {
+    const { active: a, over } = ev;
+    if (!over || a.id === over.id) return;
+    const ids = sideApps.map((x) => x.id);
+    const oldIndex = ids.indexOf(String(a.id));
+    const newIndex = ids.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    reorderSideApps(arrayMove(ids, oldIndex, newIndex));
+  };
+
+  const pinActivePage = () => {
+    const tab = tabs.find((x) => x.id === activeId) ?? tabs[0];
+    const url = tab?.url || '';
+    if (!url || !isBookmarkableUrl(url) || url === HOME_URL || url === TOR_HOME_URL) return;
+    if (sideApps.some((a) => a.url === url)) {
+      const existing = sideApps.find((a) => a.url === url);
+      if (existing) openSideApp(existing.id);
+      return;
+    }
+    const label = (tab?.title && tab.title !== '…' ? tab.title : url).slice(0, 48);
+    addSideApp({ label, url });
+  };
+
+  const ctxApp = ctx ? sideApps.find((a) => a.id === ctx.appId) : null;
+  const canPin = (() => {
+    const tab = tabs.find((x) => x.id === activeId) ?? tabs[0];
+    const url = tab?.url || '';
+    return Boolean(url && isBookmarkableUrl(url) && url !== HOME_URL && url !== TOR_HOME_URL);
+  })();
+
   return (
     <div
       className={`side-shell ${panelOpen ? 'panel-open' : ''} ${settings.uiGlass ? 'glass' : ''}`}
@@ -246,64 +406,48 @@ export function AppSidebar({
             >
               <Search size={18} strokeWidth={1.75} />
             </button>
-            {aiApp && (
-              <button
-                type="button"
-                className={`side-rail-btn ${panelOpen && active?.id === aiApp.id ? 'on' : ''}`}
-                data-tip={aiApp.label}
-                title={aiApp.label}
-                onClick={() => openSideApp(aiApp.id)}
-              >
-                {panelOpen && active?.id === aiApp.id && !motionOff && (
-                  <motion.span
-                    className="side-rail-indicator"
-                    layoutId="side-rail-active"
-                    transition={{ type: 'spring', stiffness: 480, damping: 36 }}
-                  />
-                )}
-                {panelOpen && active?.id === aiApp.id && motionOff && (
-                  <span className="side-rail-indicator" />
-                )}
-                <span className="side-rail-ico">
-                  <SideAppIcon app={aiApp} />
-                </span>
-              </button>
-            )}
           </div>
 
           <div className="side-rail-sep" aria-hidden />
 
           <div className="side-rail-group side-rail-apps" role="group" aria-label={t('sidebar.appsGroup')}>
-            {otherApps.map((app) => {
-              const on = panelOpen && active?.id === app.id;
-              return (
-                <button
-                  key={app.id}
-                  type="button"
-                  className={`side-rail-btn ${on ? 'on' : ''}`}
-                  data-tip={app.label}
-                  title={app.label}
-                  onClick={() => openSideApp(app.id)}
-                >
-                  {on && !motionOff && (
-                    <motion.span
-                      className="side-rail-indicator"
-                      layoutId="side-rail-active"
-                      transition={{ type: 'spring', stiffness: 480, damping: 36 }}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+              <SortableContext items={sideApps.map((a) => a.id)} strategy={verticalListSortingStrategy}>
+                {sideApps.map((app) => {
+                  const on = panelOpen && active?.id === app.id;
+                  return (
+                    <SortableAppBtn
+                      key={app.id}
+                      app={app}
+                      on={on}
+                      badge={badges[app.id] || 0}
+                      motionOff={motionOff}
+                      onOpen={() => openSideApp(app.id)}
+                      onContext={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setCtx({ x: e.clientX, y: e.clientY, appId: app.id });
+                      }}
                     />
-                  )}
-                  {on && motionOff && <span className="side-rail-indicator" />}
-                  <span className="side-rail-ico">
-                    <SideAppIcon app={app} />
-                  </span>
-                </button>
-              );
-            })}
+                  );
+                })}
+              </SortableContext>
+            </DndContext>
           </div>
 
           <div className="side-rail-sep" aria-hidden />
 
           <div className="side-rail-foot">
+            <button
+              type="button"
+              className="side-rail-btn"
+              data-tip={t('sidebar.addApp')}
+              title={t('sidebar.addApp')}
+              disabled={!canPin}
+              onClick={pinActivePage}
+            >
+              <Plus size={18} strokeWidth={1.75} />
+            </button>
             <button
               type="button"
               className="side-rail-btn"
@@ -388,6 +532,7 @@ export function AppSidebar({
                     app={app}
                     active={panelOpen && app.id === active.id}
                     loadingLabel={t('sidebar.loadingApp', { label: app.label })}
+                    onBadge={onBadge}
                     webRef={(el) => {
                       views.current[app.id] = el;
                     }}
@@ -414,6 +559,63 @@ export function AppSidebar({
           </>
         )}
       </section>
+
+      {ctx && ctxApp && (
+        <div
+          className="side-rail-ctx"
+          style={{ left: ctx.x, top: ctx.y }}
+          role="menu"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              openSideApp(ctxApp.id);
+              setCtx(null);
+            }}
+          >
+            {t('sidebar.ctxOpen')}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              onOpenTab(ctxApp.url);
+              setCtx(null);
+            }}
+          >
+            {t('sidebar.openInTab')}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              const next = !ctxApp.muted;
+              setSideAppMuted(ctxApp.id, next);
+              try {
+                views.current[ctxApp.id]?.setAudioMuted?.(next);
+              } catch {
+                /* */
+              }
+              setCtx(null);
+            }}
+          >
+            {ctxApp.muted ? t('sidebar.ctxUnmute') : t('sidebar.ctxMute')}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="danger"
+            onClick={() => {
+              removeSideApp(ctxApp.id);
+              setCtx(null);
+            }}
+          >
+            {t('sidebar.ctxUnpin')}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

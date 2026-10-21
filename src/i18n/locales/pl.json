@@ -694,7 +694,12 @@
     "resizeAria": "Zmień szerokość panelu",
     "resizeTitle": "Przeciągnij, żeby zmienić szerokość",
     "loadingApp": "Ładowanie {{label}}…",
-    "openInTab": "Otwórz w karcie"
+    "openInTab": "Otwórz w karcie",
+    "addApp": "Dodaj bieżącą stronę jako aplikację",
+    "ctxOpen": "Otwórz",
+    "ctxUnpin": "Odepnij",
+    "ctxMute": "Wycisz",
+    "ctxUnmute": "Włącz dźwięk"
   },
   "menu": {
     "file": "Plik",

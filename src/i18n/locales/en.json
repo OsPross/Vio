@@ -694,7 +694,12 @@
     "resizeAria": "Resize panel width",
     "resizeTitle": "Drag to resize",
     "loadingApp": "Loading {{label}}…",
-    "openInTab": "Open in tab"
+    "openInTab": "Open in tab",
+    "addApp": "Add current page as app",
+    "ctxOpen": "Open",
+    "ctxUnpin": "Unpin",
+    "ctxMute": "Mute",
+    "ctxUnmute": "Unmute"
   },
   "menu": {
     "file": "File",
