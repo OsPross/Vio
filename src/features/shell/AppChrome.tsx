@@ -63,6 +63,7 @@ export type AppChromeProps = {
   setOmniMenu: Dispatch<SetStateAction<OmniMenuState>>;
   nav: { back: boolean; forward: boolean };
   go: (raw: string, opts?: { typed?: boolean; fromSuggest?: boolean }) => void;
+  doBrowserNav: (dir: 'back' | 'forward', source?: string) => void;
   currentView: () => WebviewEl | null;
   toggleSidebar: () => void;
   active: Tab | undefined;
@@ -158,6 +159,7 @@ export function AppChrome({
   setOmniMenu,
   nav,
   go,
+  doBrowserNav,
   currentView,
   toggleSidebar,
   active,
@@ -349,6 +351,7 @@ export function AppChrome({
           nav={nav}
           go={go}
           navigateActive={navigateActive}
+          doBrowserNav={doBrowserNav}
           currentView={currentView}
           toggleSidebar={toggleSidebar}
           active={active}

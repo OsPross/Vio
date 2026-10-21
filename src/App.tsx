@@ -317,6 +317,7 @@ export function App() {
               setOmniMenu={setOmniMenu}
               nav={nav}
               go={go}
+              doBrowserNav={doBrowserNav}
               currentView={currentView}
               toggleSidebar={toggleSidebar}
               active={active}

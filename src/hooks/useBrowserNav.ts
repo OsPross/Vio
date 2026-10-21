@@ -16,6 +16,16 @@ import {
   titleForInternalUrl,
 } from '../lib/tabNavigate';
 import {
+  pruneTabSessionHistory,
+  recordTabSessionUrl,
+  tabSessionBack,
+  tabSessionCanBack,
+  tabSessionCanForward,
+  tabSessionForward,
+  tabSessionPeekBack,
+  tabSessionPeekForward,
+} from '../lib/tabSessionHistory';
+import {
   markTypedUrl,
   recordVisitFromTab,
   type WebviewEl,
@@ -97,62 +107,150 @@ export function useBrowserNav({
     return null;
   };
 
+  const refreshNavFlags = useCallback(
+    (tabId: string, webBack = false, webForward = false) => {
+      const back = tabSessionCanBack(tabId) || webBack;
+      const forward = tabSessionCanForward(tabId) || webForward;
+      setNav((prev) =>
+        prev.back === back && prev.forward === forward ? prev : { back, forward },
+      );
+    },
+    [],
+  );
+
+  const applySessionUrl = useCallback(
+    (tabId: string, url: string) => {
+      const st = useStore.getState();
+      const tab = st.tabs.find((t) => t.id === tabId);
+      if (!tab) return;
+      const tor = isTorTab(tab);
+      const nextUrl = resolveTorHomeUrl(url, tor);
+      const internal = isInternalPageUrl(nextUrl);
+      const title = internal
+        ? titleForInternalUrl(nextUrl, tor, tab.mode === 'private')
+        : '…';
+      st.updateTab(tabId, {
+        url: nextUrl,
+        title,
+        ...(tor ? { mode: 'tor' as const } : {}),
+      });
+      if (!tor && !internal) {
+        requestAnimationFrame(() => {
+          const el =
+            (document.querySelector(
+              `webview[data-tab-id="${tabId}"]`,
+            ) as unknown as WebviewEl | null) ||
+            (tabId === useStore.getState().activeId ? currentView() : null);
+          if (el && el.src !== nextUrl) el.src = nextUrl;
+        });
+      }
+      if (tabId === st.activeId) {
+        setDraft(draftForUrl(nextUrl));
+        refreshNavFlags(tabId, false, false);
+      }
+      st.setView('browser');
+    },
+    [refreshNavFlags, setDraft],
+  );
+
   const onNav = useCallback(
     (canBack: boolean, canForward: boolean, url: string, _title?: string) => {
-      setNav((prev) =>
-        prev.back === canBack && prev.forward === canForward
-          ? prev
-          : { back: canBack, forward: canForward },
-      );
+      const id = useStore.getState().activeId;
+      if (id && url) recordTabSessionUrl(id, url);
+      refreshNavFlags(id, canBack, canForward);
       if (omniEditingRef.current && omniFocusedRef.current) return;
       if (!url.startsWith('about:')) {
         setDraft((d) => (d === url ? d : url));
       }
     },
-    [omniEditingRef, omniFocusedRef, setDraft],
+    [omniEditingRef, omniFocusedRef, refreshNavFlags, setDraft],
   );
 
   /** Single history nav entry — mouse / IPC / chrome UI share one 150ms gate */
   const browserNavAt = useRef(0);
-  const navigateHistory = useCallback((tabId: string, dir: 'back' | 'forward', source = 'unknown') => {
-    const now = Date.now();
-    if (now - browserNavAt.current < 150) {
+  const navigateHistory = useCallback(
+    (tabId: string, dir: 'back' | 'forward', source = 'unknown') => {
+      const now = Date.now();
+      if (now - browserNavAt.current < 150) {
+        if (
+          typeof window !== 'undefined' &&
+          (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE
+        ) {
+          console.log('[mouse-nav:ui] dedup-skip', { tabId, dir, source });
+        }
+        return;
+      }
+      browserNavAt.current = now;
       if (
         typeof window !== 'undefined' &&
         (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE
       ) {
-        console.log('[mouse-nav:ui] dedup-skip', { tabId, dir, source });
+        console.log('[mouse-nav:ui] nav', { tabId, dir, source });
       }
+      const st = useStore.getState();
+      if (st.view === 'settings') {
+        if (dir === 'back') st.setView('browser');
+        return;
+      }
+      const id = tabId || st.activeId;
+      const tab = st.tabs.find((t) => t.id === id);
+      if (!tab) return;
+      // Home / Tor home: chrome disables buttons; keep a hard stop here.
+      if (tab.url === HOME_URL || tab.url === TOR_HOME_URL) return;
+
+      const curInternal = isInternalPageUrl(tab.url);
+      const peek =
+        dir === 'back' ? tabSessionPeekBack(id) : tabSessionPeekForward(id);
+      const peekInternal = peek ? isInternalPageUrl(peek) : false;
+
+      // Cross about:* ↔ www (or about ↔ about) via session stack — webview has no about:* history.
+      if (peek && (curInternal || peekInternal)) {
+        const url = dir === 'back' ? tabSessionBack(id) : tabSessionForward(id);
+        if (url) applySessionUrl(id, url);
+        return;
+      }
+
+      const el =
+        (document.querySelector(`webview[data-tab-id="${id}"]`) as unknown as WebviewEl | null) ||
+        (id === st.activeId ? currentView() : null);
+      try {
+        if (dir === 'back') el?.goBack?.();
+        else el?.goForward?.();
+      } catch {
+        /* */
+      }
+    },
+    [applySessionUrl],
+  );
+
+  const tabIdsKey = tabs.map((t) => t.id).join(',');
+  useEffect(() => {
+    pruneTabSessionHistory(tabIdsKey ? tabIdsKey.split(',') : []);
+  }, [tabIdsKey]);
+
+  // Keep session stack + button state in sync when tab URL changes (omnibox, shortcuts, about:*).
+  const activeTabId = active?.id;
+  const activeTabUrl = active?.url;
+  useEffect(() => {
+    if (!activeTabId || !activeTabUrl) return;
+    recordTabSessionUrl(activeTabId, activeTabUrl);
+    if (isHome || isTorHome) {
+      setNav({ back: false, forward: false });
       return;
     }
-    browserNavAt.current = now;
-    if (
-      typeof window !== 'undefined' &&
-      (window as unknown as { __DJXXR_DEBUG_MOUSE?: boolean }).__DJXXR_DEBUG_MOUSE
-    ) {
-      console.log('[mouse-nav:ui] nav', { tabId, dir, source });
+    let webBack = false;
+    let webForward = false;
+    if (!isInternalAbout) {
+      try {
+        const el = currentView();
+        webBack = Boolean(el?.canGoBack?.());
+        webForward = Boolean(el?.canGoForward?.());
+      } catch {
+        /* */
+      }
     }
-    const st = useStore.getState();
-    if (st.view === 'settings') {
-      if (dir === 'back') st.setView('browser');
-      return;
-    }
-    const id = tabId || st.activeId;
-    const tab = st.tabs.find((t) => t.id === id);
-    if (!tab) return;
-    if (tab.url === HOME_URL || tab.url === TOR_HOME_URL || tab.url.startsWith('about:')) {
-      return;
-    }
-    const el =
-      (document.querySelector(`webview[data-tab-id="${id}"]`) as unknown as WebviewEl | null) ||
-      (id === st.activeId ? currentView() : null);
-    try {
-      if (dir === 'back') el?.goBack?.();
-      else el?.goForward?.();
-    } catch {
-      /* */
-    }
-  }, []);
+    refreshNavFlags(activeTabId, webBack, webForward);
+  }, [activeTabId, activeTabUrl, isHome, isTorHome, isInternalAbout, refreshNavFlags]);
 
   const doBrowserNav = useCallback(
     (dir: 'back' | 'forward', source = 'unknown') => {

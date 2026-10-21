@@ -60,6 +60,7 @@ export type BrowserChromeProps = {
   nav: { back: boolean; forward: boolean };
   go: (raw: string, opts?: { typed?: boolean; fromSuggest?: boolean }) => void;
   navigateActive: (url: string, query?: string, opts?: { typed?: boolean }) => void;
+  doBrowserNav: (dir: 'back' | 'forward', source?: string) => void;
   currentView: () => WebviewEl | null;
   toggleSidebar: () => void;
   active: Tab | undefined;
@@ -108,6 +109,7 @@ export function BrowserChrome({
   nav,
   go,
   navigateActive,
+  doBrowserNav,
   currentView,
   toggleSidebar,
   active,
@@ -191,8 +193,8 @@ export function BrowserChrome({
           <button
             type="button"
             className="icon-btn"
-            disabled={isHome || isTorHome || isHistoryPage || !nav.back}
-            onClick={() => currentView()?.goBack()}
+            disabled={isHome || isTorHome || !nav.back}
+            onClick={() => doBrowserNav('back', 'chrome-btn')}
             title={t('chrome.back')}
           >
             <ArrowLeft size={16} strokeWidth={1.75} />
@@ -200,8 +202,8 @@ export function BrowserChrome({
           <button
             type="button"
             className="icon-btn"
-            disabled={isHome || isTorHome || isHistoryPage || !nav.forward}
-            onClick={() => currentView()?.goForward()}
+            disabled={isHome || isTorHome || !nav.forward}
+            onClick={() => doBrowserNav('forward', 'chrome-btn')}
             title={t('chrome.forward')}
           >
             <ArrowRight size={16} strokeWidth={1.75} />
