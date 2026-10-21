@@ -696,6 +696,8 @@
     "loadingApp": "Loading {{label}}…",
     "openInTab": "Open in tab",
     "addApp": "Add current page as app",
+    "addAppDisabled": "Only available on http(s) pages",
+    "collapseRail": "Collapse sidebar",
     "ctxOpen": "Open",
     "ctxUnpin": "Unpin",
     "ctxMute": "Mute",

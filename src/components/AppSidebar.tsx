@@ -250,9 +250,12 @@ type CtxMenu = { x: number; y: number; appId: string } | null;
 export function AppSidebar({
   onHome,
   onOpenTab,
+  onCollapseSidebar,
 }: {
   onHome: () => void;
   onOpenTab: (url: string) => void;
+  /** Auto mode: hide the overlay rail (AppChrome setSidebarAutoOpen(false)). */
+  onCollapseSidebar?: () => void;
 }) {
   const t = useT();
   const settings = useStore((s) => s.settings);
@@ -361,25 +364,39 @@ export function AppSidebar({
     reorderSideApps(arrayMove(ids, oldIndex, newIndex));
   };
 
-  const pinActivePage = () => {
-    const tab = tabs.find((x) => x.id === activeId) ?? tabs[0];
-    const url = tab?.url || '';
-    if (!url || !isBookmarkableUrl(url) || url === HOME_URL || url === TOR_HOME_URL) return;
-    if (sideApps.some((a) => a.url === url)) {
-      const existing = sideApps.find((a) => a.url === url);
+  const activeTab = tabs.find((x) => x.id === activeId) ?? tabs[0];
+  const pinUrl = activeTab?.url || '';
+  const canPin = Boolean(pinUrl && isBookmarkableUrl(pinUrl));
+
+  const pinActivePage = (e?: { preventDefault?: () => void; stopPropagation?: () => void }) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    if (!canPin) return;
+    if (sideApps.some((a) => a.url === pinUrl)) {
+      const existing = sideApps.find((a) => a.url === pinUrl);
       if (existing) openSideApp(existing.id);
       return;
     }
-    const label = (tab?.title && tab.title !== '…' ? tab.title : url).slice(0, 48);
-    addSideApp({ label, url });
+    const label = (activeTab?.title && activeTab.title !== '…' ? activeTab.title : pinUrl).slice(
+      0,
+      48,
+    );
+    addSideApp({ label, url: pinUrl });
+  };
+
+  const toggleSidebarChrome = (e?: { preventDefault?: () => void; stopPropagation?: () => void }) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    if (settings.sidebarMode === 'auto') {
+      closeSidePanel();
+      onCollapseSidebar?.();
+      return;
+    }
+    // Pinned rail: hide entirely (same as Ctrl+B / menu).
+    patchSettings({ showSidebar: false, sidePanelOpen: false, sidebarMode: 'off' });
   };
 
   const ctxApp = ctx ? sideApps.find((a) => a.id === ctx.appId) : null;
-  const canPin = (() => {
-    const tab = tabs.find((x) => x.id === activeId) ?? tabs[0];
-    const url = tab?.url || '';
-    return Boolean(url && isBookmarkableUrl(url) && url !== HOME_URL && url !== TOR_HOME_URL);
-  })();
 
   return (
     <div
@@ -441,10 +458,11 @@ export function AppSidebar({
             <button
               type="button"
               className="side-rail-btn"
-              data-tip={t('sidebar.addApp')}
-              title={t('sidebar.addApp')}
+              data-tip={canPin ? t('sidebar.addApp') : t('sidebar.addAppDisabled')}
+              title={canPin ? t('sidebar.addApp') : t('sidebar.addAppDisabled')}
               disabled={!canPin}
               onClick={pinActivePage}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               <Plus size={18} strokeWidth={1.75} />
             </button>
@@ -452,20 +470,15 @@ export function AppSidebar({
               type="button"
               className="side-rail-btn"
               data-tip={
-                settings.sidebarMode === 'auto' ? t('sidebar.closePanel') : t('sidebar.hideSidebar')
+                settings.sidebarMode === 'auto' ? t('sidebar.collapseRail') : t('sidebar.hideSidebar')
               }
               title={
                 settings.sidebarMode === 'auto'
-                  ? t('sidebar.closePanel')
+                  ? t('sidebar.collapseRail')
                   : t('sidebar.hideSidebarShortcut')
               }
-              onClick={() => {
-                if (settings.sidebarMode === 'auto') {
-                  closeSidePanel();
-                  return;
-                }
-                patchSettings({ showSidebar: false, sidePanelOpen: false, sidebarMode: 'off' });
-              }}
+              onClick={toggleSidebarChrome}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               <PanelLeftClose size={18} strokeWidth={1.75} />
             </button>

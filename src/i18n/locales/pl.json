@@ -696,6 +696,8 @@
     "loadingApp": "Ładowanie {{label}}…",
     "openInTab": "Otwórz w karcie",
     "addApp": "Dodaj bieżącą stronę jako aplikację",
+    "addAppDisabled": "Dostępne tylko na stronach http(s)",
+    "collapseRail": "Zwiń sidebar",
     "ctxOpen": "Otwórz",
     "ctxUnpin": "Odepnij",
     "ctxMute": "Wycisz",

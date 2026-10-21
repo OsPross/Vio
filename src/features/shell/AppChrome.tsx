@@ -412,7 +412,11 @@ export function AppChrome({
         >
           <ErrorBoundary name="sidebar">
             <Suspense fallback={null}>
-              <AppSidebar onHome={() => navigateActive(HOME_URL)} onOpenTab={(url) => newTab(url)} />
+              <AppSidebar
+                onHome={() => navigateActive(HOME_URL)}
+                onOpenTab={(url) => newTab(url)}
+                onCollapseSidebar={() => setSidebarAutoOpen(false)}
+              />
             </Suspense>
           </ErrorBoundary>
         </div>

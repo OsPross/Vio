@@ -323,12 +323,9 @@ button {
   gap: 6px;
   padding: 12px 8px 14px;
   min-width: 56px;
-  overflow: auto;
+  overflow: hidden;
   scrollbar-width: none;
-  -webkit-app-region: drag;
-}
-
-.side-rail * {
+  /* no-drag: Electron drag regions on the rail ate clicks on foot buttons */
   -webkit-app-region: no-drag;
 }
 
@@ -354,10 +351,18 @@ button {
   color: var(--fg-2);
   border: 0;
   background: transparent;
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
+  cursor: pointer;
   transition:
     background 0.18s ease,
     color 0.18s ease,
     transform 0.18s ease;
+}
+
+.side-rail-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .side-rail-btn img {
@@ -407,6 +412,13 @@ button {
   width: 100%;
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.side-rail-apps::-webkit-scrollbar {
+  display: none;
 }
 
 .side-rail-label {
@@ -420,6 +432,11 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
 }
 
 .side-rail-badge {
