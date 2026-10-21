@@ -12,8 +12,6 @@ import {
   LogOut,
   Pause,
   Play,
-  Repeat,
-  Shuffle,
   SkipBack,
   SkipForward,
   Volume2,
@@ -491,17 +489,6 @@ export function SpotifyWidget({
       </div>
 
       <div className="hw-spotify-controls" onPointerDown={(e) => e.stopPropagation()}>
-        {size !== 'S' && (
-          <button
-            type="button"
-            className={`hw-icon-btn ${playback?.shuffle ? 'on' : ''}`}
-            title={t('widgets.ui.spotify.shuffle')}
-            disabled={busy}
-            onClick={() => void run(() => window.shell?.spotifyShuffle?.(!playback?.shuffle))}
-          >
-            <Shuffle size={14} />
-          </button>
-        )}
         <button
           type="button"
           className="hw-icon-btn"
@@ -535,21 +522,6 @@ export function SpotifyWidget({
         >
           <SkipForward size={16} />
         </button>
-        {size !== 'S' && (
-          <button
-            type="button"
-            className={`hw-icon-btn ${playback?.repeat && playback.repeat !== 'off' ? 'on' : ''}`}
-            title={t('widgets.ui.spotify.repeat')}
-            disabled={busy}
-            onClick={() => {
-              const cur = playback?.repeat || 'off';
-              const next = cur === 'off' ? 'context' : cur === 'context' ? 'track' : 'off';
-              void run(() => window.shell?.spotifyRepeat?.(next as 'off' | 'track' | 'context'));
-            }}
-          >
-            <Repeat size={14} />
-          </button>
-        )}
       </div>
 
       {size === 'L' && playback?.device?.supportsVolume !== false && (
