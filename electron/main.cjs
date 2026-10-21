@@ -75,7 +75,10 @@ notes.init();
 // Extensions load after chrome API (setImmediate) — avoid loadExtension-before-ready
 downloads.init();
 
-if (!app.isPackaged && process.env.PERF_BENCH === '1') {
+if (
+  !app.isPackaged &&
+  (process.env.PERF_BENCH === '1' || process.env.PERF_STARTUP === '1')
+) {
   console.log('[boot] require times', JSON.stringify(global.__DJXXR_REQUIRE_TIMES__));
 }
 
@@ -222,6 +225,10 @@ function guestWebContentsById(id) {
 
 app.whenReady().then(async () => {
   global.__DJXXR_PERF_READY_AT = Date.now();
+  const phase = (label) => {
+    if (!global.__DJXXR_PERF_PHASES__) global.__DJXXR_PERF_PHASES__ = {};
+    global.__DJXXR_PERF_PHASES__[label] = Date.now() - global.__DJXXR_PERF_READY_AT;
+  };
 
   // FIRST: purge legacy Partitions/private before any session.fromPartition
   try {
@@ -229,9 +236,11 @@ app.whenReady().then(async () => {
   } catch (err) {
     console.warn('[window-mode] purge boot', err);
   }
+  phase('purgePrivate');
 
   security.init();
   certificate.init();
+  phase('securityInit');
 
   // Backup: patch fanout BEFORE any guest listeners; then wire navigation
   app.on('web-contents-created', (_e, contents) => {
@@ -269,11 +278,31 @@ app.whenReady().then(async () => {
       mainWindow.webContents.send('shell:extensions-install-ask', req);
     }
   });
+  phase('sessionWire');
 
-  // Fast path: deserialize engine cache (ms), attach sessions, show window.
-  // Heavy list refresh / chrome-extensions stay after show; guests gated until engine ready.
+  // Start loading the shell window BEFORE engine.bin deserialize so Chromium can
+  // compile/paint the renderer in parallel with main-thread adblock work.
+  // Guests cannot exist until React mounts (after this sync section finishes),
+  // and attachToSession below still runs before the event loop serves guest traffic.
+  // If cache miss, attachToSession installs boot-gate until engine ready.
+  metrics.init({
+    onPush: (payload) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('shell:metrics', payload);
+      }
+    },
+  });
+  metrics.attachNetwork(ses);
+  phase('beforeCreateWindow');
+
+  createWindow();
+  global.__DJXXR_PERF_WINDOW_CREATED_AT = Date.now();
+  phase('afterCreateWindow');
+
+  // Fast path: deserialize engine cache, attach sessions (must precede first guest request).
   const cacheLoad = adblock.loadCachedEngineSync();
   console.log('[adblock+] cache load', cacheLoad);
+  phase('adblockCache');
   adblock.attachToSession(ses);
   downloads.attachToSession(ses, { tor: false });
   downloads.setPushHandler((list) => {
@@ -294,23 +323,13 @@ app.whenReady().then(async () => {
   adblock.setBlockedListener((n) => {
     mainWindow?.webContents.send('shell:adblock-blocked', n);
   });
+  phase('sessionAttach');
 
-  metrics.init({
-    onPush: (payload) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('shell:metrics', payload);
-      }
-    },
-  });
-  metrics.attachNetwork(ses);
-
-  createWindow();
   try {
     require('./updater.cjs').scheduleStartupCheck();
   } catch (err) {
     console.warn('[updater] schedule', err && err.message);
   }
-  global.__DJXXR_PERF_WINDOW_CREATED_AT = Date.now();
 
   // Deferred: list refresh, chrome-extensions, passwords — then unlock guests if needed
   setImmediate(() => {
@@ -394,6 +413,13 @@ app.whenReady().then(async () => {
       void bench.run(() => mainWindow);
     } catch (err) {
       console.error('[perf-bench] failed to start', err);
+    }
+  } else if (!app.isPackaged && process.env.PERF_STARTUP === '1') {
+    try {
+      const probe = require('../scripts/probe-startup.cjs');
+      void probe.run(() => mainWindow);
+    } catch (err) {
+      console.error('[probe-startup] failed to start', err);
     }
   } else if (!app.isPackaged && process.env.PERF_PROBE_LISTENERS === '1') {
     try {
