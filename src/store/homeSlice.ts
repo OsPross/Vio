@@ -179,7 +179,7 @@ export function layoutHomeChromeCentered(): HomeChromeItem[] {
 
 /**
  * Place a newly added widget under shortcuts, centered, with ≥24px gap.
- * Never lands at 0,0.
+ * Never lands at 0,0. Caps Y so the card stays in a typical viewport (no off-page scroll).
  */
 export function placeNewHomeWidget(
   existing: HomeWidget[],
@@ -189,17 +189,27 @@ export function placeNewHomeWidget(
   const ch = normalizeHomeChrome(chrome);
   const shortcuts = ch.find((c) => c.id === 'shortcuts');
   const scBottom = (shortcuts?.y ?? 44) + Math.ceil(chromeSizeToPx('shortcuts').h / HOME_GRID_PX);
+  const dim = widgetSizeCells(widget.size, widget.type);
+  // ~576px band under chrome — keep full card visible without page scroll
+  const maxY = Math.max(3, 72 - dim.h - 1);
   let y = scBottom + 3; // 24px
   for (const w of existing) {
     const bottom = w.y + widgetSizeCells(w.size, w.type).h;
     if (bottom + 3 > y) y = bottom + 3;
   }
   if (y < 3) y = 3;
+  let x = 0;
+  if (y > maxY) {
+    // Stack would go off-screen — sit on the visible row and offset horizontally
+    y = Math.min(scBottom + 3, maxY);
+    const slot = existing.length % 4;
+    x = (slot - 1.5) * (dim.w + 3);
+  }
   return {
     ...widget,
     anchor: 'center',
-    x: 0,
-    y,
+    x: Math.round(x),
+    y: Math.min(y, maxY),
   };
 }
 

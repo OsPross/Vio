@@ -982,8 +982,7 @@ html.side-panel-resizing .app {
 
   inset: 0;
 
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
 
   background: var(--bg);
 }

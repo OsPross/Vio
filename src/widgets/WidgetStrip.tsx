@@ -53,6 +53,8 @@ import { SearchWidget } from './SearchWidget';
 import { ShortcutsWidget } from './ShortcutsWidget';
 import {
   chromeToPx,
+  clampWidgetPos,
+  clampWidgetsToCanvas,
   nextFlexFallback,
   placeCssVars,
   pxToWidgetPos,
@@ -213,6 +215,10 @@ export function WidgetStrip({
   const rootRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
   const metricsRef = useRef<CanvasMetrics | null>(null);
+  const widgetsRef = useRef(widgets);
+  const onChangeRef = useRef(onChange);
+  widgetsRef.current = widgets;
+  onChangeRef.current = onChange;
   const [metrics, setMetrics] = useState<CanvasMetrics | null>(null);
   const [flexFallback, setFlexFallback] = useState(false);
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
@@ -251,7 +257,7 @@ export function WidgetStrip({
       const headerLeft = (width - headerWidth) / 2;
       const next: CanvasMetrics = {
         width,
-        height: Math.max(height, 320),
+        height,
         headerLeft,
         headerWidth,
         headerBottom: Math.round(height * 0.42),
@@ -259,12 +265,17 @@ export function WidgetStrip({
       metricsRef.current = next;
       setMetrics(next);
       setFlexFallback((prev) => nextFlexFallback(prev, width));
+      // Keep free-place widgets inside the visible canvas on resize / first measure
+      if (!preview && !locked) {
+        const clamped = clampWidgetsToCanvas(widgetsRef.current, next);
+        if (clamped !== widgetsRef.current) onChangeRef.current(clamped);
+      }
     };
     measure();
     const ro = new ResizeObserver(() => measure());
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [preview, locked]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -474,9 +485,10 @@ export function WidgetStrip({
       height = dim.h;
       const resolved = resolveCollision(d.left, d.top, width, height, allOtherBoxes(d.key, m), m);
       const pos = pxToWidgetPos(resolved.left, resolved.top, width, height, m, w.anchor);
+      const next = clampWidgetPos({ ...w, ...pos }, m);
       pushUndo(widgets, chrome);
       markCustom();
-      onChange(widgets.map((x) => (x.id === d.key ? { ...x, ...pos } : x)));
+      onChange(widgets.map((x) => (x.id === d.key ? next : x)));
     }
   }, [widgets, chrome, onChange, pushUndo, allOtherBoxes, markCustom, setChrome]);
 
