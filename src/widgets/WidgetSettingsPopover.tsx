@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { HomeChromeId, HomeClockStyle, HomeWidgetSize, HomeWidgetStyle } from '../store';
 import { Switch } from '../components/ui/Switch';
 import { useT } from '../i18n';
+import { WeatherCityField } from './WeatherCityField';
 
 export type SettingsTarget =
   | {
@@ -11,11 +12,12 @@ export type SettingsTarget =
       type: string;
       size: HomeWidgetSize;
       style?: HomeWidgetStyle;
+      settings?: Record<string, unknown>;
     }
   | { kind: 'chrome'; id: HomeChromeId };
 
-const POP_W = 248;
-const POP_H = 280;
+const POP_W = 268;
+const POP_H = 360;
 
 /** Flip / shift so popover stays in viewport and prefers not covering the widget. */
 export function placeFloatingPopover(
@@ -72,6 +74,7 @@ export function WidgetSettingsPopover({
   onClose,
   onWidgetSize,
   onWidgetStyle,
+  onPatchWidgetSettings,
   onRemoveWidget,
   onClockStyle,
   onToggleSeconds,
@@ -92,6 +95,7 @@ export function WidgetSettingsPopover({
   onWidgetSize?: (size: HomeWidgetSize) => void;
   /** null = inherit global */
   onWidgetStyle?: (style: HomeWidgetStyle | null) => void;
+  onPatchWidgetSettings?: (patch: Record<string, unknown>) => void;
   onRemoveWidget?: () => void;
   onClockStyle?: (style: HomeClockStyle) => void;
   onToggleSeconds?: (v: boolean) => void;
@@ -206,6 +210,15 @@ export function WidgetSettingsPopover({
               ))}
             </div>
           </label>
+          {target.type === 'weather' && onPatchWidgetSettings && (
+            <WeatherCityField
+              location={String(target.settings?.location || '')}
+              onChange={(next) => {
+                onPatchWidgetSettings(next);
+                /* keep popover target in sync for controlled field */
+              }}
+            />
+          )}
           {onRemoveWidget && (
             <button type="button" className="hw-settings-danger" onClick={onRemoveWidget}>
               {t('widgets.ui.removeWidget')}

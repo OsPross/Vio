@@ -858,26 +858,25 @@
   color: var(--fg);
 }
 
-/* Widget list */
-.pz-widget-list {
+/* Widget tiles (Personalize → Widgets) */
+.pz-widget-tiles {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
+}
+.pz-widget-tile {
+  display: grid;
+  grid-template-columns: 24px 72px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 4px;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  padding: 4px;
-  background: color-mix(in srgb, var(--fg) 3%, transparent);
+  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 70%, transparent);
 }
-.pz-widget-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 8px 8px 4px;
-  border-radius: 8px;
-  background: transparent;
-}
-.pz-widget-row:hover {
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
+.pz-widget-tile:hover {
+  border-color: color-mix(in srgb, var(--line) 90%, transparent);
+  background: color-mix(in srgb, var(--fg) 4%, var(--bg-elev, var(--elev)));
 }
 .pz-widget-grip {
   display: grid;
@@ -891,16 +890,197 @@
   cursor: grab;
   flex-shrink: 0;
 }
-.pz-widget-ico {
-  color: var(--fg-2);
-  flex-shrink: 0;
+.pz-widget-tile-preview {
+  width: 72px;
+  height: 52px;
+  border-radius: 8px;
+  overflow: hidden;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
 }
-.pz-widget-name {
-  flex: 1;
+.pz-widget-tile-preview .hw-gallery-preview-wrap {
+  height: 100%;
+}
+.pz-widget-tile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
+}
+.pz-widget-tile-meta strong {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pz-widget-tile-meta span {
+  font-size: 11px;
+  color: var(--fg-3);
+}
+.pz-widget-more-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-3);
+  cursor: pointer;
+}
+.pz-widget-more-btn:hover,
+.pz-widget-more-btn[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+}
+.pz-widget-menu {
+  position: fixed;
+  z-index: 260;
+  min-width: 196px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 96%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 32px color-mix(in srgb, #000 28%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pz-widget-menu-label {
+  padding: 4px 8px 2px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.pz-widget-menu-sizes {
+  display: flex;
+  gap: 4px;
+  padding: 2px 6px 8px;
+}
+.pz-widget-menu-sizes button {
+  flex: 1;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  background: transparent;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pz-widget-menu-sizes button.on {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent);
+}
+.pz-widget-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.pz-widget-menu-item:hover {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.pz-widget-menu-item.danger {
+  color: color-mix(in srgb, var(--danger, #e85d5d) 90%, var(--fg));
+}
+.pz-widget-settings-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 270;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, #000 35%, transparent);
+  padding: 16px;
+}
+.pz-widget-settings-card {
+  width: min(340px, 100%);
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  background: var(--bg-elev, var(--elev));
+  box-shadow: 0 16px 40px color-mix(in srgb, #000 30%, transparent);
+  overflow: hidden;
+}
+.pz-widget-settings-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.pz-widget-settings-body {
+  padding: 12px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pz-widget-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--fg-2);
+}
+.pz-widget-settings-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-3);
+  line-height: 1.4;
+}
+.pz-widgets-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pz-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: 0;
+  background: color-mix(in srgb, var(--accent) 88%, #000);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.pz-primary-btn:hover {
+  filter: brightness(1.05);
+}
+.pz-rec-desc {
+  font-size: 11px;
+  color: var(--fg-3);
+  text-align: center;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Custom home background — separate layers under content (never force children to position:relative) */
@@ -1074,11 +1254,6 @@
   font-size: 12px;
   font-weight: 550;
   cursor: pointer;
-}
-.pz-widget-more {
-  color: var(--fg-3);
-  display: grid;
-  place-items: center;
 }
 
 .home-layout-minimal .home-shell-ios,
