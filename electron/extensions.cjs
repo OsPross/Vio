@@ -126,6 +126,114 @@ function saveStore() {
   }
 }
 
+/**
+ * Resolve chrome.i18n message placeholders (__MSG_foo__) from _locales.
+ * @param {string} dir
+ * @param {string} value
+ * @returns {string}
+ */
+function resolveManifestString(dir, value) {
+  const s = String(value || '');
+  const m = /^__MSG_([A-Za-z0-9_]+)__$/.exec(s);
+  if (!m) return s;
+  const key = m[1];
+  let locale = 'en';
+  try {
+    const mf = JSON.parse(fs.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
+    if (typeof mf.default_locale === 'string' && mf.default_locale) locale = mf.default_locale;
+  } catch {
+    /* */
+  }
+  for (const loc of [locale, 'en', 'en_US', 'pl']) {
+    try {
+      const messages = JSON.parse(
+        fs.readFileSync(path.join(dir, '_locales', loc, 'messages.json'), 'utf8'),
+      );
+      const entry = messages[key] || messages[key.toLowerCase()];
+      if (entry && typeof entry.message === 'string' && entry.message) return entry.message;
+    } catch {
+      /* */
+    }
+  }
+  return s;
+}
+
+/**
+ * Pick best icon path relative to extension root (for toolbar / about:extensions).
+ * @param {string} dir
+ * @param {object} raw
+ * @returns {string|null}
+ */
+function pickIconRel(dir, raw) {
+  const candidates = [];
+  const collect = (icons) => {
+    if (!icons || typeof icons !== 'object') return;
+    for (const [size, p] of Object.entries(icons)) {
+      const n = Number(size) || 0;
+      if (typeof p === 'string' && p) candidates.push({ n, p: p.replace(/^\//, '') });
+    }
+  };
+  collect(raw.icons);
+  const action = raw.action || raw.browser_action;
+  if (action && typeof action === 'object') collect(action.default_icon);
+  candidates.sort((a, b) => b.n - a.n);
+  for (const c of candidates) {
+    if (fs.existsSync(path.join(dir, c.p))) return c.p;
+  }
+  // Common fallbacks
+  for (const p of ['icon.png', 'icons/icon128.png', 'icons/icon48.png', 'img/icon128.png']) {
+    if (fs.existsSync(path.join(dir, p))) return p;
+  }
+  return null;
+}
+
+/**
+ * APIs Electron / electron-chrome-extensions often lack or only partially support.
+ * Used for honest "may not work fully" UI — not a hard block.
+ */
+const LIMITED_PERMS = new Set([
+  'declarativenetrequest',
+  'declarativenetrequestwithhostaccess',
+  'declarativenetrequestfeedback',
+  'webrequestblocking',
+  'debugger',
+  'proxy',
+  'nativemessaging',
+  'identity',
+  'enterprise.deviceattributes',
+  'offscreen',
+  'sidepanel',
+  'userscripts',
+  'tabgroups',
+  'devtools',
+]);
+
+function assessCompatibility(rec, raw) {
+  const warnings = [];
+  const perms = (rec.permissions || []).map((p) => String(p).toLowerCase());
+  const limited = perms.filter((p) => {
+    const base = p.split('.')[0];
+    return LIMITED_PERMS.has(p) || LIMITED_PERMS.has(base);
+  });
+  if (limited.length) {
+    warnings.push(
+      `Niedostępne lub ograniczone w Electron: ${limited.slice(0, 4).join(', ')}${limited.length > 4 ? '…' : ''}`,
+    );
+  }
+  if (looksLikeAdblocker(rec) && wantsChromeWebRequest(rec)) {
+    warnings.push('Adblocker: wstrzymuje sieciowy Ghostery (konflikt webRequest/DNR).');
+  }
+  // MV3 content/scripting extensions often work; only flag SW when other gaps exist
+  if (raw?.background?.service_worker && limited.length) {
+    warnings.push('Service worker MV3 — część chrome.* może być niedostępna.');
+  }
+  const uniq = [...new Set(warnings)];
+  return {
+    limitedSupport: uniq.length > 0,
+    warnings: uniq.slice(0, 3),
+  };
+}
+
 function readManifest(dir) {
   const mf = path.join(dir, 'manifest.json');
   const raw = JSON.parse(fs.readFileSync(mf, 'utf8'));
@@ -135,13 +243,39 @@ function readManifest(dir) {
     ...(Array.isArray(raw.optional_permissions) ? raw.optional_permissions : []),
     ...(Array.isArray(raw.optional_host_permissions) ? raw.optional_host_permissions : []),
   ].map(String);
+  const nameRaw = String(raw.name || path.basename(dir));
+  const iconRel = pickIconRel(dir, raw);
   return {
-    name: String(raw.name || path.basename(dir)),
+    name: resolveManifestString(dir, nameRaw),
     version: String(raw.version || '0'),
     manifestVersion: Number(raw.manifest_version) || 2,
     permissions: [...new Set(perms)],
     key: typeof raw.key === 'string' ? raw.key : null,
+    iconRel,
+    raw,
   };
+}
+
+function iconDataUrl(dir, iconRel) {
+  if (!dir || !iconRel) return null;
+  try {
+    const abs = path.join(dir, iconRel);
+    if (!fs.existsSync(abs)) return null;
+    const buf = fs.readFileSync(abs);
+    if (buf.length > 512 * 1024) return null;
+    const ext = path.extname(abs).toLowerCase();
+    const mime =
+      ext === '.svg'
+        ? 'image/svg+xml'
+        : ext === '.jpg' || ext === '.jpeg'
+          ? 'image/jpeg'
+          : ext === '.webp'
+            ? 'image/webp'
+            : 'image/png';
+    return `data:${mime};base64,${buf.toString('base64')}`;
+  } catch {
+    return null;
+  }
 }
 
 function mainSession() {
@@ -408,12 +542,38 @@ async function init() {
 }
 
 function list() {
-  return records.map((r) => ({
-    ...r,
-    loaded: loadedMain.has(r.id),
-    electronId: loadedMain.get(r.id)?.id || r.chromeId || null,
-    usesWebRequest: wantsChromeWebRequest(r),
-  }));
+  return records.map((r) => {
+    let icon = null;
+    let limitedSupport = false;
+    let warnings = [];
+    let displayName = r.name;
+    try {
+      if (fs.existsSync(r.path)) {
+        const meta = readManifest(r.path);
+        icon = iconDataUrl(r.path, meta.iconRel || r.iconRel);
+        const assessed = assessCompatibility(r, meta.raw);
+        limitedSupport = assessed.limitedSupport;
+        warnings = assessed.warnings;
+        if (meta.name && !meta.name.startsWith('__MSG_')) displayName = meta.name;
+      }
+    } catch {
+      /* */
+    }
+    return {
+      ...r,
+      name: displayName,
+      loaded: loadedMain.has(r.id),
+      electronId: loadedMain.get(r.id)?.id || r.chromeId || null,
+      usesWebRequest: wantsChromeWebRequest(r),
+      icon,
+      limitedSupport,
+      warnings,
+      canUpdate: Boolean(
+        (r.chromeId && isChromeExtensionId(r.chromeId)) ||
+          (isChromeExtensionId(r.id) && String(r.source || '').startsWith('cws:')),
+      ),
+    };
+  });
 }
 
 function findManifestDir(root) {
@@ -497,10 +657,11 @@ async function installFromUnpacked(srcDir, sourceLabel, identity = {}) {
       path: dest,
       enabled: true,
       allowPrivate: false,
-      pinned: false,
+      pinned: true,
       permissions: pinnedMeta.permissions,
       manifestVersion: pinnedMeta.manifestVersion,
       source: sourceLabel || 'folder',
+      iconRel: pinnedMeta.iconRel || null,
     };
     // Replace same Chrome id or same name+version
     records = records.filter(
@@ -571,25 +732,62 @@ function parseChromeStoreId(input) {
 }
 
 function chromeProdVersion() {
-  const v = String(process.versions.chrome || process.versions.electron || '131.0.0.0');
+  try {
+    const { chromeFull } = require('./ua-chrome.cjs');
+    if (typeof chromeFull === 'function') {
+      const v = String(chromeFull() || '');
+      if (/^\d+\.\d+\.\d+\.\d+/.test(v)) return v.split(' ')[0];
+    }
+  } catch {
+    /* */
+  }
+  const v = String(process.versions.chrome || process.versions.electron || '134.0.0.0');
   // Google update endpoint expects Chrome-like major.minor.build.patch
   if (/^\d+\.\d+\.\d+\.\d+/.test(v)) return v.split(' ')[0];
   if (/^\d+\.\d+\.\d+/.test(v)) return `${v}.0`;
-  return '131.0.0.0';
+  return '134.0.0.0';
 }
 
+function chromeDownloadUa(prod) {
+  try {
+    const { buildChromeUa } = require('./ua-chrome.cjs');
+    if (typeof buildChromeUa === 'function') return buildChromeUa();
+  } catch {
+    /* */
+  }
+  return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${prod} Safari/537.36`;
+}
+
+/**
+ * Download a signed CRX from Google's update2 endpoint.
+ * Requires Chrome-like UA + acceptformat=crx2,crx3; wrong/missing IDs return HTTP 404
+ * with body "error-unknownApplication".
+ */
 async function downloadCrx(extensionId) {
+  const id = String(extensionId || '').toLowerCase();
+  if (!isChromeExtensionId(id)) throw new Error('Nieprawidłowe ID rozszerzenia');
   const prod = chromeProdVersion();
+  const ua = chromeDownloadUa(prod);
   const urls = [
-    `https://clients2.google.com/service/update2/crx?response=redirect&prod=chromiumcrx&prodchannel=&prodversion=${encodeURIComponent(prod)}&acceptformat=crx3&x=id%3D${extensionId}%26installsource%3Dondemand%26uc`,
-    `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${encodeURIComponent(prod)}&acceptformat=crx3&x=id%3D${extensionId}%26installsource%3Dondemand%26uc`,
+    `https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&prodversion=${encodeURIComponent(prod)}&x=id%3D${id}%26installsource%3Dondemand%26uc`,
+    `https://clients2.google.com/service/update2/crx?response=redirect&os=win&arch=x64&os_arch=x86_64&nacl_arch=x86-64&prod=chromiumcrx&prodchannel=&prodversion=${encodeURIComponent(prod)}&lang=en-US&acceptformat=crx2,crx3&x=id%3D${id}%26installsource%3Dondemand%26uc`,
   ];
   let lastErr = null;
   for (const url of urls) {
     try {
-      const res = await net.fetch(url, { redirect: 'follow' });
+      const res = await net.fetch(url, {
+        redirect: 'follow',
+        headers: {
+          'User-Agent': ua,
+          Accept: 'application/x-chrome-extension,*/*',
+        },
+      });
       if (!res.ok) {
-        lastErr = new Error(`Pobieranie CRX: HTTP ${res.status}`);
+        lastErr = new Error(
+          res.status === 404
+            ? `Rozszerzenie niedostępne w sklepie (HTTP 404) — sprawdź ID`
+            : `Pobieranie CRX: HTTP ${res.status}`,
+        );
         continue;
       }
       const ab = await res.arrayBuffer();
@@ -598,7 +796,12 @@ async function downloadCrx(extensionId) {
         lastErr = new Error('Pusty CRX');
         continue;
       }
-      const out = path.join(stagingRoot(), `${extensionId}.crx`);
+      const magic = buf.toString('utf8', 0, 4);
+      if (magic !== 'Cr24') {
+        lastErr = new Error(`Odpowiedź nie jest plikiem CRX (magic=${JSON.stringify(magic)})`);
+        continue;
+      }
+      const out = path.join(stagingRoot(), `${id}.crx`);
       fs.mkdirSync(stagingRoot(), { recursive: true });
       fs.writeFileSync(out, buf);
       return out;
@@ -632,6 +835,39 @@ async function installFromStore(input) {
   } catch (err) {
     return { ok: false, error: err?.message || String(err) };
   }
+}
+
+/** Re-download from CWS when we know the Chrome Web Store id. */
+async function updateFromStore(id) {
+  const rec = records.find((r) => r.id === id);
+  if (!rec) return { ok: false, error: 'not_found' };
+  const storeId =
+    (rec.chromeId && isChromeExtensionId(rec.chromeId) && rec.chromeId) ||
+    (isChromeExtensionId(rec.id) && rec.id) ||
+    (typeof rec.source === 'string' && /^cws:([a-p]{32})$/i.exec(rec.source)?.[1]) ||
+    null;
+  if (!storeId) {
+    return { ok: false, error: 'Brak ID Chrome Web Store — zaktualizuj ręcznie (folder / CRX)' };
+  }
+  const wasPinned = rec.pinned;
+  const wasEnabled = rec.enabled;
+  const allowPrivate = rec.allowPrivate;
+  const result = await installFromStore(storeId);
+  if (result.ok) {
+    const next = records.find((r) => r.id === storeId || r.chromeId === storeId || r.id === result.extension?.id);
+    if (next) {
+      next.pinned = wasPinned;
+      next.allowPrivate = allowPrivate;
+      if (!wasEnabled) {
+        next.enabled = true;
+        saveStore();
+        await setEnabled(next.id, false);
+      } else {
+        saveStore();
+      }
+    }
+  }
+  return result;
 }
 
 async function pickAndInstall(parent) {
@@ -770,6 +1006,10 @@ function register(ipcMain, wrapApp, wrapAppOrGuest) {
   );
   ipcMain.handle('shell:extensions-set-pinned', wrapApp((_e, id, pinned) => setPinned(String(id || ''), pinned)));
   ipcMain.handle('shell:extensions-remove', wrapApp((_e, id) => remove(String(id || ''))));
+  ipcMain.handle(
+    'shell:extensions-update',
+    wrapApp((_e, id) => updateFromStore(String(id || ''))),
+  );
   ipcMain.handle(
     'shell:extensions-select-tab',
     wrapApp((_e, webContentsId) => {
@@ -939,6 +1179,7 @@ module.exports = {
   installFromFolder,
   installFromArchive,
   installFromStore,
+  updateFromStore,
   pickAndInstall,
   setEnabled,
   setAllowPrivate,
