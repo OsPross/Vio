@@ -1995,20 +1995,47 @@ html[data-theme='paper'] .hw-notes-ctx {
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--bg) 35%, transparent);
   color: var(--fg);
-  cursor: pointer;
   position: relative;
   min-height: 0;
 }
-.hw-gallery-card:hover:not(:disabled):not(.is-added) {
+.hw-gallery-card:hover:not(.is-added) {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
 }
 .hw-gallery-card.is-added {
   opacity: 0.55;
-  cursor: default;
 }
-.hw-gallery-card:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.hw-gallery-card-preview {
+  pointer-events: none;
+}
+.hw-gallery-card-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: inherit;
+}
+.hw-gallery-add {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  margin-left: auto;
+  border-radius: 7px;
+  border: 0;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hw-gallery-add:hover {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
 }
 .hw-gallery-preview-wrap {
   position: relative;
@@ -2053,6 +2080,8 @@ html[data-theme='paper'] .hw-notes-ctx {
   overflow: hidden;
 }
 .hw-gallery-meta {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2163,12 +2192,170 @@ html[data-theme='paper'] .hw-notes-ctx {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
+/* Edit-mode outline + gentle jiggle (on frame, not place coords) */
+.home.is-editing-widgets .hw-card.editable > .hw-frame.is-edit {
+  outline: 1.5px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  outline-offset: 3px;
+}
+.home.is-editing-widgets .hw-card.editable:not(.is-dragging) > .hw-frame.is-edit {
+  animation: hw-edit-jiggle 0.55s ease-in-out infinite alternate;
+}
+.home.is-editing-widgets .hw-card.editable.is-dragging > .hw-frame.is-edit,
+.home.is-editing-widgets .hw-canvas.is-reduced .hw-card.editable > .hw-frame.is-edit,
+[data-reduce-motion='on'] .home.is-editing-widgets .hw-card.editable > .hw-frame.is-edit {
+  animation: none;
+}
+@keyframes hw-edit-jiggle {
+  from {
+    transform: rotate(-0.35deg);
+  }
+  to {
+    transform: rotate(0.35deg);
+  }
+}
+
+.hw-size-handle {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 3px;
+  padding: 0;
+  cursor: nwse-resize;
+  background:
+    linear-gradient(
+      135deg,
+      transparent 46%,
+      color-mix(in srgb, var(--fg) 45%, transparent) 46%,
+      color-mix(in srgb, var(--fg) 45%, transparent) 54%,
+      transparent 54%
+    ),
+    linear-gradient(
+      135deg,
+      transparent 62%,
+      color-mix(in srgb, var(--fg) 45%, transparent) 62%,
+      color-mix(in srgb, var(--fg) 45%, transparent) 70%,
+      transparent 70%
+    );
+  opacity: 0.7;
+  z-index: 3;
+}
+.hw-size-handle:hover {
+  opacity: 1;
+}
+.hw-frame {
+  position: relative;
+}
+
+.hw-city-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hw-city-label {
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--fg-2);
+}
+.hw-city-input {
+  width: 100%;
+}
+.hw-city-hint {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--fg-3);
+  line-height: 1.35;
+}
+.hw-city-suggest {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  background: var(--bg-elev, var(--elev));
+  box-shadow: 0 10px 28px color-mix(in srgb, #000 24%, transparent);
+  max-height: 180px;
+  overflow: auto;
+}
+.hw-city-suggest button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hw-city-suggest button:hover {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.hw-city-suggest strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.hw-city-suggest span {
+  font-size: 11px;
+  color: var(--fg-3);
+}
+
+.hw-empty-cta {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  translate: -50% -50%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--line) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 72%, transparent);
+  backdrop-filter: blur(10px);
+  text-align: center;
+  max-width: min(360px, 90vw);
+}
+.hw-empty-cta p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fg-2);
+  line-height: 1.4;
+}
+.hw-empty-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: 0;
+  background: color-mix(in srgb, var(--accent) 88%, #000);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hw-item {
     transition: none !important;
   }
   .hw-skeleton {
     animation: none;
+  }
+  .home.is-editing-widgets .hw-card.editable > .hw-frame.is-edit {
+    animation: none !important;
   }
 }
 
