@@ -342,7 +342,7 @@ export function normalizeHomeWidgets(raw: unknown): HomeWidget[] {
   const placed = parsed.filter((w) => !looksUnplaced(w));
   const orphans = parsed.filter(looksUnplaced);
   if (!orphans.length) return parsed;
-  let acc = [...placed];
+  const acc = [...placed];
   const chrome = defaultHomeChrome();
   for (const w of orphans) {
     acc.push(placeNewHomeWidget(acc, chrome, w));

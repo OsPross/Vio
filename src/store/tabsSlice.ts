@@ -59,7 +59,7 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
           pinned: false,
           muted: false,
         };
-        let tabs = [...st.tabs];
+        const tabs = [...st.tabs];
         if (besideId) {
           const idx = tabs.findIndex((t) => t.id === besideId);
           if (idx >= 0) tabs.splice(idx + 1, 0, tab);

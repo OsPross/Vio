@@ -55,7 +55,7 @@ function placeUnderOrAbove(anchor: DOMRect, popW: number, popH: number) {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const pad = 8;
-  let left = Math.min(
+  const left = Math.min(
     Math.max(pad, anchor.left + anchor.width / 2 - popW / 2),
     Math.max(pad, vw - popW - pad),
   );

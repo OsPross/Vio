@@ -275,7 +275,7 @@ export function OmniboxSuggest({
   const allGroups = useMemo(() => {
     const g = [...groups];
     if (remote.length) {
-      let n = g.reduce((a, x) => a + x.items.length, 0);
+      const n = g.reduce((a, x) => a + x.items.length, 0);
       const room = Math.max(0, MAX_SUGGEST - n);
       if (room > 0) g.push({ label: 'Wyszukiwarka', items: remote.slice(0, room) });
     }

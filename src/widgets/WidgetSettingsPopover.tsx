@@ -56,7 +56,7 @@ export function placeFloatingPopover(
   // Fallback: clamp beside, even if partial overlap is inevitable on tiny screens
   let left = anchor.right + PAD;
   if (left + popW > vw - PAD) left = Math.max(PAD, anchor.left - popW - PAD);
-  let top = Math.min(Math.max(PAD, anchor.top), vh - popH - PAD);
+  const top = Math.min(Math.max(PAD, anchor.top), vh - popH - PAD);
   return { left, top };
 }
 
