@@ -229,9 +229,9 @@ export function WidgetStrip({
   const rafRef = useRef(0);
   const guidesRef = useRef<GuideLine[]>([]);
 
-  const setChrome = (next: HomeChromeItem[]) => {
+  const setChrome = useCallback((next: HomeChromeItem[]) => {
     patchSettings({ homeChrome: normalizeHomeChrome(next) });
-  };
+  }, [patchSettings]);
 
   const markCustom = useCallback(() => {
     if (settings.homeLayoutPreset !== 'custom') {
@@ -296,7 +296,7 @@ export function WidgetStrip({
       setChrome(prev.chrome);
       return s.slice(0, -1);
     });
-  }, [onChange, patchSettings]);
+  }, [onChange, setChrome]);
 
   useEffect(() => {
     if (!editMode || locked) return;
@@ -341,6 +341,7 @@ export function WidgetStrip({
     undo,
     selectedKey,
     markCustom,
+    setChrome,
   ]);
 
   const patchWidgetSettings = useCallback(
@@ -477,7 +478,7 @@ export function WidgetStrip({
       markCustom();
       onChange(widgets.map((x) => (x.id === d.key ? { ...x, ...pos } : x)));
     }
-  }, [widgets, chrome, onChange, pushUndo, allOtherBoxes, markCustom]);
+  }, [widgets, chrome, onChange, pushUndo, allOtherBoxes, markCustom, setChrome]);
 
   const onCardPointerDown = useCallback(
     (e: ReactPointerEvent, key: string, box: PlaceBox) => {

@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Archive,
@@ -311,10 +318,13 @@ export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: But
   const [uncontrolled, setUncontrolled] = useState(false);
   const controlled = openProp !== undefined;
   const open = controlled ? Boolean(openProp) : uncontrolled;
-  const setOpen = (next: boolean) => {
-    if (!controlled) setUncontrolled(next);
-    onOpenChange?.(next);
-  };
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (!controlled) setUncontrolled(next);
+      onOpenChange?.(next);
+    },
+    [controlled, onOpenChange],
+  );
   const [rows, setRows] = useState<DownloadRow[]>([]);
   const wrapRef = useRef<HTMLDivElement>(null);
   const settings = useStore((s) => s.settings);
@@ -345,7 +355,7 @@ export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: But
       document.removeEventListener('mousedown', close);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, setOpen]);
 
   const active = rows.filter((r) => r.state === 'progressing' || r.state === 'paused');
   const recent = rows.slice(0, 5);

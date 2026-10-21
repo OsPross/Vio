@@ -390,6 +390,7 @@ export function useShortcuts({
       bumpZoom,
       closeFind,
       closeTab,
+      currentView,
       doBrowserNav,
       findOpen,
       htmlFullscreen,

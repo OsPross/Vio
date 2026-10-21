@@ -43,7 +43,7 @@ export function usePageActions({
     } catch {
       void currentView()?.executeJavaScript?.('window.print()');
     }
-  }, [guestWc]);
+  }, [guestWc, currentView]);
 
   useEffect(() => {
     const onSave = () => saveActivePage();

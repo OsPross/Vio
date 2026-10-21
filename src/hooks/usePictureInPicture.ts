@@ -75,7 +75,7 @@ export function usePictureInPicture({
         )
         .catch(() => {});
     },
-    [guestWc],
+    [guestWc, currentView],
   );
 
   const togglePictureInPicture = useCallback(() => {
@@ -90,7 +90,7 @@ export function usePictureInPicture({
     const media = tabMediaRef.current[prevId];
     if (!media?.playing) return;
     runPictureInPictureOnTab(prevId, { enterOnly: true });
-  }, [activeId, autoPipOnTabSwitch, runPictureInPictureOnTab]);
+  }, [activeId, autoPipOnTabSwitch, runPictureInPictureOnTab, tabMediaRef]);
 
   return { togglePictureInPicture };
 }

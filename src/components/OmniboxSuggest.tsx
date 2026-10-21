@@ -302,20 +302,19 @@ export function OmniboxSuggest({
     caretEnd: caret.end,
   });
 
-  const completionItem: SuggestItem | null =
-    ghostSuffix && effectiveFill
-      ? {
-          kind: 'completion',
-          title: value + ghostSuffix,
-          subtitle: 'Enter',
-          fill: normalizeGhostFill(effectiveFill),
-          url: `https://${normalizeGhostFill(effectiveFill)}`,
-        }
-      : null;
-
   const listRows = useMemo(() => {
     const rows: { item: SuggestItem; selIdx: number }[] = [];
     let sel = 0;
+    const completionItem: SuggestItem | null =
+      ghostSuffix && effectiveFill
+        ? {
+            kind: 'completion',
+            title: value + ghostSuffix,
+            subtitle: 'Enter',
+            fill: normalizeGhostFill(effectiveFill),
+            url: `https://${normalizeGhostFill(effectiveFill)}`,
+          }
+        : null;
     if (completionItem && ghostSuffix) {
       rows.push({ item: completionItem, selIdx: sel++ });
     }
@@ -324,7 +323,7 @@ export function OmniboxSuggest({
       rows.push({ item, selIdx: sel++ });
     }
     return rows;
-  }, [flat, completionItem, ghostSuffix]);
+  }, [flat, ghostSuffix, effectiveFill, value]);
 
   const selectable = listRows;
 

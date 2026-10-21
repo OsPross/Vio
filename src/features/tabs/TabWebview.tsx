@@ -229,7 +229,7 @@ function TabWebviewInner({
         /* */
       }
     },
-    [tab.id],
+    [],
   );
   const onNavRef = useRef(onNav);
   const onSaveOfferRef = useRef(onSaveOffer);

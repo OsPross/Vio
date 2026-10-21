@@ -21,8 +21,8 @@ export function CalendarWidget({ size, preview }: { size: 'S' | 'M' | 'L'; previ
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
 
-  const today = new Date();
   const cells = useMemo(() => {
+    const today = new Date();
     const year = cursor.getFullYear();
     const month = cursor.getMonth();
     const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
@@ -37,7 +37,7 @@ export function CalendarWidget({ size, preview }: { size: 'S' | 'M' | 'L'; previ
       });
     }
     return out;
-  }, [cursor, today]);
+  }, [cursor]);
 
   const title = cursor.toLocaleDateString(dateLocale, { month: 'long', year: 'numeric' });
   const compact = size === 'S';

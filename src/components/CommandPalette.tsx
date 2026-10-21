@@ -183,7 +183,8 @@ export function CommandPalette({ open, onClose, onNavigate, onSwitchTab, onRunBa
         deduped.push(r);
       });
     return deduped.slice(0, 12);
-  }, [body, mode, tor, tabs, hist, bangs, ctx, prefix, q, settings.uiLocale]);
+    // settings.uiLocale: getCommandTitle() reads i18n; keep so palette titles refresh on language switch
+  }, [body, mode, tor, tabs, hist, bangs, ctx, prefix, settings.uiLocale]);
 
   useEffect(() => setIdx(0), [q]);
 
