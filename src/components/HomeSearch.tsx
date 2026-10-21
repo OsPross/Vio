@@ -5,8 +5,10 @@ import { homeBgCssUrl } from '../lib/homeBg';
 import { WidgetStrip } from '../widgets/WidgetStrip';
 import { AddWidgetGallery } from '../widgets/AddWidgetGallery';
 import { PersonalizeSheet } from './personalize/PersonalizeSheet';
+import { useT } from '../i18n';
 
 export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => void }) {
+  const t = useT();
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
 
@@ -97,7 +99,8 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
           setCustomize(true);
           setEditMode(false);
         }}
-        title="Personalizuj stronę startową"
+        title={t('home.customize')}
+        aria-label={t('home.customize')}
         aria-expanded={customize}
       >
         <LayoutGrid size={15} strokeWidth={1.75} />
@@ -108,10 +111,21 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
           type="button"
           className="home-fab home-fab-add"
           onClick={() => setGalleryOpen(true)}
-          title="Dodaj widżet"
+          title={t('home.addWidget')}
+          aria-label={t('home.addWidget')}
         >
           <Plus size={15} strokeWidth={1.75} />
         </button>
+      )}
+
+      {editMode && !settings.homeLayoutLock && widgets.length === 0 && (
+        <div className="hw-empty-cta">
+          <p>{t('home.personalize.widgetsEmpty')}</p>
+          <button type="button" className="hw-empty-cta-btn" onClick={() => setGalleryOpen(true)}>
+            <Plus size={15} strokeWidth={2} />
+            {t('home.personalize.addFirstWidget')}
+          </button>
+        </div>
       )}
 
       <PersonalizeSheet

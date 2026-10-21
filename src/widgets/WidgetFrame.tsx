@@ -17,6 +17,7 @@ export function WidgetFrame({
   locked,
   onRemove,
   onOpenSettings,
+  onCycleSize,
   children,
   className,
   bare,
@@ -27,6 +28,8 @@ export function WidgetFrame({
   locked?: boolean;
   onRemove?: () => void;
   onOpenSettings?: (anchor: HTMLElement) => void;
+  /** Corner control: cycle S → M → L while editing */
+  onCycleSize?: () => void;
   children: ReactNode;
   className?: string;
   /** No card chrome — only for clock/search/shortcuts outside edit outlines */
@@ -69,6 +72,7 @@ export function WidgetFrame({
                   type="button"
                   className="hw-icon-btn"
                   title={t('common.remove')}
+                  aria-label={t('common.remove')}
                   onClick={onRemove}
                 >
                   <X size={13} />
@@ -78,6 +82,19 @@ export function WidgetFrame({
           )}
         </header>
         <div className="hw-frame-body">{children}</div>
+        {showEditChrome && onCycleSize && (
+          <button
+            type="button"
+            className="hw-size-handle"
+            title={t('widgets.ui.cycleSize')}
+            aria-label={t('widgets.ui.cycleSize')}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCycleSize();
+            }}
+          />
+        )}
       </div>
     );
   }

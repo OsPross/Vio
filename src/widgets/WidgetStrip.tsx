@@ -677,9 +677,10 @@ export function WidgetStrip({
           const px = w.type === 'spotify' ? cells.w * HOME_GRID_PX : sizePx(w.size);
           const h = cells.h * HOME_GRID_PX;
           const resolvedStyle = (w.style || widgetStyle) as HomeWidgetStyle;
-          // Hide weather on home until a city is set (configure in Personalize → Widgets)
+          // Hide weather outside edit until a city is set (configure via … / edit mode)
           if (
             !preview &&
+            !editMode &&
             w.type === 'weather' &&
             !String(w.settings?.location || '').trim()
           ) {
@@ -729,10 +730,17 @@ export function WidgetStrip({
                       type: w.type,
                       size: w.size,
                       style: w.style,
+                      settings: w.settings,
                     },
                     el,
                   )
                 }
+                onCycleSize={() => {
+                  const order: HomeWidgetSize[] = ['S', 'M', 'L'];
+                  const next = order[(order.indexOf(w.size) + 1) % order.length]!;
+                  pushUndo(widgets, chrome);
+                  onChange(widgets.map((x) => (x.id === w.id ? { ...x, size: next } : x)));
+                }}
               >
                 <WidgetBody
                   widget={w}
@@ -779,6 +787,14 @@ export function WidgetStrip({
             }),
           );
           setSettingsTarget({ ...settingsTarget, style: style ?? undefined });
+        }}
+        onPatchWidgetSettings={(patch) => {
+          if (settingsTarget?.kind !== 'widget') return;
+          patchWidgetSettings(settingsTarget.id, patch);
+          setSettingsTarget({
+            ...settingsTarget,
+            settings: { ...(settingsTarget.settings || {}), ...patch },
+          });
         }}
         onRemoveWidget={() => {
           if (settingsTarget?.kind !== 'widget') return;
