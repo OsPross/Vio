@@ -29,6 +29,7 @@ import { WIDGET_REGISTRY } from '../../../widgets/registry';
 import { AddWidgetGallery } from '../../../widgets/AddWidgetGallery';
 import { WidgetPreview } from '../../../widgets/WidgetPreview';
 import { WeatherCityField } from '../../../widgets/WeatherCityField';
+import { WIDGET_ICONS } from '../../../widgets/WidgetStrip';
 import { useT } from '../../../i18n';
 
 const RECOMMENDED: HomeWidgetType[] = ['weather', 'notes', 'todo', 'calendar'];
@@ -154,6 +155,7 @@ function SortableWidgetTile({
     id: widget.id,
   });
   const meta = WIDGET_REGISTRY[widget.type];
+  const Icon = WIDGET_ICONS[widget.type];
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<DOMRect | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -178,13 +180,13 @@ function SortableWidgetTile({
       >
         <GripVertical size={14} />
       </button>
-      <div className="pz-widget-tile-preview" aria-hidden>
-        <WidgetPreview type={widget.type} size={widget.size} />
+      <div className="pz-widget-tile-ico" aria-hidden>
+        <Icon size={20} strokeWidth={1.75} />
       </div>
       <div className="pz-widget-tile-meta">
         <strong>{meta.label}</strong>
         <span>
-          {widget.size}
+          {t('widgets.ui.size')}: {widget.size}
           {needsCity ? ` · ${t('widgets.ui.weather.needsCity')}` : ''}
         </span>
       </div>
