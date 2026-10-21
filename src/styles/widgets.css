@@ -745,22 +745,7 @@
 }
 
 /* —— Weather —— */
-.hw-card.hw-type-weather .hw-frame {
-  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
-  border-radius: var(--hw-radius, 14px);
-  padding: 10px 12px 12px;
-  box-sizing: border-box;
-  height: 100%;
-}
-.hw-card.hw-type-weather.hw-style-glass .hw-frame {
-  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 48%, transparent);
-  backdrop-filter: blur(var(--glass-blur, 16px));
-  -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
-}
-.hw-card.hw-type-weather.hw-style-solid .hw-frame {
-  background: var(--bg-elev, var(--elev));
-}
+/* Weather uses shared .hw-style-* frame chrome (no type-specific bg) */
 .hw-weather {
   position: relative;
   flex: 1;
@@ -1562,30 +1547,9 @@ html[data-theme='paper'] .hw-notes-ctx {
   background: color-mix(in srgb, var(--accent) 75%, transparent);
 }
 
-/* —— Spotify (same card language as weather / notes) —— */
-.hw-card.hw-type-spotify .hw-frame {
-  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
-  border-radius: var(--hw-radius, 14px);
-  padding: 8px 12px 10px;
-  box-sizing: border-box;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-.hw-card.hw-type-spotify .hw-frame-head {
-  margin-bottom: 6px;
-}
+/* —— Spotify: shared .hw-style-* card chrome; only accent the icon —— */
 .hw-card.hw-type-spotify .hw-frame-ico {
   color: #1db954;
-}
-.hw-card.hw-type-spotify.hw-style-glass .hw-frame {
-  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 48%, transparent);
-  backdrop-filter: blur(var(--glass-blur, 16px));
-  -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
-}
-.hw-card.hw-type-spotify.hw-style-solid .hw-frame {
-  background: var(--bg-elev, var(--elev));
 }
 .hw-card.hw-type-spotify .hw-frame-body {
   padding: 0;
