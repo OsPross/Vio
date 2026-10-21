@@ -149,6 +149,14 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
   }
   if (!s.zoomFactors || typeof s.zoomFactors !== 'object') s.zoomFactors = {};
   if (typeof s.showBookmarksBar !== 'boolean') s.showBookmarksBar = false;
+  {
+    const mode = s.bookmarksBarMode;
+    if (mode !== 'always' && mode !== 'newtab' && mode !== 'never') {
+      s.bookmarksBarMode = s.showBookmarksBar ? 'always' : 'never';
+    }
+    // Keep legacy boolean in sync for older UI readers
+    s.showBookmarksBar = s.bookmarksBarMode === 'always' || s.bookmarksBarMode === 'newtab';
+  }
   if (typeof s.darkPageScrollbars !== 'boolean') s.darkPageScrollbars = true;
   if (s.pageColorScheme !== 'system' && s.pageColorScheme !== 'light' && s.pageColorScheme !== 'dark') {
     // Legacy: ciemny chrome wymuszał dark na stronach i psuł layout — domyślnie system

@@ -6,16 +6,27 @@ const { writeAtomicSync } = require('../lib/atomic-write.cjs');
 const C = require('./channels.cjs');
 
 /**
- * Bookmarks import + optional atomic export save.
- * App bookmarks live in Zustand; this IPC covers profile import and HTML export to disk.
+ * Bookmarks: disk store (djxxr-bookmarks.json) + profile import + HTML export.
  */
 function register(deps) {
-  const { ipcMain, wrapApp, bookmarksImport } = deps;
+  const { ipcMain, wrapApp, bookmarksImport, bookmarks } = deps;
 
   ipcMain.handle(C.BOOKMARKS_DISCOVER_PROFILES, wrapApp(() => bookmarksImport.discoverProfiles()));
   ipcMain.handle(
     C.BOOKMARKS_READ_PROFILE,
     wrapApp((_e, profilePath) => bookmarksImport.readProfileBookmarks(profilePath)),
+  );
+
+  ipcMain.handle(C.BOOKMARKS_GET, wrapApp(() => bookmarks.getAll()));
+  ipcMain.handle(
+    C.BOOKMARKS_REPLACE,
+    wrapApp((_e, payload) => bookmarks.replaceAll(payload && typeof payload === 'object' ? payload : {})),
+  );
+  ipcMain.handle(
+    C.BOOKMARKS_MIGRATE,
+    wrapApp((_e, payload) =>
+      bookmarks.migrateFromLegacy(payload && typeof payload === 'object' ? payload : {}),
+    ),
   );
 
   /** Save Netscape/HTML (or any text) bookmarks export atomically (temp + rename). */

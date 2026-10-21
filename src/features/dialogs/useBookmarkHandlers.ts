@@ -9,9 +9,16 @@ import {
 } from 'react';
 import { isBookmarkableUrl, useStore, type Tab } from '../../store';
 
+export type OpenBookmarkOpts = {
+  newTab?: boolean;
+  background?: boolean;
+  private?: boolean;
+};
+
 export type UseBookmarkHandlersArgs = {
   active: Tab | undefined;
   activeIsTor: boolean;
+  windowMode: 'normal' | 'private' | 'tor';
   navigateActive: (url: string, query?: string, opts?: { typed?: boolean }) => void;
 };
 
@@ -20,16 +27,18 @@ export type UseBookmarkHandlersResult = {
   setBookmarkPop: Dispatch<SetStateAction<{ url: string; title: string } | null>>;
   bookmarkStarRef: RefObject<HTMLButtonElement | null>;
   openBookmarkDialog: (url?: string, title?: string) => void;
-  openBookmarkUrl: (url: string, opts?: { newTab?: boolean }) => void;
+  openBookmarkUrl: (url: string, opts?: OpenBookmarkOpts) => void;
 };
 
 export function useBookmarkHandlers({
   active,
   activeIsTor,
+  windowMode,
   navigateActive,
 }: UseBookmarkHandlersArgs): UseBookmarkHandlersResult {
   const newTab = useStore((s) => s.newTab);
   const newTorTab = useStore((s) => s.newTorTab);
+  const newPrivateTab = useStore((s) => s.newPrivateTab);
 
   const [bookmarkPop, setBookmarkPop] = useState<{ url: string; title: string } | null>(null);
   const bookmarkStarRef = useRef<HTMLButtonElement>(null);
@@ -37,9 +46,9 @@ export function useBookmarkHandlers({
   const openBookmarkDialog = useCallback(
     (url?: string, title?: string) => {
       const u = url ?? active?.url ?? '';
-      const t = title ?? active?.title ?? u;
+      const titleText = title ?? active?.title ?? u;
       if (!isBookmarkableUrl(u)) return;
-      setBookmarkPop({ url: u, title: t });
+      setBookmarkPop({ url: u, title: titleText });
     },
     [active?.url, active?.title],
   );
@@ -50,18 +59,30 @@ export function useBookmarkHandlers({
     return () => window.removeEventListener('djxxr-bookmark-page', onBookmark);
   }, [openBookmarkDialog]);
 
-  const openBookmarkUrl = (url: string, opts?: { newTab?: boolean }) => {
-    if (activeIsTor && active?.partition) {
+  const openBookmarkUrl = useCallback(
+    (url: string, opts?: OpenBookmarkOpts) => {
+      if (opts?.private) {
+        void window.shell?.newWindow?.({ boot: 'private', restoreTabs: [{ url }] });
+        return;
+      }
+      if (activeIsTor && active?.partition) {
+        if (opts?.newTab) {
+          newTorTab({ url, partition: active.partition, background: opts.background !== false });
+        } else {
+          navigateActive(url);
+        }
+        return;
+      }
       if (opts?.newTab) {
-        newTorTab({ url, partition: active.partition, background: true });
+        newTab(url, { background: Boolean(opts.background) });
+      } else if (windowMode === 'private') {
+        newPrivateTab(url);
       } else {
         navigateActive(url);
       }
-      return;
-    }
-    if (opts?.newTab) newTab(url);
-    else navigateActive(url);
-  };
+    },
+    [active?.partition, activeIsTor, navigateActive, newPrivateTab, newTab, newTorTab, windowMode],
+  );
 
   return {
     bookmarkPop,

@@ -314,6 +314,7 @@ export const DEFAULT_SETTINGS: Settings = {
   automationEnabled: false,
   zoomFactors: {},
   showBookmarksBar: false,
+  bookmarksBarMode: 'never' as const,
   darkPageScrollbars: true,
   pageColorScheme: 'system',
   autoPipOnTabSwitch: false,

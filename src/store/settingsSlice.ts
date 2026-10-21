@@ -146,6 +146,7 @@ export const createSettingsSlice: StateCreator<StoreState, [], [], SettingsSlice
           url: b.url,
           folderId: b.folderId,
           createdAt: b.createdAt ?? Date.now(),
+          ...(b.iconOnly ? { iconOnly: true } : {}),
         },
       ],
     }));

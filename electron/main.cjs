@@ -41,6 +41,7 @@ const certificate = timedRequire('certificate', './certificate.cjs');
 const shortcutsGuest = timedRequire('shortcuts-guest', './shortcuts-guest.cjs');
 const pip = timedRequire('pip', './pip.cjs');
 const bookmarksImport = timedRequire('bookmarks-import', './bookmarks-import.cjs');
+const bookmarks = timedRequire('bookmarks', './bookmarks.cjs');
 const extensions = timedRequire('extensions', './extensions.cjs');
 const uaChrome = timedRequire('ua-chrome', './ua-chrome.cjs');
 const mouseNav = timedRequire('mouse-nav', './mouse-nav.cjs');
@@ -617,6 +618,7 @@ const ipcDeps = {
   tabArchive,
   downloads,
   bookmarksImport,
+  bookmarks,
   passwords,
   extensions,
   adblock,

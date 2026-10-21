@@ -202,7 +202,7 @@ export function App() {
   const { saveActivePdf, printActivePage } = usePageActions({ guestWc, currentView });
 
   const { bookmarkPop, setBookmarkPop, bookmarkStarRef, openBookmarkDialog, openBookmarkUrl } =
-    useBookmarkHandlers({ active, activeIsTor, navigateActive });
+    useBookmarkHandlers({ active, activeIsTor, windowMode, navigateActive });
 
   useShortcuts({
     isHome,

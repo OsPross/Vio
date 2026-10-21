@@ -144,9 +144,8 @@ export const useStore = create<StoreState>()(
         bangs: s.bangs,
         shortcuts: s.shortcuts,
         sideApps: s.sideApps,
-        // history: ONLY electron/history.cjs (migrated out of localStorage)
-        bookmarks: s.bookmarks,
-        bookmarkFolders: s.bookmarkFolders,
+        // history: ONLY electron/history.cjs
+        // bookmarks: ONLY electron/bookmarks.cjs (djxxr-bookmarks.json)
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<StoreState>;
@@ -192,10 +191,12 @@ export const useStore = create<StoreState>()(
       },
       onRehydrateStorage: () => (state) => {
         const items = state?.history;
-        if (!Array.isArray(items) || !items.length) return;
-        void window.shell?.historyImportQueries?.(items).then(() => {
-          useStore.setState({ history: [] });
-        });
+        if (Array.isArray(items) && items.length) {
+          void window.shell?.historyImportQueries?.(items).then(() => {
+            useStore.setState({ history: [] });
+          });
+        }
+        void import('../lib/bookmarksSync').then((m) => m.initBookmarksDiskSync());
       },
     },
   ),
@@ -209,6 +210,7 @@ export type {
   BgStyle,
   Bookmark,
   BookmarkFolder,
+  BookmarksBarMode,
   ClosedTab,
   ClosedWindow,
   HistoryItem,

@@ -665,6 +665,35 @@ declare global {
         html: string,
         opts?: { forcePath?: string },
       ) => Promise<{ ok: boolean; filePath?: string; canceled?: boolean; error?: string }>;
+      bookmarksGet: () => Promise<{
+        ok: boolean;
+        bookmarks?: {
+          id: string;
+          title: string;
+          url: string;
+          folderId?: string;
+          createdAt: number;
+          iconOnly?: boolean;
+        }[];
+        folders?: { id: string; title: string; parentId?: string }[];
+      }>;
+      bookmarksReplace: (payload: {
+        bookmarks?: unknown[];
+        folders?: unknown[];
+      }) => Promise<{
+        ok: boolean;
+        bookmarks?: unknown[];
+        folders?: unknown[];
+      }>;
+      bookmarksMigrate: (payload: {
+        bookmarks?: unknown[];
+        folders?: unknown[];
+      }) => Promise<{
+        ok: boolean;
+        migrated?: boolean;
+        bookmarks?: unknown[];
+        folders?: unknown[];
+      }>;
       searchSuggest: (q: string) => Promise<string[]>;
       weatherFetch: (opts: { location?: string; lat?: number; lon?: number }) => Promise<{
         ok: boolean;

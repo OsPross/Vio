@@ -5142,18 +5142,44 @@ html.side-panel-resizing .app {
 .bookmarks-bar {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   flex-wrap: nowrap;
   overflow: hidden;
-  padding: 0 10px 6px;
-  scrollbar-width: thin;
+  padding: 0 4px;
+  height: 28px;
+  scrollbar-width: none;
+}
+.bookmarks-bar-dnd {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+}
+.bookmarks-bar-grid {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 2px 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg3);
+  cursor: pointer;
+}
+.bookmarks-bar-grid:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
 }
 .bookmarks-bar-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  max-width: 200px;
-  padding: 4px 10px;
+  gap: 5px;
+  max-width: 160px;
+  height: 24px;
+  padding: 0 8px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -5161,39 +5187,48 @@ html.side-panel-resizing .app {
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
+  touch-action: none;
 }
 .bookmarks-bar-item span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.bookmarks-bar-item:hover {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+.bookmarks-bar-item:hover,
+.bookmarks-bar-folder.drop-target > .bookmarks-bar-item {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
   color: var(--fg);
 }
+.bookmarks-bar-item.dragging {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
 .bookmarks-bar-item:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
 }
 .bookmarks-bar-empty {
   font-size: 11px;
-  padding: 4px 8px;
+  padding: 0 8px;
+  opacity: 0.7;
 }
 .bookmarks-bar-folder {
   position: relative;
 }
 .bookmarks-bar-submenu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 2px);
   left: 0;
   z-index: 50;
-  min-width: 180px;
-  max-height: 320px;
+  min-width: 200px;
+  max-height: 360px;
   overflow: auto;
-  padding: 4px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
+  padding: 6px;
+  border-radius: 12px;
+  border: 0;
   background: var(--bg-elev);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--fg) 8%, transparent),
+    0 16px 48px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
 }
 .bookmarks-bar-subitem {
   display: block;
@@ -5203,13 +5238,20 @@ html.side-panel-resizing .app {
   background: transparent;
   color: var(--fg);
   padding: 7px 10px;
-  border-radius: 6px;
+  border-radius: 7px;
   font-size: 12px;
   cursor: pointer;
 }
+.bookmarks-bar-open-all {
+  color: var(--fg2);
+  font-weight: 500;
+  margin-bottom: 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 8%, transparent);
+  border-radius: 7px 7px 0 0;
+}
 .bookmarks-bar-subitem:hover,
 .bookmarks-bar-subitem:focus-visible {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
   outline: none;
 }
 .bookmarks-ctx {
@@ -5421,10 +5463,14 @@ html.side-panel-resizing .app {
 .bookmarks-bar-wrap {
   position: relative;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   min-width: 0;
-  border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  height: 28px;
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 6%, transparent);
+  background: color-mix(in srgb, var(--bg) 96%, transparent);
+}
+.bookmarks-bar-wrap.drop-over {
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
 }
 .bookmarks-bar-measure {
   position: absolute;
@@ -5446,35 +5492,51 @@ html.side-panel-resizing .app {
   position: relative;
   display: flex;
   align-items: center;
-  padding: 0 4px 6px;
+  padding: 0 4px;
 }
 .bookmarks-bar-overflow-btn {
   border: 0;
   background: transparent;
   color: var(--fg2);
-  padding: 4px 8px;
+  padding: 2px 8px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
+  height: 24px;
 }
 .bookmarks-bar-overflow-btn:hover {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
   color: var(--fg);
 }
 .bookmarks-bar-overflow-menu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 2px);
   right: 0;
   z-index: 55;
   min-width: 200px;
   max-height: 280px;
   overflow: auto;
-  padding: 4px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
+  padding: 6px;
+  border-radius: 12px;
+  border: 0;
   background: var(--bg-elev);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--fg) 8%, transparent),
+    0 16px 48px rgba(0, 0, 0, 0.35);
+}
+.bookmark-pop-hint {
+  font-size: 11px;
+  margin: 0 0 6px;
+  line-height: 1.35;
+}
+.bm-bar-mode {
+  background: var(--bg-elev);
+  color: var(--fg);
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
 }
 
 .window-mode-banner {

@@ -59,7 +59,12 @@ export type Bookmark = {
   url: string;
   folderId?: string;
   createdAt: number;
+  /** Bar: show favicon only (no title label). */
+  iconOnly?: boolean;
 };
+
+/** When the bookmarks bar under the omnibox is visible. */
+export type BookmarksBarMode = 'always' | 'newtab' | 'never';
 export type BookmarkFolder = { id: string; title: string; parentId?: string };
 export type HistoryItem = { q: string; at: number };
 export type SideApp = {
@@ -308,8 +313,10 @@ export type Settings = {
   automationEnabled: boolean;
   /** Per-host zoom factor (host → factor, e.g. 1.25) */
   zoomFactors: Record<string, number>;
-  /** Pasek zakładek pod paskiem narzędzi (Ctrl+Shift+B) */
+  /** @deprecated Prefer bookmarksBarMode — kept for migrate */
   showBookmarksBar: boolean;
+  /** Pasek zakładek pod omniboxem (Ctrl+Shift+B cykuje) */
+  bookmarksBarMode: BookmarksBarMode;
   /** Ciemne paski przewijania w treści stron (webview) */
   darkPageScrollbars: boolean;
   /**

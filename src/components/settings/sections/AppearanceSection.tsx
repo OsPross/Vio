@@ -4,6 +4,7 @@ import { ColorPicker, Segmented } from '../../ui';
 import {
   THEMES,
   useStore,
+  type BookmarksBarMode,
   type PageColorScheme,
   type ThemeId,
   type UiDensity,
@@ -102,6 +103,28 @@ export function AppearanceSection() {
             </div>
           </Row>
         )}
+      </SettingsGroup>
+
+      <SettingsGroup title={t('settings.look.bookmarksBar')}>
+        <Row
+          label={t('settings.look.bookmarksBarMode')}
+          desc={t('settings.look.bookmarksBarModeDesc')}
+        >
+          <Segmented
+            value={settings.bookmarksBarMode || 'never'}
+            options={[
+              { id: 'always', label: t('settings.look.bookmarksBarAlways') },
+              { id: 'newtab', label: t('settings.look.bookmarksBarNewtab') },
+              { id: 'never', label: t('settings.look.bookmarksBarNever') },
+            ]}
+            onChange={(v) =>
+              patchSettings({
+                bookmarksBarMode: v as BookmarksBarMode,
+                showBookmarksBar: v !== 'never',
+              })
+            }
+          />
+        </Row>
       </SettingsGroup>
 
       <SettingsGroup title={t('settings.look.pages')}>

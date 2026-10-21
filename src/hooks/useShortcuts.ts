@@ -234,8 +234,13 @@ export function useShortcuts({
             return true;
           }
           case 'toggleBookmarksBar': {
-            const cur = useStore.getState().settings.showBookmarksBar;
-            patchSettings({ showBookmarksBar: !cur });
+            const cur = useStore.getState().settings.bookmarksBarMode;
+            const next =
+              cur === 'never' ? 'always' : cur === 'always' ? 'newtab' : 'never';
+            patchSettings({
+              bookmarksBarMode: next,
+              showBookmarksBar: next !== 'never',
+            });
             return true;
           }
           case 'history': {

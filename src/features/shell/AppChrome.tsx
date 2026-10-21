@@ -502,7 +502,11 @@ export function AppChrome({
           setFindOpen={setFindOpen}
         />
 
-        <BookmarksBar onOpen={openBookmarkUrl} onEdit={(b) => openBookmarkDialog(b.url, b.title)} />
+        <BookmarksBar
+          activeUrl={active?.url}
+          onOpen={openBookmarkUrl}
+          onEdit={(b) => openBookmarkDialog(b.url, b.title)}
+        />
 
         <ChromeOverlays
           findOpen={findOpen}
