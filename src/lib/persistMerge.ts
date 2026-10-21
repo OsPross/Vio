@@ -148,6 +148,7 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
     s.pageColorScheme = 'system';
   }
   if (typeof s.autoPipOnTabSwitch !== 'boolean') s.autoPipOnTabSwitch = false;
+  if (typeof s.linkPreviewEnabled !== 'boolean') s.linkPreviewEnabled = true;
   if (s.adblockLevel !== 'standard' && s.adblockLevel !== 'strict') s.adblockLevel = 'standard';
   if (!Array.isArray(s.adblockExceptions)) s.adblockExceptions = [];
   if (!Array.isArray(s.adblockBuiltinDisabled)) s.adblockBuiltinDisabled = [];

@@ -52,6 +52,10 @@ contextBridge.exposeInMainWorld('shell', {
   historyRecordQuery: (q, opts) => ipcRenderer.invoke('shell:history-record-query', q, opts || {}),
   historyImportQueries: (items) => ipcRenderer.invoke('shell:history-import-queries', items || []),
   historySuggest: (q, opts) => ipcRenderer.invoke('shell:history-suggest', q, opts || {}),
+  linkPreviewRegister: (webContentsId) =>
+    ipcRenderer.invoke('shell:link-preview-register', webContentsId),
+  linkPreviewUnregister: (webContentsId) =>
+    ipcRenderer.invoke('shell:link-preview-unregister', webContentsId),
   historyList: (opts) => ipcRenderer.invoke('shell:history-list', opts || {}),
   historyDelete: (id) => ipcRenderer.invoke('shell:history-delete', id),
   historyDeleteUrl: (url) => ipcRenderer.invoke('shell:history-delete-url', url),

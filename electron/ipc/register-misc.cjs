@@ -360,6 +360,16 @@ function register(deps) {
   ipcMain.handle(C.PERF_CLEAR_CACHE, wrapApp(async () => perf.clearBrowsingCache()));
   ipcMain.handle(C.PERF_MEMORY, wrapApp(async () => perf.getMemoryInfo()));
 
+  const linkPreviewGuests = require('../lib/link-preview-guests.cjs');
+  ipcMain.handle(
+    C.LINK_PREVIEW_REGISTER,
+    wrapApp((_e, webContentsId) => linkPreviewGuests.register(webContentsId)),
+  );
+  ipcMain.handle(
+    C.LINK_PREVIEW_UNREGISTER,
+    wrapApp((_e, webContentsId) => linkPreviewGuests.unregister(webContentsId)),
+  );
+
   ipcMain.handle(C.PERMISSIONS_LIST, wrapApp(() => security.listPermissions()));
   ipcMain.handle(
     C.PERMISSIONS_REVOKE,

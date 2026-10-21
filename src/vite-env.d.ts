@@ -484,6 +484,12 @@ declare global {
       historyImportQueries: (
         items: { q: string; at?: number }[],
       ) => Promise<{ ok: boolean; imported?: number }>;
+      linkPreviewRegister: (
+        webContentsId: number,
+      ) => Promise<{ ok: boolean; id?: number }>;
+      linkPreviewUnregister: (
+        webContentsId: number,
+      ) => Promise<{ ok: boolean; id?: number }>;
       historySuggest: (
         q: string,
         opts?: {

@@ -316,6 +316,7 @@ export const DEFAULT_SETTINGS: Settings = {
   darkPageScrollbars: true,
   pageColorScheme: 'system',
   autoPipOnTabSwitch: false,
+  linkPreviewEnabled: true,
 };
 
 export const MAX_CLOSED_TABS = 25;

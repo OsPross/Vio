@@ -62,6 +62,8 @@ export const IpcChannels = {
   HOME_BG_CLEAR: 'shell:home-bg-clear',
   HOME_BG_PICK: 'shell:home-bg-pick',
   HTTPS_WARN: 'shell:https-warn',
+  LINK_PREVIEW_REGISTER: 'shell:link-preview-register',
+  LINK_PREVIEW_UNREGISTER: 'shell:link-preview-unregister',
   METRICS: 'shell:metrics',
   METRICS_LOW_POWER: 'shell:metrics-low-power',
   METRICS_SET_GUESTS: 'shell:metrics-set-guests',

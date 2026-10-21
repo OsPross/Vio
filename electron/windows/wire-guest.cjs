@@ -180,8 +180,11 @@ function createWireGuest(deps) {
       spellcheck.applyToWebContents(guestWc, { tor: false });
       guestWc.__djxxrHttpsUpgrade = null;
 
+      const linkPreviewGuests = require('../lib/link-preview-guests.cjs');
       const recordGuestVisit = (url, title, soft) => {
         try {
+          // Shift+hover preview webviews must not pollute browsing history
+          if (linkPreviewGuests.has(guestWc.id)) return;
           history.recordVisit({
             url: String(url || ''),
             title: String(title || ''),

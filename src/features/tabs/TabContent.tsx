@@ -20,7 +20,9 @@ import {
   type Tab,
 } from '../../store';
 import { useT } from '../../i18n';
+import { useLinkPreview } from '../../hooks/useLinkPreview';
 import { isMotionOff } from '../../lib/motionPresets';
+import { LinkPreviewPopover } from './LinkPreviewPopover';
 import { TabWebview, type SaveOffer, type WebviewEl } from './TabWebview';
 
 const AboutPage = lazy(() =>
@@ -128,6 +130,13 @@ export function TabContent({
   const pushHistory = useStore((s) => s.pushHistory);
   const patchSettings = useStore((s) => s.patchSettings);
   const motionOff = isMotionOff(settings);
+  const linkPreviewOk =
+    settings.linkPreviewEnabled !== false &&
+    windowMode === 'normal' &&
+    !activeIsTor &&
+    active?.mode !== 'private' &&
+    active?.mode !== 'tor';
+  const linkPreview = useLinkPreview(Boolean(linkPreviewOk));
   /** Hold guest webviews until Ghostery is bound (boot-gate + enableBlockingInSession). */
   const [adblockReady, setAdblockReady] = useState(false);
   useEffect(() => {
@@ -327,6 +336,27 @@ export function TabContent({
             onNav={(b, f, u, title) => onNav(b, f, u, title)}
             onSaveOffer={setSaveOffer}
             onGuestMeta={onGuestMeta}
+            onLinkPreview={(msg) => {
+              if (!linkPreviewOk || t.id !== activeId) return;
+              if (msg.type === 'show') {
+                const partition =
+                  t.mode === 'tor' && t.partition
+                    ? t.partition
+                    : t.mode === 'private'
+                      ? t.partition || ''
+                      : 'persist:main';
+                if (!partition || t.mode === 'tor' || t.mode === 'private') return;
+                linkPreview.show({
+                  url: msg.url,
+                  x: msg.x,
+                  y: msg.y,
+                  partition,
+                });
+                return;
+              }
+              if (msg.type === 'hide') linkPreview.close();
+              else linkPreview.scheduleClose();
+            }}
             passwordsEnabled={pwOn}
             passwordsAutofill={pwOn && settings.passwordsAutofill}
             darkPageScrollbars={settings.darkPageScrollbars}
@@ -334,6 +364,12 @@ export function TabContent({
           />
         );
       })}
+      <LinkPreviewPopover
+        target={linkPreview.target}
+        onClose={linkPreview.close}
+        onHoldChange={linkPreview.onHoldChange}
+        onOpenTab={(url) => newTab(url)}
+      />
     </>
   );
 }

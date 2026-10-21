@@ -474,3 +474,140 @@ window.addEventListener(
   },
   true,
 );
+
+// Shift + hover link → host shows floating preview (Tor/private ignored in renderer).
+(function bootLinkPreview() {
+  const SHOW_MS = 300;
+  let shiftDown = false;
+  let hoverTimer = null;
+  let lastHref = '';
+  let lastX = 0;
+  let lastY = 0;
+
+  function clearHoverTimer() {
+    if (hoverTimer != null) {
+      clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
+  }
+
+  function httpHrefFromTarget(t) {
+    try {
+      const a = t && t.closest ? t.closest('a[href]') : null;
+      if (!a) return '';
+      const href = String(a.href || '');
+      if (!/^https?:\/\//i.test(href)) return '';
+      return href;
+    } catch {
+      return '';
+    }
+  }
+
+  function emitShow(href, x, y) {
+    try {
+      ipcRenderer.sendToHost('djxxr-link-preview', {
+        type: 'show',
+        url: href,
+        x: Math.round(x),
+        y: Math.round(y),
+      });
+    } catch {
+      /* */
+    }
+  }
+
+  function emitHide() {
+    clearHoverTimer();
+    lastHref = '';
+    try {
+      ipcRenderer.sendToHost('djxxr-link-preview', { type: 'hide' });
+    } catch {
+      /* */
+    }
+  }
+
+  function scheduleShow(href, x, y) {
+    if (!shiftDown || !href) return;
+    if (href === lastHref && hoverTimer == null) return;
+    clearHoverTimer();
+    lastHref = href;
+    lastX = x;
+    lastY = y;
+    hoverTimer = setTimeout(() => {
+      hoverTimer = null;
+      if (!shiftDown || lastHref !== href) return;
+      emitShow(href, lastX, lastY);
+    }, SHOW_MS);
+  }
+
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key !== 'Shift') return;
+      shiftDown = true;
+    },
+    true,
+  );
+  window.addEventListener(
+    'keyup',
+    (e) => {
+      if (e.key !== 'Shift') return;
+      shiftDown = false;
+      emitHide();
+    },
+    true,
+  );
+  window.addEventListener(
+    'blur',
+    () => {
+      shiftDown = false;
+      emitHide();
+    },
+    true,
+  );
+  window.addEventListener(
+    'mousemove',
+    (e) => {
+      if (!shiftDown) return;
+      const href = httpHrefFromTarget(e.target);
+      if (!href) {
+        if (lastHref) emitHide();
+        return;
+      }
+      lastX = e.clientX;
+      lastY = e.clientY;
+      if (href !== lastHref) scheduleShow(href, e.clientX, e.clientY);
+    },
+    true,
+  );
+  window.addEventListener(
+    'mouseover',
+    (e) => {
+      if (!shiftDown) return;
+      const href = httpHrefFromTarget(e.target);
+      if (!href) return;
+      scheduleShow(href, e.clientX, e.clientY);
+    },
+    true,
+  );
+  window.addEventListener(
+    'mouseout',
+    (e) => {
+      const to = e.relatedTarget;
+      const next = httpHrefFromTarget(to);
+      const prev = httpHrefFromTarget(e.target);
+      if (prev && next === prev) return;
+      if (prev && next !== prev) {
+        // Leaving this link — host applies ~200 ms grace if cursor enters popover
+        clearHoverTimer();
+        try {
+          ipcRenderer.sendToHost('djxxr-link-preview', { type: 'leave' });
+        } catch {
+          /* */
+        }
+        lastHref = '';
+      }
+    },
+    true,
+  );
+})();

@@ -176,6 +176,7 @@ function TabWebviewInner({
   appTheme,
   onMediaState,
   onBrowserNav,
+  onLinkPreview,
 }: {
   tab: Tab;
   active: boolean;
@@ -199,6 +200,9 @@ function TabWebviewInner({
   appTheme: ThemeId;
   onMediaState?: (state: { hasVideo: boolean; playing: boolean }) => void;
   onBrowserNav?: (dir: 'back' | 'forward', source?: string) => void;
+  onLinkPreview?: (
+    msg: { type: 'show'; url: string; x: number; y: number } | { type: 'hide' | 'leave' },
+  ) => void;
 }) {
   const ref = useRef<WebviewEl | null>(null);
   /** Latest tab.url for one-shot src init — never bind src={tab.url} (YT miniplayer SPA). */
@@ -249,6 +253,7 @@ function TabWebviewInner({
   const onHtmlFullscreenRef = useRef(onHtmlFullscreen);
   const onMediaStateRef = useRef(onMediaState);
   const onBrowserNavRef = useRef(onBrowserNav);
+  const onLinkPreviewRef = useRef(onLinkPreview);
   onNavRef.current = onNav;
   onSaveOfferRef.current = onSaveOffer;
   onGuestMetaRef.current = onGuestMeta;
@@ -258,6 +263,7 @@ function TabWebviewInner({
   onHtmlFullscreenRef.current = onHtmlFullscreen;
   onMediaStateRef.current = onMediaState;
   onBrowserNavRef.current = onBrowserNav;
+  onLinkPreviewRef.current = onLinkPreview;
 
   const applyPageScrollbars = useCallback(
     async (el: WebviewEl) => {
@@ -533,6 +539,26 @@ function TabWebviewInner({
         const msg = e.args?.[0] as { dir?: string; source?: string } | undefined;
         if (msg?.dir === 'back' || msg?.dir === 'forward') {
           onBrowserNavRef.current?.(msg.dir, msg.source || 'guest-mouseup');
+        }
+        return;
+      }
+      if (e.channel === 'djxxr-link-preview') {
+        const msg = e.args?.[0] as
+          | { type?: string; url?: string; x?: number; y?: number }
+          | undefined;
+        if (!msg?.type) return;
+        if (msg.type === 'show' && typeof msg.url === 'string') {
+          const r = el.getBoundingClientRect();
+          onLinkPreviewRef.current?.({
+            type: 'show',
+            url: msg.url,
+            x: r.left + (typeof msg.x === 'number' ? msg.x : 0),
+            y: r.top + (typeof msg.y === 'number' ? msg.y : 0),
+          });
+          return;
+        }
+        if (msg.type === 'hide' || msg.type === 'leave') {
+          onLinkPreviewRef.current?.({ type: msg.type });
         }
         return;
       }

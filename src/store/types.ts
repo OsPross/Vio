@@ -314,6 +314,8 @@ export type Settings = {
   pageColorScheme: PageColorScheme;
   /** Enter PiP when switching away from a tab with playing video */
   autoPipOnTabSwitch: boolean;
+  /** Shift+hover link preview popover (disabled in Tor/private). */
+  linkPreviewEnabled: boolean;
 };
 
 export type SettingsTab =
