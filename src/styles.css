@@ -4092,15 +4092,86 @@ html.side-panel-resizing .app {
   color: var(--fg);
 }
 .link-preview-body {
+  position: relative;
   flex: 1;
   min-height: 0;
   background: var(--bg);
 }
 .link-preview-webview {
-  display: flex;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border: 0;
+  background: var(--bg);
+  opacity: 0;
+  pointer-events: none;
+}
+.link-preview-webview.is-ready {
+  opacity: 1;
+  pointer-events: auto;
+}
+.link-preview-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: color-mix(in srgb, var(--bg) 92%, var(--fg));
+}
+.link-preview-skeleton-bar {
+  height: 10px;
+  width: 72%;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  animation: link-preview-pulse 1.1s ease-in-out infinite;
+}
+.link-preview-skeleton-bar.short {
+  width: 44%;
+  animation-delay: 0.12s;
+}
+.link-preview-skeleton-block {
+  flex: 1;
+  min-height: 80px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  animation: link-preview-pulse 1.1s ease-in-out infinite;
+  animation-delay: 0.2s;
+}
+@keyframes link-preview-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+[data-reduce-motion='on'] .link-preview-skeleton-bar,
+[data-reduce-motion='on'] .link-preview-skeleton-block {
+  animation: none;
+}
+.link-preview-error {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  text-align: center;
+  background: var(--bg);
+  color: var(--fg-2);
+  font-size: 13px;
+}
+.link-preview-error p {
+  margin: 0;
+  max-width: 28ch;
+  line-height: 1.4;
 }
 
 /* App hamburger menu */

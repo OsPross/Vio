@@ -354,6 +354,7 @@ export function TabContent({
                 });
                 return;
               }
+              // hide = hard close; leave = 200ms grace (popover can hold)
               if (msg.type === 'hide') linkPreview.close();
               else linkPreview.scheduleClose();
             }}

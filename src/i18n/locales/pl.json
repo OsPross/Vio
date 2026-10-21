@@ -1279,6 +1279,8 @@
   "linkPreview": {
     "aria": "Podgląd linku",
     "openTab": "Otwórz w nowej karcie",
-    "close": "Zamknij podgląd"
+    "close": "Zamknij podgląd",
+    "loadFailed": "Nie udało się wczytać podglądu.",
+    "loadError": "Błąd wczytywania ({{code}})."
   }
 }

@@ -1279,6 +1279,8 @@
   "linkPreview": {
     "aria": "Link preview",
     "openTab": "Open in new tab",
-    "close": "Close preview"
+    "close": "Close preview",
+    "loadFailed": "Could not load the preview.",
+    "loadError": "Load error ({{code}})."
   }
 }

@@ -251,6 +251,11 @@ app.whenReady().then(async () => {
     }
     try {
       if (typeof contents.getType === 'function' && contents.getType() === 'webview') {
+        try {
+          require('./lib/link-preview-guests.cjs').claimPending(contents.id);
+        } catch {
+          /* */
+        }
         console.log('[ctx-menu] web-contents-created webview', contents.id);
         wireGuestNavigation(contents);
       }

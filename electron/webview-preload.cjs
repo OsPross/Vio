@@ -516,11 +516,12 @@ window.addEventListener(
     }
   }
 
-  function emitHide() {
+  function emitLeave() {
     clearHoverTimer();
     lastHref = '';
     try {
-      ipcRenderer.sendToHost('djxxr-link-preview', { type: 'hide' });
+      // leave → host 200ms grace (popover hold); not hard hide
+      ipcRenderer.sendToHost('djxxr-link-preview', { type: 'leave' });
     } catch {
       /* */
     }
@@ -553,7 +554,7 @@ window.addEventListener(
     (e) => {
       if (e.key !== 'Shift') return;
       shiftDown = false;
-      emitHide();
+      emitLeave();
     },
     true,
   );
@@ -561,7 +562,7 @@ window.addEventListener(
     'blur',
     () => {
       shiftDown = false;
-      emitHide();
+      emitLeave();
     },
     true,
   );
@@ -571,7 +572,7 @@ window.addEventListener(
       if (!shiftDown) return;
       const href = httpHrefFromTarget(e.target);
       if (!href) {
-        if (lastHref) emitHide();
+        if (lastHref) emitLeave();
         return;
       }
       lastX = e.clientX;

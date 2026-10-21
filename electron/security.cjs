@@ -307,11 +307,12 @@ function attachWebviewGuard(ses, preloadPath) {
       try {
         const src = String(params.src || '');
         const okSrc =
+          !src ||
           /^https?:\/\//i.test(src) ||
           /^file:\/\//i.test(src) ||
           src === 'about:blank' ||
           src.startsWith('data:text/html');
-        // allow about:blank for init; block file/javascript primary navigations handled elsewhere
+        // allow empty / about:blank for init; block file/javascript primary navigations handled elsewhere
         if (!okSrc && src && !src.startsWith('about:')) {
           event.preventDefault();
           return;
@@ -320,6 +321,14 @@ function attachWebviewGuard(ses, preloadPath) {
         if (partition && !isAllowedPartition(partition)) {
           event.preventDefault();
           return;
+        }
+        // Shift+hover preview: mark next webview guest so wire-guest skips history
+        if (String(params['data-djxxr-link-preview'] || '') === '1') {
+          try {
+            require('./lib/link-preview-guests.cjs').expectAttach();
+          } catch {
+            /* */
+          }
         }
         webPreferences.nodeIntegration = false;
         webPreferences.nodeIntegrationInSubFrames = false;
