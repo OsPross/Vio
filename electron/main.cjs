@@ -69,11 +69,8 @@ try {
 } catch {
   /* */
 }
-// Light inits only — heavy Ghostery lists / chrome-extensions / openpgp stay lazy
-history.init();
-notes.init();
-// Extensions load after chrome API (setImmediate) — avoid loadExtension-before-ready
-downloads.init();
+// history/notes/downloads init runs after createWindow (setImmediate) so disk I/O
+// does not compete with first paint. First IPC use still ensureLoaded()-s safely.
 
 if (
   !app.isPackaged &&
@@ -225,7 +222,10 @@ function guestWebContentsById(id) {
 
 app.whenReady().then(async () => {
   global.__DJXXR_PERF_READY_AT = Date.now();
+  const perfStartup =
+    process.env.PERF_STARTUP === '1' || process.env.PERF_BENCH === '1';
   const phase = (label) => {
+    if (!perfStartup) return;
     if (!global.__DJXXR_PERF_PHASES__) global.__DJXXR_PERF_PHASES__ = {};
     global.__DJXXR_PERF_PHASES__[label] = Date.now() - global.__DJXXR_PERF_READY_AT;
   };
@@ -331,8 +331,15 @@ app.whenReady().then(async () => {
     console.warn('[updater] schedule', err && err.message);
   }
 
-  // Deferred: list refresh, chrome-extensions, passwords — then unlock guests if needed
+  // Deferred: disk inits + list refresh, chrome-extensions, passwords
   setImmediate(() => {
+    try {
+      history.init();
+      notes.init();
+      downloads.init();
+    } catch (err) {
+      console.warn('[boot] deferred data init', err && err.message);
+    }
     try {
       torDaemon.removeAutostartShortcuts();
     } catch (e) {
