@@ -239,8 +239,11 @@ function assessCompatibility(rec, raw) {
     return LIMITED_PERMS.has(p) || LIMITED_PERMS.has(base);
   });
   if (limited.length) {
+    const hasTabCapture = limited.some((p) => p.includes('tabcapture'));
     warnings.push(
-      `Niedostępne lub ograniczone w Electron: ${limited.slice(0, 4).join(', ')}${limited.length > 4 ? '…' : ''}`,
+      hasTabCapture
+        ? 'tabCapture: Electron go nie ma — Vio podłącza suwak głośności do aktywnej karty (Web Audio).'
+        : `Niedostępne lub ograniczone w Electron: ${limited.slice(0, 4).join(', ')}${limited.length > 4 ? '…' : ''}`,
     );
   }
   if (looksLikeAdblocker(rec) && wantsChromeWebRequest(rec)) {
@@ -987,6 +990,217 @@ async function remove(id) {
 
 /** @type {import('electron').BrowserWindow | null} */
 let actionPopupWin = null;
+/** Guests that arrived before electron-chrome-extensions was ready. */
+const pendingGuestTabs = [];
+/** @type {ReturnType<typeof setInterval> | null} */
+let audiblePollTimer = null;
+/** @type {WeakMap<object, boolean>} */
+const lastAudible = new WeakMap();
+
+/**
+ * Apply volume gain to a guest page (Web Audio). Used because Electron has no
+ * chrome.tabCapture for store extensions like Volume Master.
+ * @param {import('electron').WebContents} guestWc
+ * @param {number} percent 0–600 (Volume Master scale; 100 = normal)
+ */
+async function applyGuestVolumeGain(guestWc, percent) {
+  if (!guestWc || guestWc.isDestroyed()) return { ok: false };
+  const gain = Math.max(0, Math.min(8, Number(percent) / 100));
+  const js = `(() => {
+    const g = ${JSON.stringify(gain)};
+    try {
+      if (!window.__vioAudioBoost) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return { ok: false, error: 'no-audio-context' };
+        const ctx = new AC();
+        const gainNode = ctx.createGain();
+        gainNode.connect(ctx.destination);
+        gainNode.gain.value = 1;
+        const wrap = (el) => {
+          if (!el || el.__vioVolWrapped) return;
+          try {
+            const src = ctx.createMediaElementSource(el);
+            src.connect(gainNode);
+            el.__vioVolWrapped = true;
+          } catch (_) { /* already connected / CORS */ }
+        };
+        document.querySelectorAll('audio,video').forEach(wrap);
+        new MutationObserver(() => {
+          document.querySelectorAll('audio,video').forEach(wrap);
+        }).observe(document.documentElement, { childList: true, subtree: true });
+        window.__vioAudioBoost = { ctx, gainNode };
+        try { ctx.resume(); } catch (_) {}
+      }
+      window.__vioAudioBoost.gainNode.gain.setTargetAtTime(g, window.__vioAudioBoost.ctx.currentTime, 0.02);
+      return { ok: true, gain: g };
+    } catch (e) {
+      return { ok: false, error: String(e && e.message || e) };
+    }
+  })()`;
+  try {
+    const res = await guestWc.executeJavaScript(js, true);
+    return res && typeof res === 'object' ? res : { ok: true };
+  } catch (err) {
+    return { ok: false, error: err?.message || String(err) };
+  }
+}
+
+function resolveGuestForVolume(preferredId) {
+  const { webContents } = require('electron');
+  if (preferredId != null) {
+    const wc = webContents.fromId(Number(preferredId));
+    if (wc && !wc.isDestroyed() && wc.getType?.() === 'webview') return wc;
+  }
+  if (chromeExtApi) {
+    try {
+      const active = chromeExtApi.ctx?.store?.getActiveTabOfCurrentWindow?.();
+      if (active && !active.isDestroyed() && active.getType?.() === 'webview') return active;
+    } catch {
+      /* */
+    }
+  }
+  try {
+    for (const wc of webContents.getAllWebContents()) {
+      if (wc.isDestroyed()) continue;
+      if (wc.getType?.() !== 'webview') continue;
+      if (isTorSession(wc.session)) continue;
+      if (typeof wc.isCurrentlyAudible === 'function' && wc.isCurrentlyAudible()) return wc;
+    }
+  } catch {
+    /* */
+  }
+  return null;
+}
+
+/**
+ * Hook Volume Master (and similar) popup slider → guest Web Audio gain.
+ * Electron cannot provide chrome.tabCapture; this is the practical substitute.
+ */
+function wireTabCaptureVolumeBridge(popupWc, guestHintId) {
+  if (!popupWc || popupWc.isDestroyed()) return;
+  if (popupWc.__vioVolBridge) return;
+  popupWc.__vioVolBridge = true;
+
+  const onConsole = (_e, _level, message) => {
+    const m = /^__VIO_VOL__=(-?[\d.]+)$/.exec(String(message || ''));
+    if (!m) return;
+    const percent = Number(m[1]);
+    if (!Number.isFinite(percent)) return;
+    const guest = resolveGuestForVolume(guestHintId);
+    if (!guest) return;
+    void applyGuestVolumeGain(guest, percent);
+  };
+  popupWc.on('console-message', onConsole);
+  popupWc.once('destroyed', () => {
+    try {
+      popupWc.removeListener('console-message', onConsole);
+    } catch {
+      /* */
+    }
+  });
+
+  const inject = async () => {
+    try {
+      await popupWc.executeJavaScript(
+        `(() => {
+          if (window.__vioVolHook) return true;
+          window.__vioVolHook = true;
+          const send = (v) => { try { console.log('__VIO_VOL__=' + v); } catch (_) {} };
+          const bind = () => {
+            const nodes = document.querySelectorAll(
+              '.js-volume-slider__slider, input[type=range], [class*="volume"] input[type=range]'
+            );
+            nodes.forEach((s) => {
+              if (s.__vioVolBound) return;
+              s.__vioVolBound = true;
+              const fire = () => send(s.value);
+              s.addEventListener('input', fire);
+              s.addEventListener('change', fire);
+              fire();
+            });
+          };
+          bind();
+          new MutationObserver(bind).observe(document.documentElement, { childList: true, subtree: true });
+          return true;
+        })()`,
+        true,
+      );
+    } catch (err) {
+      console.warn('[ext] volume bridge inject', err && err.message);
+    }
+  };
+  popupWc.on('dom-ready', () => {
+    void inject();
+  });
+  popupWc.on('did-finish-load', () => {
+    void inject();
+  });
+  void inject();
+}
+
+function startAudiblePolling() {
+  if (audiblePollTimer) return;
+  audiblePollTimer = setInterval(() => {
+    if (!chromeExtApi) return;
+    try {
+      const tabs = chromeExtApi.ctx?.store?.tabs;
+      if (!tabs) return;
+      for (const tab of tabs) {
+        if (!tab || tab.isDestroyed?.()) continue;
+        let now = false;
+        try {
+          now = Boolean(tab.isCurrentlyAudible?.());
+        } catch {
+          continue;
+        }
+        const prev = lastAudible.get(tab);
+        if (prev === now) continue;
+        lastAudible.set(tab, now);
+        try {
+          tab.emit('tab-updated');
+        } catch {
+          /* */
+        }
+      }
+    } catch {
+      /* */
+    }
+  }, 750);
+}
+
+function flushPendingGuestTabs() {
+  const { BrowserWindow } = require('electron');
+  while (pendingGuestTabs.length) {
+    const item = pendingGuestTabs.shift();
+    if (!item?.guest || item.guest.isDestroyed()) continue;
+    const host =
+      item.host && !item.host.isDestroyed()
+        ? item.host
+        : BrowserWindow.fromWebContents(item.guest) || getMainWindow?.();
+    trackGuestTab(item.guest, host, { tor: item.tor });
+  }
+}
+
+function rescanGuestTabs() {
+  const { webContents, BrowserWindow } = require('electron');
+  try {
+    for (const wc of webContents.getAllWebContents()) {
+      if (wc.isDestroyed()) continue;
+      if (wc.getType?.() !== 'webview') continue;
+      if (isTorSession(wc.session)) continue;
+      let host = null;
+      try {
+        host = BrowserWindow.fromWebContents(wc);
+      } catch {
+        /* */
+      }
+      if (!host) host = getMainWindow?.();
+      trackGuestTab(wc, host, { tor: false });
+    }
+  } catch (err) {
+    console.warn('[ext] rescan guests', err && err.message);
+  }
+}
 
 /**
  * Open an extension's browser_action / action popup in a real window.
@@ -1037,19 +1251,35 @@ async function openAction(id, opts = {}) {
     return { ok: false, error: 'Brak okna przeglądarki' };
   }
 
+  // Prefer the active *guest* webview as chrome.tabs target (never the host chrome —
+  // host uses defaultSession and is not audible).
+  const guestHint =
+    opts?.webContentsId != null ? Number(opts.webContentsId) : NaN;
+  let actionTabId = parent.webContents.id;
+  try {
+    flushPendingGuestTabs();
+    rescanGuestTabs();
+    const guest = resolveGuestForVolume(Number.isFinite(guestHint) ? guestHint : null);
+    if (guest && !guest.isDestroyed()) {
+      try {
+        chromeExtApi?.addTab?.(guest, parent);
+        chromeExtApi?.selectTab?.(guest, parent);
+        actionTabId = guest.id;
+      } catch (err) {
+        console.warn('[ext] select guest tab', err && err.message);
+      }
+    }
+  } catch {
+    /* */
+  }
+
   // Preferred path: electron-chrome-extensions PopupView (needs a tracked tab).
   try {
     if (chromeExtApi?.api?.browserAction?.activateClick) {
-      try {
-        chromeExtApi.addTab(parent.webContents, parent);
-        chromeExtApi.selectTab(parent.webContents, parent);
-      } catch {
-        /* already tracked or session mismatch */
-      }
       const anchor = opts?.anchorRect || { x: 0, y: 48, width: 28, height: 28 };
       chromeExtApi.api.browserAction.activateClick({
         extensionId: extId,
-        tabId: parent.webContents.id,
+        tabId: actionTabId,
         anchorRect: {
           x: Number(anchor.x) || 0,
           y: Number(anchor.y) || 48,
@@ -1058,7 +1288,7 @@ async function openAction(id, opts = {}) {
         },
         alignment: 'bottom left',
       });
-      return { ok: true, via: 'browserAction' };
+      return { ok: true, via: 'browserAction', tabId: actionTabId };
     }
   } catch (err) {
     console.warn('[ext] browserAction.activateClick', err && err.message);
@@ -1122,6 +1352,7 @@ async function openAction(id, opts = {}) {
     if (actionPopupWin === win) actionPopupWin = null;
   });
 
+  wireTabCaptureVolumeBridge(win.webContents, Number.isFinite(guestHint) ? guestHint : actionTabId);
   try {
     try {
       await win.loadURL(url);
@@ -1329,6 +1560,14 @@ function initChromeApi(opts = {}) {
         try {
           if (popup?.browserWindow && !popup.browserWindow.isDestroyed()) {
             popup.browserWindow.setBackgroundColor('#1e1f24');
+            let guestId = null;
+            try {
+              const active = chromeExtApi.ctx?.store?.getActiveTabOfCurrentWindow?.();
+              if (active && !active.isDestroyed()) guestId = active.id;
+            } catch {
+              /* */
+            }
+            wireTabCaptureVolumeBridge(popup.browserWindow.webContents, guestId);
           }
         } catch {
           /* */
@@ -1337,6 +1576,9 @@ function initChromeApi(opts = {}) {
     } catch {
       /* */
     }
+    flushPendingGuestTabs();
+    rescanGuestTabs();
+    startAudiblePolling();
     console.log('[ext] electron-chrome-extensions ready');
   } catch (err) {
     console.warn('[ext] electron-chrome-extensions unavailable', err && err.message);
@@ -1352,10 +1594,37 @@ function initChromeApi(opts = {}) {
  * @param {{ tor?: boolean }} [opts]
  */
 function trackGuestTab(guestWc, hostWin, opts = {}) {
-  if (!chromeExtApi || !guestWc || guestWc.isDestroyed()) return;
+  if (!guestWc || guestWc.isDestroyed()) return;
   if (opts.tor) return;
-  if (guestWc.__djxxrExtTab) return;
+  if (!chromeExtApi) {
+    pendingGuestTabs.push({ guest: guestWc, host: hostWin || null, tor: Boolean(opts.tor) });
+    return;
+  }
+  if (guestWc.__djxxrExtTab) {
+    // Still refresh audible / active selection when re-focused
+    try {
+      chromeExtApi.selectTab?.(guestWc, hostWin);
+    } catch {
+      /* */
+    }
+    return;
+  }
   try {
+    // Guests must share the extensions session (persist:main). Skip private/tor.
+    try {
+      const gp = String(guestWc.session?.partitionName || '');
+      if (gp && !/^persist:main$/i.test(gp) && !/^persist:main\b/i.test(gp)) {
+        // Ephemeral private partitions — only when allowPrivate loadIntoSession ran
+        if (/^private-/i.test(gp) || /^tor-/i.test(gp)) {
+          /* still allow addTab if extension was loaded into that session */
+        } else if (gp.startsWith('persist:') && gp !== 'persist:main') {
+          console.warn('[ext] skip addTab (partition)', gp);
+          return;
+        }
+      }
+    } catch {
+      /* */
+    }
     if (hostWin && !hostWin.isDestroyed()) {
       require('./window-events.cjs').patchWindow(hostWin);
       try {
@@ -1367,6 +1636,11 @@ function trackGuestTab(guestWc, hostWin, opts = {}) {
     require('./webcontents-events.cjs').patchWebContents(guestWc);
     chromeExtApi.addTab(guestWc, hostWin);
     guestWc.__djxxrExtTab = true;
+    try {
+      lastAudible.set(guestWc, Boolean(guestWc.isCurrentlyAudible?.()));
+    } catch {
+      /* */
+    }
   } catch (err) {
     console.warn('[ext] addTab', err && err.message);
   }

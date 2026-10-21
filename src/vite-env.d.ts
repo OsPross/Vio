@@ -1004,6 +1004,7 @@ declare global {
         id: string,
         opts?: {
           anchorRect?: { x: number; y: number; width?: number; height?: number };
+          webContentsId?: number;
         },
       ) => Promise<{ ok: boolean; error?: string; url?: string }>;
       extensionsSelectTab: (webContentsId: number) => Promise<{ ok: boolean }>;

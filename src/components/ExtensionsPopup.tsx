@@ -29,7 +29,7 @@ type Props = {
   partition?: string;
 };
 
-export function ExtensionsPopup({ open, onClose, onManage }: Props) {
+export function ExtensionsPopup({ open, onClose, onManage, tabId }: Props) {
   const t = useT();
   const [rows, setRows] = useState<ExtRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -77,6 +77,7 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
       const rect = el.getBoundingClientRect();
       const res = await window.shell?.extensionsOpenAction?.(ext.id, {
         anchorRect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+        webContentsId: typeof tabId === 'number' && tabId > 0 ? tabId : undefined,
       });
       await reload();
       if (!res?.ok) {
