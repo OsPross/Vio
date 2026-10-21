@@ -280,11 +280,9 @@ app.whenReady().then(async () => {
   });
   phase('sessionWire');
 
-  // Start loading the shell window BEFORE engine.bin deserialize so Chromium can
-  // compile/paint the renderer in parallel with main-thread adblock work.
-  // Guests cannot exist until React mounts (after this sync section finishes),
-  // and attachToSession below still runs before the event loop serves guest traffic.
-  // If cache miss, attachToSession installs boot-gate until engine ready.
+  // Show shell ASAP: createWindow, attach boot-gate (no engine yet), yield the
+  // event loop so ready-to-show can fire, THEN deserialize engine.bin.
+  // Boot-gate holds first guest http(s) until blocker is ready (≤1.5s).
   metrics.init({
     onPush: (payload) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -299,10 +297,7 @@ app.whenReady().then(async () => {
   global.__DJXXR_PERF_WINDOW_CREATED_AT = Date.now();
   phase('afterCreateWindow');
 
-  // Fast path: deserialize engine cache, attach sessions (must precede first guest request).
-  const cacheLoad = adblock.loadCachedEngineSync();
-  console.log('[adblock+] cache load', cacheLoad);
-  phase('adblockCache');
+  // Gate + session hooks without blocking on engine.bin (blocker still null).
   adblock.attachToSession(ses);
   downloads.attachToSession(ses, { tor: false });
   downloads.setPushHandler((list) => {
@@ -331,8 +326,13 @@ app.whenReady().then(async () => {
     console.warn('[updater] schedule', err && err.message);
   }
 
-  // Deferred: disk inits + list refresh, chrome-extensions, passwords
+  // Yield so ready-to-show can run, then deserialize + heavy boot.
   setImmediate(() => {
+    const cacheLoad = adblock.loadCachedEngineSync();
+    console.log('[adblock+] cache load', cacheLoad);
+    phase('adblockCache');
+    // Re-attach enables Ghostery now that blocker exists.
+    adblock.attachToSession(ses);
     try {
       history.init();
       notes.init();
