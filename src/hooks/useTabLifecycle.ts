@@ -10,6 +10,12 @@ import {
 import { useMetrics, useMetricsGuests } from '../lib/useMetrics';
 import type { MetricsGuest } from '../lib/metricsTypes';
 import {
+  archiveIdleMs,
+  archivePollMs,
+  archiveSkipReason,
+  archiveTabNow,
+} from '../lib/tabArchive';
+import {
   captureTabScrollY,
   discardIdleMs,
   discardPollMs,
@@ -153,6 +159,52 @@ export function useTabLifecycle({
       window.clearInterval(t);
     };
   }, [settings.perfDiscardTabs, settings.perfDiscardMinutes, settings.perfDiscardKeepPinned]);
+
+  // Auto-archive long-idle tabs (close + persist). Sleeping tabs eligible; Tor/private skipped.
+  useEffect(() => {
+    const hours = settings.tabArchiveHours;
+    if (!hours || hours <= 0) return;
+    const idleMs = archiveIdleMs(hours);
+    const pollMs = archivePollMs(idleMs);
+    let cancelled = false;
+    let busy = false;
+
+    const tick = async () => {
+      if (cancelled || busy) return;
+      busy = true;
+      try {
+        const st = useStore.getState();
+        const h = st.settings.tabArchiveHours;
+        if (!h || h <= 0) return;
+        const now = Date.now();
+        const threshold = archiveIdleMs(h);
+        const sideAppUrls = st.sideApps.map((a) => a.url);
+
+        for (const tab of st.tabs) {
+          const media = tabMediaRef.current[tab.id];
+          const skip = archiveSkipReason(tab, st.activeId, {
+            audioPlaying: Boolean(media?.playing),
+            sideAppUrls,
+          });
+          if (skip) continue;
+          const last = tab.lastActiveAt ?? 0;
+          if (!last || now - last < threshold) continue;
+          await archiveTabNow(tab.id, { audioPlaying: Boolean(media?.playing) });
+          delete tabMediaRef.current[tab.id];
+        }
+      } finally {
+        busy = false;
+      }
+    };
+
+    const t = window.setInterval(() => {
+      void tick();
+    }, pollMs);
+    return () => {
+      cancelled = true;
+      window.clearInterval(t);
+    };
+  }, [settings.tabArchiveHours]);
 
   return {
     guestWc,

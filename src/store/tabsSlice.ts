@@ -21,7 +21,8 @@ export type TabsSlice = {
   newPrivateTab: (url?: string) => void;
   newTabBeside: (besideId: string, url?: string) => void;
   muteTab: (id: string, muted?: boolean) => void;
-  closeTab: (id: string) => void;
+  /** skipClosedStack: archive close — do not push Ctrl+Shift+T stack */
+  closeTab: (id: string, opts?: { skipClosedStack?: boolean }) => void;
   setActive: (id: string) => void;
   updateTab: (id: string, patch: Partial<Tab>) => void;
   pinTab: (id: string, pinned?: boolean) => void;
@@ -133,12 +134,12 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
         view: 'browser' as const,
       }));
     },
-    closeTab: (id) => {
+    closeTab: (id, opts) => {
       const { tabs, activeId, closedTabs } = get();
       const idx = tabs.findIndex((t) => t.id === id);
       const closing = idx >= 0 ? tabs[idx] : null;
       let nextClosed = closedTabs;
-      if (closing && !isTorTab(closing)) {
+      if (closing && !isTorTab(closing) && !opts?.skipClosedStack) {
         const entry = toClosedTab(closing, idx);
         if (entry) nextClosed = [entry, ...closedTabs].slice(0, MAX_CLOSED_TABS);
       }

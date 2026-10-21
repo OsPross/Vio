@@ -80,3 +80,31 @@ export function pruneTabSessionHistory(liveIds: Iterable<string>): void {
     if (!keep.has(id)) byTab.delete(id);
   }
 }
+
+/** Snapshot for archive persistence (clone; empty → null). */
+export function exportTabSessionHistory(
+  tabId: string,
+): { stack: string[]; index: number } | null {
+  const e = byTab.get(tabId);
+  if (!e || e.stack.length === 0 || e.index < 0) return null;
+  return { stack: e.stack.slice(), index: e.index };
+}
+
+/** Restore archive session onto a (possibly new) tab id. */
+export function importTabSessionHistory(
+  tabId: string,
+  session: { stack: string[]; index: number } | null | undefined,
+): void {
+  if (!tabId) return;
+  if (!session || !Array.isArray(session.stack) || session.stack.length === 0) {
+    byTab.delete(tabId);
+    return;
+  }
+  const stack = session.stack.map(String).filter(Boolean);
+  if (!stack.length) {
+    byTab.delete(tabId);
+    return;
+  }
+  const index = Math.max(0, Math.min(stack.length - 1, Number(session.index) || 0));
+  byTab.set(tabId, { stack, index });
+}

@@ -31,6 +31,7 @@ const privacy = timedRequire('privacy', './privacy.cjs');
 const faviconCache = timedRequire('favicon-cache', './favicon-cache.cjs');
 const history = timedRequire('history', './history.cjs');
 const notes = timedRequire('notes', './notes.cjs');
+const tabArchive = timedRequire('tab-archive', './tab-archive.cjs');
 const appSession = timedRequire('session', './session.cjs');
 const downloads = timedRequire('downloads', './downloads.cjs');
 const homeBg = timedRequire('home-bg', './home-bg.cjs');
@@ -341,6 +342,7 @@ app.whenReady().then(async () => {
     try {
       history.init();
       notes.init();
+      tabArchive.init();
       downloads.init();
     } catch (err) {
       console.warn('[boot] deferred data init', err && err.message);
@@ -522,6 +524,11 @@ app.on('before-quit', () => {
     console.warn('[notes] flush on quit', err);
   }
   try {
+    tabArchive.flushNow();
+  } catch (err) {
+    console.warn('[tab-archive] flush on quit', err);
+  }
+  try {
     appSession.markCleanExit();
   } catch (err) {
     console.warn('[session] clean exit', err);
@@ -588,6 +595,7 @@ const ipcDeps = {
   appSession,
   history,
   notes,
+  tabArchive,
   downloads,
   bookmarksImport,
   passwords,
@@ -612,6 +620,7 @@ require('./ipc/register-misc.cjs').register(ipcDeps);
 require('./ipc/register-downloads.cjs').register(ipcDeps);
 require('./ipc/register-bookmarks.cjs').register(ipcDeps);
 require('./ipc/register-notes.cjs').register(ipcDeps);
+require('./ipc/register-tab-archive.cjs').register(ipcDeps);
 require('./ipc/register-extensions.cjs').register(ipcDeps);
 require('./ipc/register-history.cjs').register(ipcDeps);
 require('./ipc/register-adblock.cjs').register(ipcDeps);

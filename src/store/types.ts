@@ -286,6 +286,11 @@ export type Settings = {
   perfDiscardMinutes: number;
   /** Do not auto-discard pinned tabs (manual sleep still allowed). */
   perfDiscardKeepPinned: boolean;
+  /**
+   * Auto-archive idle tabs after N hours (0 = off). Presets: 0 | 6 | 12 | 24.
+   * Archived tabs leave the strip and go to userData/tab-archive.json.
+   */
+  tabArchiveHours: number;
   perfReduceMotion: boolean;
   perfSmoothScrolling: boolean;
   perfSpellcheck: boolean;

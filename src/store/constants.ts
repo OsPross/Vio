@@ -299,6 +299,7 @@ export const DEFAULT_SETTINGS: Settings = {
   perfDiscardTabs: true,
   perfDiscardMinutes: 30,
   perfDiscardKeepPinned: true,
+  tabArchiveHours: 12,
   perfReduceMotion: false,
   perfSmoothScrolling: true,
   perfSpellcheck: true,

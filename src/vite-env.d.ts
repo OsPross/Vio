@@ -827,6 +827,57 @@ declare global {
         }[];
         error?: string;
       }>;
+      tabArchiveList: () => Promise<{
+        ok: boolean;
+        entries?: {
+          id: string;
+          url: string;
+          title: string;
+          favicon?: string;
+          archivedAt: number;
+          scrollY?: number;
+          session?: { stack: string[]; index: number };
+          navHistory?: {
+            url?: string;
+            title?: string;
+            urlChain?: string[];
+            index?: number;
+          } | null;
+        }[];
+        error?: string;
+      }>;
+      tabArchiveAdd: (entry: {
+        id?: string;
+        url: string;
+        title?: string;
+        favicon?: string;
+        archivedAt?: number;
+        scrollY?: number;
+        session?: { stack: string[]; index: number };
+        navHistory?: {
+          url?: string;
+          title?: string;
+          urlChain?: string[];
+          index?: number;
+        } | null;
+      }) => Promise<{
+        ok: boolean;
+        entry?: {
+          id: string;
+          url: string;
+          title: string;
+          favicon?: string;
+          archivedAt: number;
+        };
+        entries?: unknown[];
+        error?: string;
+      }>;
+      tabArchiveRemove: (id: string) => Promise<{
+        ok: boolean;
+        entries?: unknown[];
+        error?: string;
+      }>;
+      tabArchiveClear: () => Promise<{ ok: boolean; entries?: unknown[] }>;
       extensionsList: () => Promise<{
         ok: boolean;
         extensions?: {

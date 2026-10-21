@@ -5,6 +5,8 @@
 import assert from 'node:assert/strict';
 import {
   dropTabSessionHistory,
+  exportTabSessionHistory,
+  importTabSessionHistory,
   recordTabSessionUrl,
   tabSessionBack,
   tabSessionCanBack,
@@ -46,5 +48,15 @@ assert.equal(tabSessionPeekForward(id), 'https://c.example/');
 
 dropTabSessionHistory(id);
 assert.equal(tabSessionCanBack(id), false);
+
+recordTabSessionUrl(id, 'https://x.example/');
+recordTabSessionUrl(id, 'https://y.example/');
+const snap = exportTabSessionHistory(id);
+assert.ok(snap && snap.stack.length === 2);
+dropTabSessionHistory(id);
+importTabSessionHistory(id, snap);
+assert.equal(tabSessionCanBack(id), true);
+assert.equal(tabSessionPeekBack(id), 'https://x.example/');
+dropTabSessionHistory(id);
 
 console.log('tab-session-history.test.mjs: ok');

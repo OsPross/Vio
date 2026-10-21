@@ -140,6 +140,13 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
     else if (m <= 30) s.perfDiscardMinutes = 30;
     else s.perfDiscardMinutes = 60;
   }
+  {
+    const h = typeof s.tabArchiveHours === 'number' ? s.tabArchiveHours : 12;
+    if (!Number.isFinite(h) || h <= 0) s.tabArchiveHours = 0;
+    else if (h <= 6) s.tabArchiveHours = 6;
+    else if (h <= 12) s.tabArchiveHours = 12;
+    else s.tabArchiveHours = 24;
+  }
   if (!s.zoomFactors || typeof s.zoomFactors !== 'object') s.zoomFactors = {};
   if (typeof s.showBookmarksBar !== 'boolean') s.showBookmarksBar = false;
   if (typeof s.darkPageScrollbars !== 'boolean') s.darkPageScrollbars = true;
