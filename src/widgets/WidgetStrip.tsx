@@ -54,7 +54,7 @@ import { ShortcutsWidget } from './ShortcutsWidget';
 import {
   chromeToPx,
   clampWidgetPos,
-  clampWidgetsToCanvas,
+  layoutWidgetVisual,
   nextFlexFallback,
   placeCssVars,
   pxToWidgetPos,
@@ -215,10 +215,6 @@ export function WidgetStrip({
   const rootRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
   const metricsRef = useRef<CanvasMetrics | null>(null);
-  const widgetsRef = useRef(widgets);
-  const onChangeRef = useRef(onChange);
-  widgetsRef.current = widgets;
-  onChangeRef.current = onChange;
   const [metrics, setMetrics] = useState<CanvasMetrics | null>(null);
   const [flexFallback, setFlexFallback] = useState(false);
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
@@ -264,18 +260,14 @@ export function WidgetStrip({
       };
       metricsRef.current = next;
       setMetrics(next);
+      // Compact strip under search is view-only — never rewrite stored x/y on resize
       setFlexFallback((prev) => nextFlexFallback(prev, width));
-      // Keep free-place widgets inside the visible canvas on resize / first measure
-      if (!preview && !locked) {
-        const clamped = clampWidgetsToCanvas(widgetsRef.current, next);
-        if (clamped !== widgetsRef.current) onChangeRef.current(clamped);
-      }
     };
     measure();
     const ro = new ResizeObserver(() => measure());
     ro.observe(el);
     return () => ro.disconnect();
-  }, [preview, locked]);
+  }, []);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -578,20 +570,30 @@ export function WidgetStrip({
 
   if (!visibleChrome.length && !widgets.length) return null;
 
-  const restingBox = (
-    key: string,
-    item: HomeChromeItem | HomeWidget,
-    kind: 'chrome' | 'widget',
-  ): PlaceBox => {
-    const m = metrics ?? {
+  const metricsOrFallback = (): CanvasMetrics =>
+    metrics ?? {
       width: rootRef.current?.offsetWidth || 1280,
       height: rootRef.current?.offsetHeight || 800,
       headerLeft: 0,
       headerWidth: 640,
       headerBottom: 320,
     };
+
+  const chromeBoxesFor = (m: CanvasMetrics) =>
+    visibleChrome.map((c) => chromeToPx(c, m));
+
+  /** Stored coords → on-screen place (clamp + avoid chrome). Does not mutate store. */
+  const visualWidget = (w: HomeWidget, m: CanvasMetrics): HomeWidget =>
+    layoutWidgetVisual(w, m, chromeBoxesFor(m));
+
+  const restingBox = (
+    key: string,
+    item: HomeChromeItem | HomeWidget,
+    kind: 'chrome' | 'widget',
+  ): PlaceBox => {
+    const m = metricsOrFallback();
     if (kind === 'chrome') return chromeToPx(item as HomeChromeItem, m);
-    return widgetToPx(item as HomeWidget, m);
+    return widgetToPx(visualWidget(item as HomeWidget, m), m);
   };
 
   return (
@@ -694,9 +696,11 @@ export function WidgetStrip({
           let style: CSSProperties = { width: px, maxWidth: '100%', zIndex: stackZ };
           let box: PlaceBox = { left: 0, top: 0, width: px, height: h };
           if (!flexFallback) {
-            box = restingBox(w.id, w, 'widget');
+            const m = metricsOrFallback();
+            const placed = visualWidget(w, m);
+            box = widgetToPx(placed, m);
             style = {
-              ...placeCssVars(w.anchor, w.x, w.y, px, h),
+              ...placeCssVars(placed.anchor, placed.x, placed.y, px, h),
               zIndex: draggingKey === w.id ? 80 : selectedKey === w.id ? 40 : stackZ,
             } as CSSProperties;
           }

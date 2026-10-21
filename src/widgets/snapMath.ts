@@ -267,6 +267,24 @@ export function clampWidgetPos(w: HomeWidget, metrics: CanvasMetrics): HomeWidge
   return { ...w, ...pos };
 }
 
+/**
+ * View-only layout: stored user coords + clamp to canvas + push out of chrome
+ * (clock / search / shortcuts). Never write this back to the store on resize.
+ */
+export function layoutWidgetVisual(
+  w: HomeWidget,
+  metrics: CanvasMetrics,
+  chromeBoxes: { left: number; top: number; width: number; height: number }[],
+): HomeWidget {
+  const { w: width, h: height } = sizeToPx(w.size, w.type);
+  let left = placeLeftPx(w.anchor, w.x, width, metrics.width);
+  let top = placeTopPx(w.y);
+  const resolved = resolveCollision(left, top, width, height, chromeBoxes, metrics);
+  const pos = pxToWidgetPos(resolved.left, resolved.top, width, height, metrics, w.anchor);
+  if (pos.anchor === w.anchor && pos.x === w.x && pos.y === w.y) return w;
+  return { ...w, ...pos };
+}
+
 export function clampWidgetsToCanvas(
   widgets: HomeWidget[],
   metrics: CanvasMetrics,

@@ -285,6 +285,18 @@ function shouldUseFlexFallback(canvasWidth) {
 }
 
 {
+  // Stored free-place coords must survive canvas shrink/grow (visual clamp is view-only)
+  const stored = { id: '1', type: 'notes', size: 'M', anchor: 'left', x: -10, y: 8 };
+  const w = SIZE_PX.M;
+  const leftNarrow = placeLeftPx(stored.anchor, stored.x, w, 700);
+  const leftWide = placeLeftPx(stored.anchor, stored.x, w, 1400);
+  assert.ok(leftWide < 1400 / 2, 'wide canvas places from stored left anchor');
+  assert.notEqual(leftNarrow, leftWide, 'pixel left changes with canvas; stored cells stay fixed');
+  assert.equal(stored.x, -10);
+  assert.equal(stored.y, 8);
+}
+
+{
   // Center anchor x=0 stays centered across canvas width changes (CSS formula)
   const width = 300;
   for (const canvasW of [1440, 1100, 1440]) {
