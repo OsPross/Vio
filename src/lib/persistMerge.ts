@@ -129,6 +129,17 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
     s.uiLocale = 'pl';
   }
   if (typeof s.perfSpellcheck !== 'boolean') s.perfSpellcheck = true;
+  if (typeof s.perfDiscardTabs !== 'boolean') s.perfDiscardTabs = true;
+  if (typeof s.perfDiscardKeepPinned !== 'boolean') s.perfDiscardKeepPinned = true;
+  {
+    const m = typeof s.perfDiscardMinutes === 'number' ? s.perfDiscardMinutes : 30;
+    // Snap legacy slider values to off/15/30/60 presets
+    if (!s.perfDiscardTabs || m <= 0) {
+      s.perfDiscardMinutes = 30;
+    } else if (m <= 15) s.perfDiscardMinutes = 15;
+    else if (m <= 30) s.perfDiscardMinutes = 30;
+    else s.perfDiscardMinutes = 60;
+  }
   if (!s.zoomFactors || typeof s.zoomFactors !== 'object') s.zoomFactors = {};
   if (typeof s.showBookmarksBar !== 'boolean') s.showBookmarksBar = false;
   if (typeof s.darkPageScrollbars !== 'boolean') s.darkPageScrollbars = true;

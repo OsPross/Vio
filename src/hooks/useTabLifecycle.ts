@@ -9,6 +9,13 @@ import {
 } from 'react';
 import { useMetrics, useMetricsGuests } from '../lib/useMetrics';
 import type { MetricsGuest } from '../lib/metricsTypes';
+import {
+  captureTabScrollY,
+  discardIdleMs,
+  discardPollMs,
+  discardSkipReason,
+  tabHasDirtyForm,
+} from '../lib/tabDiscard';
 import { HOME_URL, useStore } from '../store';
 
 export type UseTabLifecycleArgs = {
@@ -98,29 +105,54 @@ export function useTabLifecycle({
     });
   }, []);
 
-  // Wyrzucanie nieaktywnych kart z pamięci (odmontowanie webview)
+  // Auto-discard inactive tabs (unmount webview) — skips Tor/private/audio/forms/pinned.
   useEffect(() => {
     if (!settings.perfDiscardTabs) return;
-    const ms = Math.max(1, settings.perfDiscardMinutes) * 60_000;
-    const t = setInterval(() => {
-      const st = useStore.getState();
-      const now = Date.now();
-      for (const tab of st.tabs) {
-        if (tab.id === st.activeId) continue;
-        if (tab.pinned) continue;
-        if (tab.url === HOME_URL || tab.url.startsWith('about:')) continue;
-        if (tab.discarded) continue;
-        // Never discard while media is playing (YouTube/Discord audio) or video present (PiP risk)
-        const media = tabMediaRef.current[tab.id];
-        if (media?.playing || media?.hasVideo) continue;
-        const last = tab.lastActiveAt ?? 0;
-        if (last && now - last >= ms) {
-          st.updateTab(tab.id, { discarded: true });
+    const idleMs = discardIdleMs(settings.perfDiscardMinutes);
+    const pollMs = discardPollMs(idleMs);
+    let cancelled = false;
+    let busy = false;
+
+    const tick = async () => {
+      if (cancelled || busy) return;
+      busy = true;
+      try {
+        const st = useStore.getState();
+        if (!st.settings.perfDiscardTabs) return;
+        const keepPinned = st.settings.perfDiscardKeepPinned !== false;
+        const now = Date.now();
+        const threshold = discardIdleMs(st.settings.perfDiscardMinutes);
+
+        for (const tab of st.tabs) {
+          const media = tabMediaRef.current[tab.id];
+          const skip = discardSkipReason(tab, st.activeId, {
+            keepPinned,
+            audioPlaying: Boolean(media?.playing),
+          });
+          if (skip) continue;
+          const last = tab.lastActiveAt ?? 0;
+          if (!last || now - last < threshold) continue;
+          if (await tabHasDirtyForm(tab.id)) continue;
+          const scrollY = await captureTabScrollY(tab.id);
+          st.updateTab(tab.id, {
+            discarded: true,
+            ...(scrollY != null ? { scrollY } : {}),
+          });
+          delete tabMediaRef.current[tab.id];
         }
+      } finally {
+        busy = false;
       }
-    }, 30_000);
-    return () => clearInterval(t);
-  }, [settings.perfDiscardTabs, settings.perfDiscardMinutes]);
+    };
+
+    const t = window.setInterval(() => {
+      void tick();
+    }, pollMs);
+    return () => {
+      cancelled = true;
+      window.clearInterval(t);
+    };
+  }, [settings.perfDiscardTabs, settings.perfDiscardMinutes, settings.perfDiscardKeepPinned]);
 
   return {
     guestWc,

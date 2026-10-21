@@ -5,6 +5,8 @@ export type Tab = {
   favicon?: string;
   lastActiveAt?: number;
   discarded?: boolean;
+  /** Scroll Y captured before discard — restored once on wake (RAM only). */
+  scrollY?: number;
   /** Isolated Tor browsing — never mix with normal tabs */
   mode?: 'normal' | 'tor' | 'private';
   /** Last main-frame load failure (shown as in-app error page) */
@@ -280,7 +282,10 @@ export type Settings = {
   perfBackgroundThrottling: boolean;
   perfLazyTabs: boolean;
   perfDiscardTabs: boolean;
+  /** Idle minutes before discard: 15 | 30 | 60 (ignored when perfDiscardTabs is false). */
   perfDiscardMinutes: number;
+  /** Do not auto-discard pinned tabs (manual sleep still allowed). */
+  perfDiscardKeepPinned: boolean;
   perfReduceMotion: boolean;
   perfSmoothScrolling: boolean;
   perfSpellcheck: boolean;

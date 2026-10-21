@@ -4,6 +4,7 @@ import { hostFromPageUrl, zoomFactorForHost } from '../../lib/pageHost';
 import { getWindowPartition } from '../../lib/windowBoot';
 import { pageScrollbarCss } from '../../lib/page-scrollbars';
 import { letterFavicon } from '../../lib/favicon';
+import { registerDiscardGuest, restoreTabScrollY } from '../../lib/tabDiscard';
 import {
   HOME_URL,
   TOR_HOME_URL,
@@ -219,7 +220,11 @@ function TabWebviewInner({
     (node: HTMLElement | null) => {
       const el = node as unknown as WebviewEl | null;
       ref.current = el;
-      if (!el) return;
+      if (!el) {
+        registerDiscardGuest(tab.id, null);
+        return;
+      }
+      registerDiscardGuest(tab.id, el);
       const flag = el as unknown as { __djxxrSrcInit?: boolean };
       if (flag.__djxxrSrcInit) return;
       flag.__djxxrSrcInit = true;
@@ -229,8 +234,12 @@ function TabWebviewInner({
         /* */
       }
     },
-    [],
+    [tab.id],
   );
+
+  useEffect(() => {
+    return () => registerDiscardGuest(tab.id, null);
+  }, [tab.id]);
   const onNavRef = useRef(onNav);
   const onSaveOfferRef = useRef(onSaveOffer);
   const onGuestMetaRef = useRef(onGuestMeta);
@@ -327,6 +336,14 @@ function TabWebviewInner({
         }
       } catch {
         /* */
+      }
+      // Restore scroll after wake from discard (one-shot).
+      const cur = useStore.getState().tabs.find((t) => t.id === tab.id);
+      const y = cur?.scrollY;
+      if (typeof y === 'number' && y > 0) {
+        void restoreTabScrollY(el, y).then(() => {
+          updateTab(tab.id, { scrollY: undefined });
+        });
       }
     };
 
