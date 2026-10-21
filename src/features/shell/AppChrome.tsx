@@ -3,6 +3,7 @@ import {
   Suspense,
   useEffect,
   useRef,
+  useState,
   type CSSProperties,
   type Dispatch,
   type MutableRefObject,
@@ -262,11 +263,14 @@ export function AppChrome({
     }
   };
 
+  const [sideAppMenuOpen, setSideAppMenuOpen] = useState(false);
+
   /** Latest hold flags for close-timer (avoid stale menu/drag state). */
   const sidebarHoldRef = useRef(false);
   sidebarHoldRef.current = Boolean(
     settings.sidePanelOpen ||
       sidebarMenu ||
+      sideAppMenuOpen ||
       tabMenu ||
       newTabMenu ||
       omniMenu ||
@@ -416,6 +420,7 @@ export function AppChrome({
                 onHome={() => navigateActive(HOME_URL)}
                 onOpenTab={(url) => newTab(url)}
                 onCollapseSidebar={() => setSidebarAutoOpen(false)}
+                onSideAppMenuOpenChange={setSideAppMenuOpen}
               />
             </Suspense>
           </ErrorBoundary>

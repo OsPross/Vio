@@ -466,33 +466,7 @@ button {
   right: 7px;
 }
 
-.side-rail-ctx {
-  position: fixed;
-  z-index: 80;
-  min-width: 160px;
-  padding: 4px;
-  border-radius: 10px;
-  background: var(--bg-elev);
-  border: 1px solid var(--line);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-}
-
-.side-rail-ctx button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 7px 10px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--fg);
-  font-size: 12.5px;
-}
-
-.side-rail-ctx button:hover {
-  background: color-mix(in srgb, var(--fg) 8%, transparent);
-}
-
+/* side-rail-ctx: portal + tab-ctx-menu tokens; only danger accent kept */
 .side-rail-ctx button.danger {
   color: #f07178;
 }

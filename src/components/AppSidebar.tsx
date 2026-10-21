@@ -1,11 +1,13 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as RE,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { LayoutGroup, motion } from 'motion/react';
 import {
   DndContext,
@@ -245,17 +247,37 @@ function SortableAppBtn({
   );
 }
 
-type CtxMenu = { x: number; y: number; appId: string } | null;
+type CtxMenu = { appId: string; anchor: DOMRect } | null;
+
+/** Right of icon, top-aligned; flip/clamp at viewport edges. */
+function placeSideAppCtx(anchor: DOMRect, menuW: number, menuH: number) {
+  const PAD = 8;
+  const GAP = 6;
+  let left = anchor.right + GAP;
+  let top = anchor.top;
+  if (left + menuW > window.innerWidth - PAD) {
+    left = Math.max(PAD, anchor.left - menuW - GAP);
+  }
+  if (top + menuH > window.innerHeight - PAD) {
+    top = Math.max(PAD, window.innerHeight - menuH - PAD);
+  }
+  if (top < PAD) top = PAD;
+  if (left < PAD) left = PAD;
+  return { left, top };
+}
 
 export function AppSidebar({
   onHome,
   onOpenTab,
   onCollapseSidebar,
+  onSideAppMenuOpenChange,
 }: {
   onHome: () => void;
   onOpenTab: (url: string) => void;
   /** Auto mode: hide the overlay rail (AppChrome setSidebarAutoOpen(false)). */
   onCollapseSidebar?: () => void;
+  /** Keep auto-sidebar open while the app context menu is visible. */
+  onSideAppMenuOpenChange?: (open: boolean) => void;
 }) {
   const t = useT();
   const settings = useStore((s) => s.settings);
@@ -274,6 +296,8 @@ export function AppSidebar({
   const [mounted, setMounted] = useState<Record<string, boolean>>({});
   const [badges, setBadges] = useState<Record<string, number>>({});
   const [ctx, setCtx] = useState<CtxMenu>(null);
+  const [ctxPos, setCtxPos] = useState<{ left: number; top: number } | null>(null);
+  const ctxMenuRef = useRef<HTMLDivElement | null>(null);
   const resizeRef = useRef<{ startX: number; startW: number } | null>(null);
 
   const active = sideApps.find((a) => a.id === settings.activeSideAppId) ?? null;
@@ -299,12 +323,34 @@ export function AppSidebar({
   }, [panelOpen, active]);
 
   useEffect(() => {
+    onSideAppMenuOpenChange?.(!!ctx);
+    return () => onSideAppMenuOpenChange?.(false);
+  }, [ctx, onSideAppMenuOpenChange]);
+
+  useLayoutEffect(() => {
+    if (!ctx) {
+      setCtxPos(null);
+      return;
+    }
+    const el = ctxMenuRef.current;
+    const w = el?.offsetWidth || 168;
+    const h = el?.offsetHeight || 140;
+    setCtxPos(placeSideAppCtx(ctx.anchor, w, h));
+  }, [ctx]);
+
+  useEffect(() => {
     if (!ctx) return;
     const close = () => setCtx(null);
-    window.addEventListener('click', close);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        close();
+      }
+    };
+    window.addEventListener('keydown', onKey);
     window.addEventListener('blur', close);
     return () => {
-      window.removeEventListener('click', close);
+      window.removeEventListener('keydown', onKey);
       window.removeEventListener('blur', close);
     };
   }, [ctx]);
@@ -443,7 +489,8 @@ export function AppSidebar({
                       onContext={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setCtx({ x: e.clientX, y: e.clientY, appId: app.id });
+                        const anchor = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        setCtx({ appId: app.id, anchor });
                       }}
                     />
                   );
@@ -573,62 +620,75 @@ export function AppSidebar({
         )}
       </section>
 
-      {ctx && ctxApp && (
-        <div
-          className="side-rail-ctx"
-          style={{ left: ctx.x, top: ctx.y }}
-          role="menu"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              openSideApp(ctxApp.id);
+      {ctx &&
+        ctxApp &&
+        createPortal(
+          <div
+            className="tab-ctx-backdrop"
+            onMouseDown={() => setCtx(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
               setCtx(null);
             }}
           >
-            {t('sidebar.ctxOpen')}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              onOpenTab(ctxApp.url);
-              setCtx(null);
-            }}
-          >
-            {t('sidebar.openInTab')}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              const next = !ctxApp.muted;
-              setSideAppMuted(ctxApp.id, next);
-              try {
-                views.current[ctxApp.id]?.setAudioMuted?.(next);
-              } catch {
-                /* */
-              }
-              setCtx(null);
-            }}
-          >
-            {ctxApp.muted ? t('sidebar.ctxUnmute') : t('sidebar.ctxMute')}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="danger"
-            onClick={() => {
-              removeSideApp(ctxApp.id);
-              setCtx(null);
-            }}
-          >
-            {t('sidebar.ctxUnpin')}
-          </button>
-        </div>
-      )}
+            <div
+              ref={ctxMenuRef}
+              className="tab-ctx-menu side-rail-ctx"
+              style={ctxPos ? { left: ctxPos.left, top: ctxPos.top } : { left: -9999, top: 0 }}
+              role="menu"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  openSideApp(ctxApp.id);
+                  setCtx(null);
+                }}
+              >
+                {t('sidebar.ctxOpen')}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onOpenTab(ctxApp.url);
+                  setCtx(null);
+                }}
+              >
+                {t('sidebar.openInTab')}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  const next = !ctxApp.muted;
+                  setSideAppMuted(ctxApp.id, next);
+                  try {
+                    views.current[ctxApp.id]?.setAudioMuted?.(next);
+                  } catch {
+                    /* */
+                  }
+                  setCtx(null);
+                }}
+              >
+                {ctxApp.muted ? t('sidebar.ctxUnmute') : t('sidebar.ctxMute')}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="danger"
+                onClick={() => {
+                  removeSideApp(ctxApp.id);
+                  setCtx(null);
+                }}
+              >
+                {t('sidebar.ctxUnpin')}
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
