@@ -127,6 +127,7 @@ contextBridge.exposeInMainWorld('shell', {
   extensionsSetPrivate: (id, allow) => ipcRenderer.invoke('shell:extensions-set-private', id, allow),
   extensionsSetPinned: (id, pinned) => ipcRenderer.invoke('shell:extensions-set-pinned', id, pinned),
   extensionsRemove: (id) => ipcRenderer.invoke('shell:extensions-remove', id),
+  extensionsUpdate: (id) => ipcRenderer.invoke('shell:extensions-update', id),
   onExtensionsInstallAsk: (cb) => {
     const handler = (_e, payload) => cb(payload);
     ipcRenderer.on('shell:extensions-install-ask', handler);

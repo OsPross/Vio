@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Puzzle, FolderOpen, Trash2, RefreshCw, Pin, Link2 } from 'lucide-react';
+import { Puzzle, FolderOpen, Trash2, RefreshCw, Pin, Link2, AlertTriangle } from 'lucide-react';
 import { useT } from '../i18n';
 import { InternalPage } from './InternalPage';
+import { Switch } from './ui/Switch';
 
 type ExtRow = {
   id: string;
@@ -18,6 +19,10 @@ type ExtRow = {
   electronId?: string | null;
   chromeId?: string;
   usesWebRequest?: boolean;
+  icon?: string | null;
+  limitedSupport?: boolean;
+  warnings?: string[];
+  canUpdate?: boolean;
 };
 
 export function ExtensionsPage() {
@@ -26,6 +31,7 @@ export function ExtensionsPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [storeInput, setStoreInput] = useState('');
+  const [detailsId, setDetailsId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const res = await window.shell?.extensionsList?.();
@@ -58,6 +64,18 @@ export function ExtensionsPage() {
       const res = await window.shell?.extensionsInstallStore?.(input);
       if (!res?.ok) setErr(res?.error || t('internal.extInstallStoreFailed'));
       else setStoreInput('');
+      await reload();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const updateOne = async (id: string) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await window.shell?.extensionsUpdate?.(id);
+      if (!res?.ok) setErr(res?.error || t('internal.extUpdateFailed'));
       await reload();
     } finally {
       setBusy(false);
@@ -128,7 +146,14 @@ export function ExtensionsPage() {
       ) : (
         <ul className="extensions-list">
           {rows.map((ext) => (
-            <li key={ext.id} className="extensions-row">
+            <li key={ext.id} className={`extensions-row ${ext.enabled ? '' : 'off'}`}>
+              <div className="extensions-ico" aria-hidden>
+                {ext.icon ? (
+                  <img src={ext.icon} alt="" width={32} height={32} />
+                ) : (
+                  <Puzzle size={20} strokeWidth={1.5} />
+                )}
+              </div>
               <div className="extensions-meta">
                 <strong>{ext.name}</strong>
                 <span className="muted">
@@ -137,75 +162,100 @@ export function ExtensionsPage() {
                   {ext.loaded
                     ? ` · ${t('internal.extActive')}`
                     : ` · ${t('internal.extDisabledSession')}`}
-                  {ext.electronId || ext.chromeId || ext.id
-                    ? ` · ${(ext.electronId || ext.chromeId || ext.id).slice(0, 8)}…`
-                    : ''}
                   {ext.usesWebRequest ? ` · ${t('internal.extWebRequestGhostery')}` : ''}
-                  {ext.source ? ` · ${ext.source}` : ''}
                 </span>
-                {ext.permissions && ext.permissions.length > 0 ? (
-                  <details className="extensions-perms">
-                    <summary>
-                      {t('internal.extPermissions', { n: ext.permissions.length })}
-                    </summary>
-                    <ul>
-                      {ext.permissions.map((p) => (
-                        <li key={p}>
-                          <code>{p}</code>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
+                {ext.limitedSupport ? (
+                  <p className="extensions-warn">
+                    <AlertTriangle size={12} strokeWidth={2} />
+                    {t('internal.extLimitedSupport')}
+                    {ext.warnings?.[0] ? ` — ${ext.warnings[0]}` : ''}
+                  </p>
+                ) : null}
+                {detailsId === ext.id && ext.permissions && ext.permissions.length > 0 ? (
+                  <ul className="extensions-perms-list">
+                    {ext.permissions.map((p) => (
+                      <li key={p}>
+                        <code>{p}</code>
+                      </li>
+                    ))}
+                  </ul>
                 ) : null}
               </div>
-              <label className="extensions-toggle">
-                <input
-                  type="checkbox"
-                  checked={ext.enabled}
-                  onChange={(e) => {
+              <div className="extensions-actions">
+                <Switch
+                  on={ext.enabled}
+                  onChange={(on) => {
+                    void window.shell?.extensionsSetEnabled?.(ext.id, on).then(() => reload());
+                  }}
+                  aria-label={
+                    ext.enabled
+                      ? t('chrome.disableExtension', { name: ext.name })
+                      : t('chrome.enableExtension', { name: ext.name })
+                  }
+                />
+                <button
+                  type="button"
+                  className={`icon-btn sm ${ext.pinned ? 'on' : ''}`}
+                  title={ext.pinned ? t('chrome.unpinFromBar') : t('chrome.pinToBar')}
+                  disabled={!ext.enabled}
+                  onClick={() => {
                     void window.shell
-                      ?.extensionsSetEnabled?.(ext.id, e.target.checked)
+                      ?.extensionsSetPinned?.(ext.id, !ext.pinned)
                       .then(() => reload());
                   }}
-                />
-                {t('common.on')}
-              </label>
-              <label className="extensions-toggle">
-                <input
-                  type="checkbox"
-                  checked={ext.allowPrivate}
-                  onChange={(e) => {
-                    void window.shell
-                      ?.extensionsSetPrivate?.(ext.id, e.target.checked)
-                      .then(() => reload());
+                >
+                  <Pin size={13} strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  className="history-sbtn secondary sm"
+                  onClick={() => setDetailsId((cur) => (cur === ext.id ? null : ext.id))}
+                >
+                  {t('internal.extDetails')}
+                </button>
+                {ext.canUpdate ? (
+                  <button
+                    type="button"
+                    className="history-sbtn secondary sm"
+                    disabled={busy}
+                    title={t('internal.extUpdate')}
+                    onClick={() => void updateOne(ext.id)}
+                  >
+                    <RefreshCw size={12} />
+                    {t('internal.extUpdate')}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="icon-btn"
+                  title={t('common.delete')}
+                  onClick={() => {
+                    if (!window.confirm(t('internal.extRemoveConfirm', { name: ext.name }))) return;
+                    void window.shell?.extensionsRemove?.(ext.id).then(() => reload());
                   }}
-                />
-                {t('internal.extPrivate')}
-              </label>
-              <label className="extensions-toggle" title={t('internal.extPinTitle')}>
-                <input
-                  type="checkbox"
-                  checked={!!ext.pinned}
-                  onChange={(e) => {
-                    void window.shell
-                      ?.extensionsSetPinned?.(ext.id, e.target.checked)
-                      .then(() => reload());
-                  }}
-                />
-                <Pin size={12} />
-                {t('internal.extToolbar')}
-              </label>
-              <button
-                type="button"
-                className="icon-btn"
-                title={t('common.delete')}
-                onClick={() => {
-                  if (!window.confirm(t('internal.extRemoveConfirm', { name: ext.name }))) return;
-                  void window.shell?.extensionsRemove?.(ext.id).then(() => reload());
-                }}
-              >
-                <Trash2 size={14} />
-              </button>
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              {detailsId === ext.id ? (
+                <div className="extensions-details">
+                  <label className="extensions-toggle">
+                    <input
+                      type="checkbox"
+                      checked={ext.allowPrivate}
+                      onChange={(e) => {
+                        void window.shell
+                          ?.extensionsSetPrivate?.(ext.id, e.target.checked)
+                          .then(() => reload());
+                      }}
+                    />
+                    {t('internal.extPrivate')}
+                  </label>
+                  <span className="muted extensions-id" title={ext.id}>
+                    ID: {ext.chromeId || ext.electronId || ext.id}
+                  </span>
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

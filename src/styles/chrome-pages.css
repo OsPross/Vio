@@ -394,8 +394,78 @@
   background: transparent;
 }
 
+.extensions-row.off {
+  opacity: 0.62;
+}
+
 .extensions-row:hover {
   background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+
+.extensions-ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  color: var(--fg-2);
+  overflow: hidden;
+}
+
+.extensions-ico img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.extensions-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.extensions-warn {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #c9a227;
+}
+
+.extensions-perms-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.extensions-perms-list code {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+.extensions-details {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  padding-left: 48px;
+}
+
+.extensions-id {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
 }
 
 .extensions-meta {

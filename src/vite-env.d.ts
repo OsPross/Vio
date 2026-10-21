@@ -957,6 +957,12 @@ declare global {
           path?: string;
           source?: string;
           electronId?: string | null;
+          chromeId?: string;
+          icon?: string | null;
+          limitedSupport?: boolean;
+          warnings?: string[];
+          canUpdate?: boolean;
+          usesWebRequest?: boolean;
         }[];
       }>;
       extensionsInstallFolder: () => Promise<{
@@ -988,6 +994,11 @@ declare global {
         pinned: boolean,
       ) => Promise<{ ok: boolean; error?: string }>;
       extensionsRemove: (id: string) => Promise<{ ok: boolean; error?: string }>;
+      extensionsUpdate: (id: string) => Promise<{
+        ok: boolean;
+        error?: string;
+        extension?: unknown;
+      }>;
       extensionsSelectTab: (webContentsId: number) => Promise<{ ok: boolean }>;
       onExtensionsInstallAsk: (
         cb: (payload: { askId: string; extensionId: string; sourceUrl?: string }) => void,

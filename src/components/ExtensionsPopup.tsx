@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Pin, Puzzle, Settings2, X } from 'lucide-react';
+import { AlertTriangle, Pin, Puzzle, Settings2, X } from 'lucide-react';
 import { Switch } from './ui/Switch';
 import { useT } from '../i18n';
 import { isMotionOff, popupTransition } from '../lib/motionPresets';
@@ -14,6 +14,8 @@ type ExtRow = {
   pinned?: boolean;
   loaded?: boolean;
   manifestVersion?: number;
+  icon?: string | null;
+  limitedSupport?: boolean;
 };
 
 type Props = {
@@ -94,8 +96,24 @@ export function ExtensionsPopup({ open, onClose, onManage }: Props) {
             <ul className="ext-menu-list">
               {rows.map((ext) => (
                 <li key={ext.id} className={`ext-menu-row ${ext.enabled ? '' : 'off'}`}>
+                  <span className="ext-menu-ico" aria-hidden>
+                    {ext.icon ? (
+                      <img src={ext.icon} alt="" width={18} height={18} />
+                    ) : (
+                      <Puzzle size={14} strokeWidth={1.5} />
+                    )}
+                  </span>
                   <div className="ext-menu-meta">
-                    <strong title={ext.name}>{ext.name}</strong>
+                    <strong title={ext.name}>
+                      {ext.name}
+                      {ext.limitedSupport ? (
+                        <AlertTriangle
+                          size={11}
+                          className="ext-menu-warn-ico"
+                          aria-label={t('internal.extLimitedSupport')}
+                        />
+                      ) : null}
+                    </strong>
                     <span className="muted">
                       v{ext.version}
                       {ext.manifestVersion ? ` · MV${ext.manifestVersion}` : ''}
