@@ -44,18 +44,13 @@ body,
   background: var(--bg);
   border: 0;
   outline: 0;
+  box-shadow: none;
 }
 
-/*
- * Windows 11 / Electron titleBarOverlay often paints a 1px hairline on the
- * client edge (#2f2f2f). Cover it so it does not read as a stray “sidebar” strip.
- */
 html {
-  box-shadow: inset 1px 0 0 var(--chrome);
-}
-[data-theme='paper'] html,
-.paper html {
-  box-shadow: inset 1px 0 0 var(--bg);
+  border: 0;
+  outline: 0;
+  box-shadow: none;
 }
 
 button,
@@ -4444,36 +4439,37 @@ html.side-panel-resizing .app {
   grid-template-columns: 1fr;
   position: relative;
 }
-/*
- * Electron <webview> paints above HTML z-index for hit-testing. Leave an 8px HTML
- * strip so sidebar-edge-hit actually receives mouseenter (www + home).
- * Fill that gutter with the same surface as the stage so it does not look like a strip.
- */
+/* Stage / webview flush to the window edge — no reserved gutter strip. */
 .app.sidebar-auto .stage {
-  margin-left: 8px;
-  width: calc(100% - 8px);
+  margin-left: 0;
+  width: 100%;
 }
-.app.sidebar-auto::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: calc(var(--tabs-h) + var(--bar-h));
-  bottom: 0;
-  width: 8px;
-  background: var(--bg);
-  z-index: 1;
-  pointer-events: none;
-}
+/*
+ * Invisible 8px hover target (home / internal HTML). Guest www pages report the
+ * same edge via webview-preload → djxxr-sidebar-edge (webview steals HTML hits).
+ */
 .app.sidebar-auto .sidebar-edge-hit {
   position: fixed;
   left: 0;
-  /* Below tabs + toolbar — never cover chrome */
   top: calc(var(--tabs-h) + var(--bar-h));
   bottom: 0;
   width: 8px;
   z-index: 50;
   pointer-events: auto;
   background: transparent;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.app.sidebar-auto .sidebar-edge-hit:hover,
+.app.sidebar-auto .sidebar-edge-hit:focus,
+.app.sidebar-auto .sidebar-edge-hit:focus-visible,
+.app.sidebar-auto .sidebar-edge-hit:active {
+  background: transparent;
+  border: 0;
+  outline: none;
+  box-shadow: none;
 }
 .app.sidebar-auto .sidebar-ctx-host {
   display: block;
@@ -4482,12 +4478,15 @@ html.side-panel-resizing .app {
   top: calc(var(--tabs-h) + var(--bar-h));
   bottom: 0;
   z-index: 51;
-  /* Closed: fully collapse — no border/shadow peek */
+  /* Closed: fully collapse — no border/shadow/outline peek */
   width: 0;
   max-width: 0;
   overflow: hidden;
   visibility: hidden;
   pointer-events: none;
+  border: 0;
+  outline: none;
+  box-shadow: none;
 }
 .app.sidebar-auto.sidebar-auto-open .sidebar-ctx-host {
   width: calc(56px + var(--panel-w, 0px));
@@ -4500,8 +4499,10 @@ html.side-panel-resizing .app {
   height: 100%;
   width: calc(56px + var(--panel-w, 0px));
   max-width: 100%;
-  box-shadow: none;
-  border-right: 0;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-right: 0 !important;
+  outline: none;
   backdrop-filter: blur(var(--glass-blur, 18px)) saturate(1.15);
   -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(1.15);
   transform: translateX(-100%);
@@ -4514,10 +4515,10 @@ html.side-panel-resizing .app {
 /* Open only via JS class — :focus-within alone left the rail stuck out after boot. */
 .app.sidebar-auto.sidebar-auto-open .sidebar-ctx-host > .side-shell {
   transform: translateX(0);
-  border-right: 1px solid var(--line);
+  border-right: 1px solid var(--line) !important;
   box-shadow:
     8px 0 36px rgba(0, 0, 0, 0.42),
-    1px 0 0 color-mix(in srgb, var(--line) 80%, transparent);
+    1px 0 0 color-mix(in srgb, var(--line) 80%, transparent) !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .app.sidebar-auto .sidebar-ctx-host > .side-shell {

@@ -612,3 +612,35 @@ window.addEventListener(
     true,
   );
 })();
+
+/* Auto-sidebar edge hover: guest pages steal HTML hit-testing, so notify the host. */
+(() => {
+  const EDGE_PX = 8;
+  let inside = false;
+  const send = (type) => {
+    try {
+      ipcRenderer.sendToHost('djxxr-sidebar-edge', { type });
+    } catch {
+      /* */
+    }
+  };
+  window.addEventListener(
+    'mousemove',
+    (e) => {
+      const next = e.clientX <= EDGE_PX;
+      if (next === inside) return;
+      inside = next;
+      send(next ? 'enter' : 'leave');
+    },
+    { passive: true, capture: true },
+  );
+  window.addEventListener(
+    'mouseleave',
+    () => {
+      if (!inside) return;
+      inside = false;
+      send('leave');
+    },
+    true,
+  );
+})();

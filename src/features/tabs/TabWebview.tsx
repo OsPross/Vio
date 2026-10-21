@@ -562,6 +562,15 @@ function TabWebviewInner({
         }
         return;
       }
+      if (e.channel === 'djxxr-sidebar-edge') {
+        const msg = e.args?.[0] as { type?: string } | undefined;
+        if (msg?.type === 'enter' || msg?.type === 'leave') {
+          window.dispatchEvent(
+            new CustomEvent('djxxr-sidebar-edge', { detail: { type: msg.type } }),
+          );
+        }
+        return;
+      }
       if (tab.mode === 'tor') return; // no password IPC in Tor
       if (e.channel !== 'djxxr-pw') return;
       const msg = e.args?.[0] as { type?: string; payload?: Record<string, unknown> } | undefined;

@@ -316,6 +316,18 @@ export function AppChrome({
     clearSidebarTimers();
   }, [settings.sidebarMode, setSidebarAutoOpen]);
 
+  // Guest www pages: edge hover via webview-preload (HTML overlay cannot receive hits).
+  useEffect(() => {
+    if (settings.sidebarMode !== 'auto') return;
+    const onEdge = (ev: Event) => {
+      const type = (ev as CustomEvent<{ type?: string }>).detail?.type;
+      if (type === 'enter') scheduleSidebarAutoOpen();
+      else if (type === 'leave') scheduleSidebarAutoClose();
+    };
+    window.addEventListener('djxxr-sidebar-edge', onEdge);
+    return () => window.removeEventListener('djxxr-sidebar-edge', onEdge);
+  }, [settings.sidebarMode]);
+
   useEffect(() => {
     const onDragStart = () => {
       tabDraggingRef.current = true;
