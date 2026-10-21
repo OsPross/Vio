@@ -516,6 +516,14 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
+function markSessionCleanExit(reason) {
+  try {
+    appSession.markCleanExit();
+  } catch (err) {
+    console.warn('[session] clean exit', reason || '', err);
+  }
+}
+
 app.on('before-quit', () => {
   isAppQuitting = true;
   try {
@@ -528,11 +536,7 @@ app.on('before-quit', () => {
   } catch (err) {
     console.warn('[tab-archive] flush on quit', err);
   }
-  try {
-    appSession.markCleanExit();
-  } catch (err) {
-    console.warn('[session] clean exit', err);
-  }
+  markSessionCleanExit('before-quit');
   try {
     const ses = session.fromPartition('persist:main');
     void privacy.clearOnQuitIfNeeded(ses);
@@ -542,6 +546,21 @@ app.on('before-quit', () => {
   void tor.stop();
   void torDaemon.stop();
 });
+
+app.on('will-quit', () => {
+  markSessionCleanExit('will-quit');
+});
+
+// Dev / taskkill: SIGTERM often skips a graceful window close path
+for (const sig of ['SIGINT', 'SIGTERM']) {
+  try {
+    process.on(sig, () => {
+      markSessionCleanExit(sig);
+    });
+  } catch {
+    /* */
+  }
+}
 
 function sanitizeDownloadBase(title, fallback) {
   const raw = String(title || '').trim() || String(fallback || 'page');

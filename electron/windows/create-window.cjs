@@ -129,9 +129,19 @@ function createCreateWindow(deps) {
     });
 
     bw.on('close', (e) => {
-      if (getIsAppQuitting() || bootMode !== 'normal') return;
+      if (bootMode !== 'normal') return;
       const alive = [...appWindows].filter((w) => !w.isDestroyed());
-      if (alive.length <= 1) return;
+      // Last normal window: persist clean exit *before* destroy so the crash
+      // banner does not false-trigger when before-quit is skipped (dev kill / X).
+      if (alive.length <= 1) {
+        try {
+          appSession.markCleanExit();
+        } catch (err) {
+          console.warn('[session] clean exit on last-window close', err);
+        }
+        return;
+      }
+      if (getIsAppQuitting()) return;
       // Secondary window: ask renderer to push closed-window stack, then destroy
       if (bw.__djxxrClosingAck) return;
       e.preventDefault();

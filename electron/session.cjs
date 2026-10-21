@@ -93,10 +93,6 @@ let cleanExitMarked = false;
 let crashOffer = false;
 let crashOfferReady = false;
 
-function sessionDir() {
-  return app.getPath('userData');
-}
-
 function sessionPath() {
   return path.join(sessionDir(), 'session.json');
 }
@@ -331,11 +327,16 @@ function saveSnapshot(patch) {
   if (cleanExitMarked) next.dirtyExit = false;
   else next.dirtyExit = true;
   cached = next;
-  scheduleFlush(1000);
+  // After clean-exit, flush immediately so a delayed timer cannot rewrite dirtyExit:true
+  if (cleanExitMarked) flushSync();
+  else scheduleFlush(1000);
   return { ok: true, count: next.tabs.length, closed: next.closedTabs.length };
 }
 
 function markCleanExit() {
+  if (cleanExitMarked && cached && cached.dirtyExit === false) {
+    return { ok: true, already: true };
+  }
   cleanExitMarked = true;
   const cur = load();
   cur.dirtyExit = false;
