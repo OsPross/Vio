@@ -1096,6 +1096,8 @@
       "spotify": {
         "statusError": "Couldn’t read Spotify status",
         "premiumRequired": "Spotify Premium required for controls",
+        "noActiveDevice": "Open Spotify on a device",
+        "reconnectScopes": "Missing playback permission — reconnect",
         "error": "Error",
         "copiedRedirect": "Copied Redirect URI",
         "restartForLogin": "Restart Vio (Electron) to enable Spotify login",

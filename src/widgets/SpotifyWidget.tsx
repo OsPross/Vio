@@ -70,6 +70,7 @@ export function SpotifyWidget({
     needsAuthorSetup?: boolean;
     displayName?: string | null;
     redirectUri: string;
+    needReconnect?: boolean;
   } | null>(
     preview ? { connected: true, configured: true, displayName: null, redirectUri: '' } : null,
   );
@@ -103,7 +104,11 @@ export function SpotifyWidget({
           needsAuthorSetup: s.needsAuthorSetup,
           displayName: s.displayName,
           redirectUri: s.redirectUri,
+          needReconnect: Boolean(s.needReconnect),
         });
+        if (s.needReconnect) {
+          setMsg(t('widgets.ui.spotify.reconnectScopes'));
+        }
       } else {
         setStatus({
           connected: false,
@@ -165,7 +170,16 @@ export function SpotifyWidget({
 
   const run = async (
     fn: () =>
-      | Promise<{ ok: boolean; error?: string; premium?: boolean } | undefined>
+      | Promise<
+          | {
+              ok: boolean;
+              error?: string;
+              premium?: boolean;
+              noDevice?: boolean;
+              needReconnect?: boolean;
+            }
+          | undefined
+        >
       | undefined,
   ) => {
     if (preview) return;
@@ -174,11 +188,20 @@ export function SpotifyWidget({
     try {
       const r = await fn();
       if (r && !r.ok) {
-        setMsg(
-          r.premium
-            ? t('widgets.ui.spotify.premiumRequired')
-            : r.error || t('widgets.ui.spotify.error'),
-        );
+        if (r.needReconnect) {
+          setMsg(t('widgets.ui.spotify.reconnectScopes'));
+          try {
+            await window.shell?.spotifyLogout?.();
+          } catch {
+            /* */
+          }
+          setPlayback(null);
+          await refreshStatus();
+          return;
+        }
+        if (r.premium) setMsg(t('widgets.ui.spotify.premiumRequired'));
+        else if (r.noDevice) setMsg(t('widgets.ui.spotify.noActiveDevice'));
+        else setMsg(r.error || t('widgets.ui.spotify.error'));
       }
       await refreshPlayback();
     } finally {

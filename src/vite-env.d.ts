@@ -709,6 +709,8 @@ declare global {
         needsAuthorSetup?: boolean;
         displayName?: string | null;
         redirectUri: string;
+        hasModifyScope?: boolean;
+        needReconnect?: boolean;
       }>;
       spotifySetClientId: (clientId: string) => Promise<{ ok: boolean; error?: string; redirectUri?: string }>;
       spotifyLogin: () => Promise<{ ok: boolean; error?: string; displayName?: string | null }>;
@@ -741,17 +743,77 @@ declare global {
           type?: string;
         } | null;
       }>;
-      spotifyPlay: () => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
-      spotifyPause: () => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
-      spotifyNext: () => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
-      spotifyPrev: () => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
-      spotifySeek: (positionMs: number) => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
-      spotifyVolume: (percent: number) => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
-      spotifyShuffle: (state: boolean) => Promise<{ ok: boolean; error?: string; premium?: boolean }>;
+      spotifyPlay: () => Promise<{
+        ok: boolean;
+        error?: string;
+        premium?: boolean;
+        noDevice?: boolean;
+        needReconnect?: boolean;
+        reason?: string;
+        status?: number;
+      }>;
+      spotifyPause: () => Promise<{
+        ok: boolean;
+        error?: string;
+        premium?: boolean;
+        noDevice?: boolean;
+        needReconnect?: boolean;
+        reason?: string;
+        status?: number;
+      }>;
+      spotifyNext: () => Promise<{
+        ok: boolean;
+        error?: string;
+        premium?: boolean;
+        noDevice?: boolean;
+        needReconnect?: boolean;
+        reason?: string;
+        status?: number;
+      }>;
+      spotifyPrev: () => Promise<{
+        ok: boolean;
+        error?: string;
+        premium?: boolean;
+        noDevice?: boolean;
+        needReconnect?: boolean;
+        reason?: string;
+        status?: number;
+      }>;
+      spotifySeek: (positionMs: number) => Promise<{
+        ok: boolean;
+        error?: string;
+        premium?: boolean;
+        noDevice?: boolean;
+        needReconnect?: boolean;
+        reason?: string;
+        status?: number;
+      }>;
+      spotifyVolume: (percent: number) => Promise<{
+        ok: boolean;
+        error?: string;
+        premium?: boolean;
+        noDevice?: boolean;
+        needReconnect?: boolean;
+        reason?: string;
+        status?: number;
+      }>;
+      spotifyShuffle: (state: boolean) => Promise<{
+        ok: boolean;
+        error?: string;
+        premium?: boolean;
+        noDevice?: boolean;
+        needReconnect?: boolean;
+        reason?: string;
+        status?: number;
+      }>;
       spotifyRepeat: (state: 'off' | 'track' | 'context') => Promise<{
         ok: boolean;
         error?: string;
         premium?: boolean;
+        noDevice?: boolean;
+        needReconnect?: boolean;
+        reason?: string;
+        status?: number;
       }>;
       homeBgPick: () => Promise<{
         ok: boolean;
