@@ -121,8 +121,18 @@ export function TabStrip({
                 key={t.id}
                 type="button"
                 layout={!motionOff}
+                draggable={Boolean(t.url && /^https?:\/\//i.test(t.url))}
                 className={`tab ${t.id === activeId ? 'active' : ''} ${t.mode === 'tor' ? 'tor-tab' : ''} ${t.mode === 'private' ? 'private-tab' : ''} ${t.pinned ? 'pinned' : ''} ${t.muted ? 'muted-tab' : ''} ${t.discarded && t.id !== activeId ? 'is-discarded' : ''}`}
                 onClick={() => setActive(t.id)}
+                onDragStart={(e) => {
+                  if (!t.url || !/^https?:\/\//i.test(t.url)) return;
+                  const dt = (e as unknown as React.DragEvent).dataTransfer;
+                  if (!dt) return;
+                  dt.setData('text/uri-list', t.url);
+                  dt.setData('text/plain', t.url);
+                  dt.setData('application/x-vio-tab-url', t.url);
+                  dt.effectAllowed = 'copy';
+                }}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   setTabMenu({ x: e.clientX, y: e.clientY, tabId: t.id });
