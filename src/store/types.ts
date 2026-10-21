@@ -60,7 +60,13 @@ export type Bookmark = {
 };
 export type BookmarkFolder = { id: string; title: string; parentId?: string };
 export type HistoryItem = { q: string; at: number };
-export type SideApp = { id: string; label: string; url: string };
+export type SideApp = {
+  id: string;
+  label: string;
+  url: string;
+  /** Side-panel webview audio muted */
+  muted?: boolean;
+};
 
 export type SearchEngine =
   | 'brave'

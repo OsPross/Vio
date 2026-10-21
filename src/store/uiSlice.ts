@@ -13,6 +13,8 @@ export type UiSlice = {
   setSettingsTab: (t: SettingsTab) => void;
   addSideApp: (s: Omit<SideApp, 'id'> & { id?: string }) => void;
   removeSideApp: (id: string) => void;
+  reorderSideApps: (orderedIds: string[]) => void;
+  setSideAppMuted: (id: string, muted: boolean) => void;
   openSideApp: (id: string) => void;
   closeSidePanel: () => void;
 };
@@ -38,6 +40,24 @@ export const createUiSlice: StateCreator<StoreState, [], [], UiSlice> = (set, ge
         s.settings.activeSideAppId === id
           ? { ...s.settings, activeSideAppId: null, sidePanelOpen: false }
           : s.settings,
+    })),
+  reorderSideApps: (orderedIds) =>
+    set((s) => {
+      const byId = new Map(s.sideApps.map((a) => [a.id, a]));
+      const next: SideApp[] = [];
+      for (const id of orderedIds) {
+        const app = byId.get(id);
+        if (app) {
+          next.push(app);
+          byId.delete(id);
+        }
+      }
+      for (const rest of byId.values()) next.push(rest);
+      return { sideApps: next };
+    }),
+  setSideAppMuted: (id, muted) =>
+    set((s) => ({
+      sideApps: s.sideApps.map((a) => (a.id === id ? { ...a, muted: Boolean(muted) } : a)),
     })),
   openSideApp: (id) => {
     const app = get().sideApps.find((a) => a.id === id);
