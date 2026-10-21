@@ -39,6 +39,42 @@ function resolveClientId() {
 let authServer = null;
 /** @type {{ verifier: string, state: string, clientId: string } | null} */
 let pendingAuth = null;
+/** Last known Spotify Connect device id (for shuffle/repeat when optional device_id helps). */
+let lastDeviceId = null;
+
+const MODIFY_SCOPE = 'user-modify-playback-state';
+
+function parseScopeList(raw) {
+  return String(raw || '')
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function hasModifyScope(auth) {
+  const scopes = parseScopeList(auth?.scope);
+  // Legacy tokens without saved scope: assume OK until API says otherwise
+  if (!scopes.length) return true;
+  return scopes.includes(MODIFY_SCOPE);
+}
+
+function playerErrorPayload(err) {
+  return {
+    ok: false,
+    error: String(err.message || err),
+    status: err.status || 0,
+    reason: err.reason || '',
+    premium: Boolean(err.premium),
+    noDevice: Boolean(err.noDevice),
+    needReconnect: Boolean(err.needReconnect),
+  };
+}
+
+function withDeviceQuery(query = {}) {
+  const q = { ...query };
+  if (lastDeviceId && q.device_id == null) q.device_id = lastDeviceId;
+  return q;
+}
 
 function b64url(buf) {
   return Buffer.from(buf)
@@ -100,6 +136,7 @@ function publicStatus() {
   const hasOverride = /^[a-f0-9]{32}$/i.test(
     String(auth?.clientIdOverride || '').trim() || String(auth?.clientId || '').trim(),
   );
+  const modifyOk = hasModifyScope(auth);
   return {
     ok: true,
     connected: hasRefresh,
@@ -108,6 +145,8 @@ function publicStatus() {
     needsAuthorSetup: !clientId,
     displayName: auth?.displayName || null,
     redirectUri: REDIRECT_URI,
+    hasModifyScope: modifyOk,
+    needReconnect: hasRefresh && !modifyOk,
   };
 }
 
@@ -180,6 +219,7 @@ async function refreshAccess() {
     expiresAt: Date.now() + (Number(json.expires_in) || 3600) * 1000 - 30_000,
   };
   if (json.refresh_token) next.refreshToken = encrypt(json.refresh_token);
+  if (typeof json.scope === 'string' && json.scope.trim()) next.scope = json.scope.trim();
   saveAuth(next);
   return json.access_token;
 }
@@ -222,9 +262,25 @@ async function api(method, apiPath, { query, jsonBody } = {}) {
     data = null;
   }
   if (!res.ok) {
-    const err = new Error(data?.error?.message || data?.error_description || `Spotify ${res.status}`);
+    const spotifyErr = data && typeof data.error === 'object' ? data.error : null;
+    const reason = String(spotifyErr?.reason || '').toUpperCase();
+    const message =
+      (spotifyErr && spotifyErr.message) ||
+      data?.error_description ||
+      (typeof data?.error === 'string' ? data.error : null) ||
+      `Spotify ${res.status}`;
+    const err = new Error(message);
     err.status = res.status;
-    err.premium = res.status === 403;
+    err.reason = reason;
+    // Premium ONLY when Spotify says so — not every 403
+    err.premium = reason === 'PREMIUM_REQUIRED';
+    err.noDevice =
+      reason === 'NO_ACTIVE_DEVICE' ||
+      res.status === 404 ||
+      /no active device/i.test(message);
+    err.needReconnect =
+      res.status === 401 ||
+      /insufficient.*(scope|permission)|missing.*scope|not granted/i.test(message);
     throw err;
   }
   return { ok: true, data };
@@ -286,85 +342,108 @@ async function getPlayback() {
   try {
     const { data, empty } = await api('GET', '/me/player');
     if (empty || !data) return { ok: true, playing: false, item: null, idle: true };
+    if (data?.device?.id) lastDeviceId = String(data.device.id);
     return mapPlayback(data);
   } catch (err) {
     if (err.status === 204) return { ok: true, playing: false, item: null, idle: true };
-    return { ok: false, error: String(err.message || err), premium: err.premium };
+    return playerErrorPayload(err);
   }
 }
 
 async function play() {
   try {
-    await api('PUT', '/me/player/play');
+    await api('PUT', '/me/player/play', { query: withDeviceQuery() });
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: String(err.message || err), premium: err.premium, status: err.status };
+    return playerErrorPayload(err);
   }
 }
 
 async function pause() {
   try {
-    await api('PUT', '/me/player/pause');
+    await api('PUT', '/me/player/pause', { query: withDeviceQuery() });
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: String(err.message || err), premium: err.premium, status: err.status };
+    return playerErrorPayload(err);
   }
 }
 
 async function next() {
   try {
-    await api('POST', '/me/player/next');
+    await api('POST', '/me/player/next', { query: withDeviceQuery() });
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: String(err.message || err), premium: err.premium, status: err.status };
+    return playerErrorPayload(err);
   }
 }
 
 async function previous() {
   try {
-    await api('POST', '/me/player/previous');
+    await api('POST', '/me/player/previous', { query: withDeviceQuery() });
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: String(err.message || err), premium: err.premium, status: err.status };
+    return playerErrorPayload(err);
   }
 }
 
 async function seek(positionMs) {
   const ms = Math.max(0, Math.floor(Number(positionMs) || 0));
   try {
-    await api('PUT', '/me/player/seek', { query: { position_ms: ms } });
+    await api('PUT', '/me/player/seek', { query: withDeviceQuery({ position_ms: ms }) });
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: String(err.message || err), premium: err.premium, status: err.status };
+    return playerErrorPayload(err);
   }
 }
 
 async function setVolume(percent) {
   const v = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
   try {
-    await api('PUT', '/me/player/volume', { query: { volume_percent: v } });
+    await api('PUT', '/me/player/volume', { query: withDeviceQuery({ volume_percent: v }) });
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: String(err.message || err), premium: err.premium, status: err.status };
+    return playerErrorPayload(err);
   }
 }
 
 async function setShuffle(state) {
   try {
-    await api('PUT', '/me/player/shuffle', { query: { state: Boolean(state) } });
+    if (!hasModifyScope(loadAuth())) {
+      logout();
+      return {
+        ok: false,
+        needReconnect: true,
+        error: 'Brak uprawnienia user-modify-playback-state — połącz ponownie',
+      };
+    }
+    await api('PUT', '/me/player/shuffle', {
+      query: withDeviceQuery({ state: Boolean(state) }),
+    });
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: String(err.message || err), premium: err.premium, status: err.status };
+    const payload = playerErrorPayload(err);
+    if (payload.needReconnect) logout();
+    return payload;
   }
 }
 
 async function setRepeat(state) {
   const s = state === 'track' || state === 'context' || state === 'off' ? state : 'off';
   try {
-    await api('PUT', '/me/player/repeat', { query: { state: s } });
+    if (!hasModifyScope(loadAuth())) {
+      logout();
+      return {
+        ok: false,
+        needReconnect: true,
+        error: 'Brak uprawnienia user-modify-playback-state — połącz ponownie',
+      };
+    }
+    await api('PUT', '/me/player/repeat', { query: withDeviceQuery({ state: s }) });
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: String(err.message || err), premium: err.premium, status: err.status };
+    const payload = playerErrorPayload(err);
+    if (payload.needReconnect) logout();
+    return payload;
   }
 }
 
@@ -454,6 +533,7 @@ function login() {
           refreshToken: encrypt(tokens.refresh_token),
           expiresAt: Date.now() + (Number(tokens.expires_in) || 3600) * 1000 - 30_000,
           displayName,
+          scope: typeof tokens.scope === 'string' && tokens.scope.trim() ? tokens.scope.trim() : SCOPES,
         });
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(
