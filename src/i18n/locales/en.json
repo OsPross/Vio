@@ -1098,6 +1098,7 @@
         "premiumRequired": "Spotify Premium required for controls",
         "noActiveDevice": "Open Spotify on a device",
         "reconnectScopes": "Missing playback permission — reconnect",
+        "restrictionViolated": "Spotify doesn’t allow shuffle/repeat for this playback",
         "error": "Error",
         "copiedRedirect": "Copied Redirect URI",
         "restartForLogin": "Restart Vio (Electron) to enable Spotify login",

@@ -803,6 +803,7 @@ declare global {
         premium?: boolean;
         noDevice?: boolean;
         needReconnect?: boolean;
+        restricted?: boolean;
         reason?: string;
         status?: number;
       }>;
@@ -812,6 +813,7 @@ declare global {
         premium?: boolean;
         noDevice?: boolean;
         needReconnect?: boolean;
+        restricted?: boolean;
         reason?: string;
         status?: number;
       }>;

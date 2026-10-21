@@ -177,6 +177,7 @@ export function SpotifyWidget({
               premium?: boolean;
               noDevice?: boolean;
               needReconnect?: boolean;
+              restricted?: boolean;
             }
           | undefined
         >
@@ -201,6 +202,7 @@ export function SpotifyWidget({
         }
         if (r.premium) setMsg(t('widgets.ui.spotify.premiumRequired'));
         else if (r.noDevice) setMsg(t('widgets.ui.spotify.noActiveDevice'));
+        else if (r.restricted) setMsg(t('widgets.ui.spotify.restrictionViolated'));
         else setMsg(r.error || t('widgets.ui.spotify.error'));
       }
       await refreshPlayback();

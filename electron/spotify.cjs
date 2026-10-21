@@ -67,6 +67,7 @@ function playerErrorPayload(err) {
     premium: Boolean(err.premium),
     noDevice: Boolean(err.noDevice),
     needReconnect: Boolean(err.needReconnect),
+    restricted: Boolean(err.restricted),
   };
 }
 
@@ -74,6 +75,22 @@ function withDeviceQuery(query = {}) {
   const q = { ...query };
   if (lastDeviceId && q.device_id == null) q.device_id = lastDeviceId;
   return q;
+}
+
+/** Refresh Connect device id from /me/player before mutate commands. */
+async function refreshActiveDevice() {
+  try {
+    const { data, empty } = await api('GET', '/me/player');
+    if (empty || !data) {
+      lastDeviceId = null;
+      return null;
+    }
+    if (data?.device?.id) lastDeviceId = String(data.device.id);
+    else lastDeviceId = null;
+    return lastDeviceId;
+  } catch {
+    return lastDeviceId;
+  }
 }
 
 function b64url(buf) {
@@ -281,6 +298,12 @@ async function api(method, apiPath, { query, jsonBody } = {}) {
     err.needReconnect =
       res.status === 401 ||
       /insufficient.*(scope|permission)|missing.*scope|not granted/i.test(message);
+    // 403 "Restriction violated" / UNKNOWN — context/device disallows the command (not Premium)
+    err.restricted =
+      !err.premium &&
+      (reason === 'UNKNOWN' ||
+        reason === 'RESTRICTED' ||
+        /restriction violated/i.test(message));
     throw err;
   }
   return { ok: true, data };
@@ -406,45 +429,53 @@ async function setVolume(percent) {
   }
 }
 
-async function setShuffle(state) {
+async function putPlayerFlag(apiPath, query) {
+  if (!hasModifyScope(loadAuth())) {
+    logout();
+    return {
+      ok: false,
+      needReconnect: true,
+      error: 'Brak uprawnienia user-modify-playback-state — połącz ponownie',
+    };
+  }
+  const deviceId = await refreshActiveDevice();
+  if (!deviceId) {
+    return {
+      ok: false,
+      noDevice: true,
+      error: 'Brak aktywnego urządzenia Spotify',
+      reason: 'NO_ACTIVE_DEVICE',
+      status: 404,
+    };
+  }
   try {
-    if (!hasModifyScope(loadAuth())) {
-      logout();
-      return {
-        ok: false,
-        needReconnect: true,
-        error: 'Brak uprawnienia user-modify-playback-state — połącz ponownie',
-      };
-    }
-    await api('PUT', '/me/player/shuffle', {
-      query: withDeviceQuery({ state: Boolean(state) }),
-    });
+    await api('PUT', apiPath, { query: withDeviceQuery(query) });
     return { ok: true };
   } catch (err) {
+    // Stale/wrong device_id sometimes yields Restriction violated — retry once without it
+    if (err.restricted || /restriction violated/i.test(String(err.message || ''))) {
+      try {
+        await api('PUT', apiPath, { query: { ...query } });
+        return { ok: true };
+      } catch (err2) {
+        const payload = playerErrorPayload(err2);
+        if (payload.needReconnect) logout();
+        return payload;
+      }
+    }
     const payload = playerErrorPayload(err);
     if (payload.needReconnect) logout();
     return payload;
   }
 }
 
+async function setShuffle(state) {
+  return putPlayerFlag('/me/player/shuffle', { state: Boolean(state) });
+}
+
 async function setRepeat(state) {
   const s = state === 'track' || state === 'context' || state === 'off' ? state : 'off';
-  try {
-    if (!hasModifyScope(loadAuth())) {
-      logout();
-      return {
-        ok: false,
-        needReconnect: true,
-        error: 'Brak uprawnienia user-modify-playback-state — połącz ponownie',
-      };
-    }
-    await api('PUT', '/me/player/repeat', { query: withDeviceQuery({ state: s }) });
-    return { ok: true };
-  } catch (err) {
-    const payload = playerErrorPayload(err);
-    if (payload.needReconnect) logout();
-    return payload;
-  }
+  return putPlayerFlag('/me/player/repeat', { state: s });
 }
 
 function logout(opts = {}) {

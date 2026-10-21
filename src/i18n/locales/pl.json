@@ -1098,6 +1098,7 @@
         "premiumRequired": "Wymaga Spotify Premium do sterowania",
         "noActiveDevice": "Otwórz Spotify na jakimś urządzeniu",
         "reconnectScopes": "Brak uprawnień odtwarzania — połącz ponownie",
+        "restrictionViolated": "Spotify nie pozwala na losowe/powtarzanie w tym odtwarzaniu",
         "error": "Błąd",
         "copiedRedirect": "Skopiowano Redirect URI",
         "restartForLogin": "Zrestartuj Vio (Electron), żeby włączyć logowanie Spotify",
