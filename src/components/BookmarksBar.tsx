@@ -15,10 +15,9 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ChevronRight, Folder, LayoutGrid } from 'lucide-react';
+import { Folder, LayoutGrid } from 'lucide-react';
 import { useT } from '../i18n';
-import { letterFavicon } from '../lib/favicon';
-import { formatUrlPlain } from '../lib/url-display';
+import { hostnameOf } from '../lib/favicon';
 import { useLinkPreview } from '../hooks/useLinkPreview';
 import { LinkPreviewPopover } from '../features/tabs/LinkPreviewPopover';
 import {
@@ -86,6 +85,35 @@ export function shouldShowBookmarksBar(mode: BookmarksBarMode, activeUrl?: strin
   return u === HOME_URL || u === TOR_HOME_URL || u === '' || u.startsWith('about:home');
 }
 
+function BookmarkFavicon({
+  url,
+  cached,
+  size = 16,
+}: {
+  url: string;
+  cached?: string;
+  size?: number;
+}) {
+  if (cached) {
+    return (
+      <img
+        className="bookmarks-bar-fav"
+        src={cached}
+        alt=""
+        width={size}
+        height={size}
+        draggable={false}
+      />
+    );
+  }
+  const letter = (hostnameOf(url).charAt(0) || '?').toUpperCase();
+  return (
+    <span className="bookmarks-bar-fav-letter" style={{ width: size, height: size }} aria-hidden>
+      {letter}
+    </span>
+  );
+}
+
 function parseDropUrl(dt: DataTransfer): string | null {
   const uri = dt.getData('text/uri-list')?.split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('#'));
   if (uri && /^https?:\/\//i.test(uri)) return uri;
@@ -132,10 +160,41 @@ export function BookmarksBar({ onOpen, onEdit, activeUrl }: Props) {
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [dropOver, setDropOver] = useState(false);
   const [folderDropId, setFolderDropId] = useState<string | null>(null);
+  const [tip, setTip] = useState<{ x: number; y: number; title: string; domain: string } | null>(
+    null,
+  );
 
   const wrapRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
+  const tipTimer = useRef<number | null>(null);
+
+  const clearTipTimer = useCallback(() => {
+    if (tipTimer.current != null) {
+      window.clearTimeout(tipTimer.current);
+      tipTimer.current = null;
+    }
+  }, []);
+
+  const hideTip = useCallback(() => {
+    clearTipTimer();
+    setTip(null);
+  }, [clearTipTimer]);
+
+  const scheduleTip = useCallback(
+    (e: React.MouseEvent, title: string, url: string) => {
+      clearTipTimer();
+      const x = e.clientX;
+      const y = e.clientY;
+      tipTimer.current = window.setTimeout(() => {
+        tipTimer.current = null;
+        setTip({ x, y: y + 14, title, domain: hostnameOf(url) });
+      }, 500);
+    },
+    [clearTipTimer],
+  );
+
+  useEffect(() => () => clearTipTimer(), [clearTipTimer]);
 
   const barItems = useMemo(() => barBookmarks(bookmarks), [bookmarks]);
   const subfolders = useMemo(
@@ -308,27 +367,38 @@ export function BookmarksBar({ onOpen, onEdit, activeUrl }: Props) {
   if (!show) return null;
 
   const renderBookmarkBtn = (b: Bookmark, opts?: { sortable?: boolean; measure?: boolean }) => {
-    const ico = favicons[b.url] || letterFavicon(b.url);
     const inner = (
       <>
-        <img src={ico} alt="" width={14} height={14} draggable={false} />
+        <BookmarkFavicon url={b.url} cached={favicons[b.url]} />
         {!b.iconOnly ? <span>{b.title}</span> : null}
       </>
     );
+    const onEnter = (e: React.MouseEvent) => {
+      scheduleTip(e, b.title, b.url);
+      onBookmarkHover(e, b.url);
+    };
+    const onLeave = () => {
+      hideTip();
+      onLinkPreview?.(null);
+    };
+    const onMove = (e: React.MouseEvent) => {
+      if (tip) setTip((p) => (p ? { ...p, x: e.clientX, y: e.clientY + 14 } : p));
+      onBookmarkHover(e, b.url);
+    };
     if (opts?.sortable) {
       return (
         <SortableBarItem
           key={b.id}
           id={b.id}
-          title={formatUrlPlain(b.url)}
           onClick={(e) => onItemClick(e, b.url)}
           onContextMenu={(e) => {
             e.preventDefault();
+            hideTip();
             setCtx({ kind: 'bookmark', bookmark: b, x: e.clientX, y: e.clientY });
           }}
-          onMouseEnter={(e) => onBookmarkHover(e, b.url)}
-          onMouseLeave={() => onLinkPreview?.(null)}
-          onMouseMove={(e) => onBookmarkHover(e, b.url)}
+          onMouseEnter={onEnter}
+          onMouseLeave={onLeave}
+          onMouseMove={onMove}
         >
           {inner}
         </SortableBarItem>
@@ -340,18 +410,18 @@ export function BookmarksBar({ onOpen, onEdit, activeUrl }: Props) {
         type="button"
         data-bar-entry={opts?.measure ? true : undefined}
         className="bookmarks-bar-item"
-        title={formatUrlPlain(b.url)}
         onClick={(e) => onItemClick(e, b.url)}
         onMouseDown={(e) => {
           if (e.button === 1) e.preventDefault();
         }}
         onContextMenu={(e) => {
           e.preventDefault();
+          hideTip();
           setCtx({ kind: 'bookmark', bookmark: b, x: e.clientX, y: e.clientY });
         }}
-        onMouseEnter={(e) => onBookmarkHover(e, b.url)}
-        onMouseLeave={() => onLinkPreview?.(null)}
-        onMouseMove={(e) => onBookmarkHover(e, b.url)}
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
+        onMouseMove={onMove}
       >
         {inner}
       </button>
@@ -375,12 +445,14 @@ export function BookmarksBar({ onOpen, onEdit, activeUrl }: Props) {
         <button
           type="button"
           className="bookmarks-bar-grid"
-          title={t('bookmarks.barAll')}
           aria-label={t('bookmarks.barAll')}
           onClick={openAllBookmarks}
+          onMouseEnter={(e) => scheduleTip(e, t('bookmarks.barAll'), '')}
+          onMouseLeave={hideTip}
         >
-          <LayoutGrid size={14} strokeWidth={1.75} />
+          <LayoutGrid size={15} strokeWidth={1.75} />
         </button>
+        <span className="bookmarks-bar-sep" aria-hidden />
 
         <DndContext
           sensors={sensors}
@@ -485,9 +557,8 @@ export function BookmarksBar({ onOpen, onEdit, activeUrl }: Props) {
             ) : (
               <div key={entry.folder.id} data-bar-entry>
                 <button type="button" className="bookmarks-bar-item">
-                  <Folder size={14} />
+                  <Folder size={16} strokeWidth={1.75} />
                   <span>{entry.folder.title}</span>
-                  <ChevronRight size={12} />
                 </button>
               </div>
             ),
@@ -613,6 +684,13 @@ export function BookmarksBar({ onOpen, onEdit, activeUrl }: Props) {
         </div>
       ) : null}
 
+      {tip ? (
+        <div className="bookmarks-bar-tip" style={{ left: tip.x, top: tip.y }} role="tooltip">
+          <strong>{tip.title}</strong>
+          {tip.domain ? <span>{tip.domain}</span> : null}
+        </div>
+      ) : null}
+
       <LinkPreviewPopover
         target={linkPreview.target}
         onClose={linkPreview.close}
@@ -625,7 +703,6 @@ export function BookmarksBar({ onOpen, onEdit, activeUrl }: Props) {
 
 function SortableBarItem({
   id,
-  title,
   children,
   onClick,
   onContextMenu,
@@ -634,7 +711,6 @@ function SortableBarItem({
   onMouseMove,
 }: {
   id: string;
-  title: string;
   children: React.ReactNode;
   onClick: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
@@ -651,7 +727,6 @@ function SortableBarItem({
       type="button"
       data-bar-entry
       className={`bookmarks-bar-item${isDragging ? ' dragging' : ''}`}
-      title={title}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
@@ -716,9 +791,8 @@ function FolderMenu({
       }}
     >
       <button type="button" className="bookmarks-bar-item">
-        <Folder size={14} strokeWidth={1.75} />
+        <Folder size={16} strokeWidth={1.75} />
         <span>{folder.title}</span>
-        <ChevronRight size={12} />
       </button>
 
       {open && (items.length || subs.length) ? (
@@ -734,39 +808,30 @@ function FolderMenu({
               {t('bookmarks.ctxOpenAll')}
             </button>
           ) : null}
-          {items.map((b) => {
-            const ico = favicons[b.url] || letterFavicon(b.url);
-            return (
-              <button
-                key={b.id}
-                type="button"
-                className="bookmarks-bar-subitem"
-                onClick={(e) => {
-                  if (e.button === 1 || e.ctrlKey || e.metaKey) {
-                    onOpen(b.url, { newTab: true, background: true });
-                  } else onOpen(b.url);
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onCtxBookmark(b, e.clientX, e.clientY);
-                }}
-                onMouseEnter={(e) => {
-                  if (e.shiftKey) onLinkPreview?.({ url: b.url, x: e.clientX, y: e.clientY });
-                }}
-                onMouseLeave={() => onLinkPreview?.(null)}
-              >
-                <img
-                  src={ico}
-                  alt=""
-                  width={12}
-                  height={12}
-                  style={{ marginRight: 6, verticalAlign: -2 }}
-                />
-                {b.title}
-              </button>
-            );
-          })}
+          {items.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              className="bookmarks-bar-subitem"
+              onClick={(e) => {
+                if (e.button === 1 || e.ctrlKey || e.metaKey) {
+                  onOpen(b.url, { newTab: true, background: true });
+                } else onOpen(b.url);
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onCtxBookmark(b, e.clientX, e.clientY);
+              }}
+              onMouseEnter={(e) => {
+                if (e.shiftKey) onLinkPreview?.({ url: b.url, x: e.clientX, y: e.clientY });
+              }}
+              onMouseLeave={() => onLinkPreview?.(null)}
+            >
+              <BookmarkFavicon url={b.url} cached={favicons[b.url]} size={14} />
+              <span>{b.title}</span>
+            </button>
+          ))}
           {subs.map((sf) => (
             <FolderMenu
               key={sf.id}
