@@ -12,7 +12,7 @@ import {
   type SetStateAction,
 } from 'react';
 import { X } from 'lucide-react';
-import { BookmarksBar } from '../../components/BookmarksBar';
+import { BookmarksBar, shouldShowBookmarksBar } from '../../components/BookmarksBar';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import type { TorStatusInfo } from '../../components/TorLanding';
 import { BrowserChrome } from '../omnibox';
@@ -240,6 +240,10 @@ export function AppChrome({
   const newTab = useStore((s) => s.newTab);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
   const patchSettings = useStore((s) => s.patchSettings);
+  const bookmarksBarVisible = shouldShowBookmarksBar(
+    settings.bookmarksBarMode ?? (settings.showBookmarksBar ? 'always' : 'never'),
+    active?.url,
+  );
 
   const pageUrlForShare =
     active &&
@@ -372,6 +376,7 @@ export function AppChrome({
         htmlFullscreen ? 'html-fullscreen' : '',
         windowMode === 'private' ? 'window-private' : '',
         windowMode === 'tor' ? 'window-tor' : '',
+        bookmarksBarVisible ? 'has-bookmarks-bar' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -502,11 +507,13 @@ export function AppChrome({
           setFindOpen={setFindOpen}
         />
 
-        <BookmarksBar
-          activeUrl={active?.url}
-          onOpen={openBookmarkUrl}
-          onEdit={(b) => openBookmarkDialog(b.url, b.title)}
-        />
+        <div className="bookmarks-bar-slot">
+          <BookmarksBar
+            activeUrl={active?.url}
+            onOpen={openBookmarkUrl}
+            onEdit={(b) => openBookmarkDialog(b.url, b.title)}
+          />
+        </div>
 
         <ChromeOverlays
           findOpen={findOpen}

@@ -15,6 +15,7 @@
   --radius: 12px;
   --bar-h: 44px;
   --tabs-h: 36px;
+  --bookmarks-h: 0px;
   --title-h: 32px;
   --caption-w: 140px;
   --dur-fast: 120ms;
@@ -741,9 +742,17 @@ html.side-panel-resizing .app {
 
 .main {
   display: grid;
-  grid-template-rows: var(--tabs-h) var(--bar-h) 1fr;
+  /* tabs | omnibox | bookmarks bar (0 when hidden) | stage */
+  grid-template-rows: var(--tabs-h) var(--bar-h) var(--bookmarks-h) 1fr;
   min-width: 0;
   min-height: 0;
+}
+.bookmarks-bar-slot {
+  min-height: 0;
+  overflow: hidden;
+}
+.app.has-bookmarks-bar {
+  --bookmarks-h: 28px;
 }
 
 .drag-strip {
@@ -4451,7 +4460,7 @@ html.side-panel-resizing .app {
 .app.sidebar-auto .sidebar-edge-hit {
   position: fixed;
   left: 0;
-  top: calc(var(--tabs-h) + var(--bar-h));
+  top: calc(var(--tabs-h) + var(--bar-h) + var(--bookmarks-h));
   bottom: 0;
   width: 8px;
   z-index: 50;
@@ -4475,7 +4484,7 @@ html.side-panel-resizing .app {
   display: block;
   position: fixed;
   left: 0;
-  top: calc(var(--tabs-h) + var(--bar-h));
+  top: calc(var(--tabs-h) + var(--bar-h) + var(--bookmarks-h));
   bottom: 0;
   z-index: 51;
   /* Closed: fully collapse — no border/shadow/outline peek */
@@ -5466,6 +5475,7 @@ html.side-panel-resizing .app {
   align-items: center;
   min-width: 0;
   height: 28px;
+  box-sizing: border-box;
   border-bottom: 1px solid color-mix(in srgb, var(--fg) 6%, transparent);
   background: color-mix(in srgb, var(--bg) 96%, transparent);
 }
