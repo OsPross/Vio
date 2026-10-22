@@ -754,8 +754,9 @@ html.side-panel-resizing .app {
 .app.has-bookmarks-bar {
   --bookmarks-h: 30px;
 }
+/* Omnibox + bookmarks = one chrome slab (no seam between them) */
 .app.has-bookmarks-bar .bar {
-  border-bottom-color: transparent;
+  border-bottom: none !important;
 }
 
 .drag-strip {
@@ -5595,6 +5596,7 @@ html.side-panel-resizing .app {
   min-width: 0;
   height: 30px;
   box-sizing: border-box;
+  border-top: none;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
   background: var(--chrome);
 }
