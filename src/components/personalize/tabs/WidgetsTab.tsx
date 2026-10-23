@@ -15,8 +15,10 @@ import {
   useStore,
   type HomeWidget,
   type HomeWidgetSize,
+  type HomeWidgetStyle,
   type HomeWidgetType,
 } from '../../../store';
+import { PzSection } from './PzRows';
 import { WIDGET_REGISTRY } from '../../../widgets/registry';
 import { SpotifyGlyph } from '../../../widgets/SpotifyGlyph';
 import { Segmented, Switch } from '../../ui';
@@ -31,6 +33,11 @@ const CATALOG: { type: HomeWidgetType; icon: LucideIcon | null; tint: string }[]
   { type: 'calendar', icon: CalendarDays, tint: '#ff5a6e' },
 ];
 const SIZES: HomeWidgetSize[] = ['S', 'M', 'L'];
+const STYLES: { id: HomeWidgetStyle; label: string }[] = [
+  { id: 'transparent', label: 'home.personalize.styleTransparent' },
+  { id: 'glass', label: 'home.personalize.styleGlass' },
+  { id: 'solid', label: 'home.personalize.styleSolid' },
+];
 
 export function WidgetsTab({ onEditOnPage }: { onEditOnPage: () => void }) {
   const t = useT();
@@ -86,6 +93,26 @@ export function WidgetsTab({ onEditOnPage }: { onEditOnPage: () => void }) {
           <em>{t('home.personalize.arrangeHint')}</em>
         </span>
       </button>
+
+      <PzSection title={t('home.personalize.widgetCardStyle')}>
+        <div className="pz-wstyles" role="radiogroup" aria-label={t('home.personalize.widgetCardStyle')}>
+          {STYLES.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={settings.homeWidgetStyle === id}
+              className={`pz-wstyle${settings.homeWidgetStyle === id ? ' on' : ''}`}
+              onClick={() => patchSettings({ homeWidgetStyle: id })}
+            >
+              <span className={`pz-wstyle-tile pz-wstyle-${id}`}>
+                <i />
+              </span>
+              <span className="pz-wstyle-name">{t(label)}</span>
+            </button>
+          ))}
+        </div>
+      </PzSection>
 
       <div className="pz-widgets">
         {CATALOG.map(({ type, icon: Icon, tint }) => {

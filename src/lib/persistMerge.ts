@@ -124,6 +124,15 @@ export function applyOneShotLocalFlags(
   } catch {
     /* */
   }
+  // Widget style picker is live again: start everyone on the glass look they already see.
+  try {
+    if (!storage.getItem('vio_widget_style_v2')) {
+      out.homeWidgetStyle = 'glass';
+      storage.setItem('vio_widget_style_v2', '1');
+    }
+  } catch {
+    /* */
+  }
   return out;
 }
 
@@ -134,7 +143,9 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
   const s: Record<string, unknown> = { ...merged };
   if (!Array.isArray(s.homeTodos)) s.homeTodos = [];
   s.homeLayoutPreset = deriveHomeLayoutPreset(s);
-  if (!s.homeWidgetStyle) s.homeWidgetStyle = 'transparent';
+  if (s.homeWidgetStyle !== 'transparent' && s.homeWidgetStyle !== 'glass' && s.homeWidgetStyle !== 'solid') {
+    s.homeWidgetStyle = 'glass';
+  }
   if (typeof s.homeWidgetRadius !== 'number') s.homeWidgetRadius = 14;
   if (typeof s.homeGridGap !== 'number') s.homeGridGap = 12;
   if (typeof s.homeLayoutLock !== 'boolean') s.homeLayoutLock = false;

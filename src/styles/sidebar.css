@@ -70,6 +70,12 @@ html:not([data-theme='paper']) .app.sidebar-auto.sidebar-auto-open .sidebar-ctx-
   border-left: 1px solid color-mix(in srgb, var(--fg) 7%, transparent);
 }
 
+/* Home widgets keep clear of the auto card (8px inset + rail + 8px) when it slides out */
+.app.sidebar-auto .home-widgets-band {
+  padding-left: calc(var(--rail-w, 52px) + 16px);
+  padding-right: calc(var(--rail-w, 52px) + 16px);
+}
+
 /* —— Rail items —— */
 .app .side-rail-btn.is-current {
   color: var(--fg);

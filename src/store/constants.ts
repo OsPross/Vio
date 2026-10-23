@@ -283,7 +283,7 @@ export const DEFAULT_SETTINGS: Settings = {
   homeDensity: 'comfortable',
   homeWidgets: [],
   homeChrome: [],
-  homeWidgetStyle: 'transparent',
+  homeWidgetStyle: 'glass',
   homeWidgetRadius: 14,
   homeGridGap: 12,
   homeLayoutLock: false,

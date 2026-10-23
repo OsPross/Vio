@@ -91,7 +91,7 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
           '--hw-gap': `${settings.homeGridGap}px`,
         } as CSSProperties
       }
-      data-hw-style="glass"
+      data-hw-style={settings.homeWidgetStyle}
       onContextMenu={(e) => {
         const tEl = e.target as HTMLElement;
         if (
@@ -148,7 +148,7 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
           editMode={editMode && !settings.homeLayoutLock}
           onGo={onGo}
           reduced={reduced}
-          widgetStyle="glass"
+          widgetStyle={settings.homeWidgetStyle}
           radius={22}
           locked={settings.homeLayoutLock}
           onExitEdit={() => setEditMode(false)}
