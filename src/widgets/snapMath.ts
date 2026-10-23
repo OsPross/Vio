@@ -84,6 +84,13 @@ export function chromeToPx(
   };
 }
 
+/** Anchor by canvas third, so a widget keeps hugging its side when the window is resized. */
+export function anchorFor(centerX: number, metrics: CanvasMetrics): HomeWidgetAnchor {
+  if (centerX < metrics.width / 3) return 'left';
+  if (centerX > (metrics.width * 2) / 3) return 'right';
+  return 'center';
+}
+
 /** Pixel center → stored grid relative to preferred anchor */
 export function pxToWidgetPos(
   left: number,
@@ -267,22 +274,114 @@ export function clampWidgetPos(w: HomeWidget, metrics: CanvasMetrics): HomeWidge
   return { ...w, ...pos };
 }
 
+type Box = { left: number; top: number; width: number; height: number };
+/** Invisible wall around clock / search / shortcuts — widgets never enter it. */
+export const CHROME_WALL_GAP = 24;
+const WIDGET_GAP = 12;
+
 /**
- * View-only layout: stored user coords + clamp to canvas + push out of chrome
- * (clock / search / shortcuts). Never write this back to the store on resize.
+ * Nearest spot (to the requested one) inside the canvas that keeps `gap` clearance
+ * from every obstacle. Candidates hug obstacle and canvas edges; widgets are tried
+ * first against everything, then against the chrome wall only. Null if nothing fits.
  */
-export function layoutWidgetVisual(
-  w: HomeWidget,
+export function findFreeSpot(
+  box: Box,
+  obstacles: { box: Box; gap: number }[],
   metrics: CanvasMetrics,
-  chromeBoxes: { left: number; top: number; width: number; height: number }[],
-): HomeWidget {
-  const { w: width, h: height } = sizeToPx(w.size, w.type);
-  let left = placeLeftPx(w.anchor, w.x, width, metrics.width);
-  let top = placeTopPx(w.y);
-  const resolved = resolveCollision(left, top, width, height, chromeBoxes, metrics);
-  const pos = pxToWidgetPos(resolved.left, resolved.top, width, height, metrics, w.anchor);
-  if (pos.anchor === w.anchor && pos.x === w.x && pos.y === w.y) return w;
-  return { ...w, ...pos };
+): { left: number; top: number } | null {
+  const { width, height } = box;
+  const minL = EDGE_PAD;
+  const minT = EDGE_PAD;
+  const maxL = metrics.width - width - EDGE_PAD;
+  const maxT = metrics.height - height - EDGE_PAD;
+  if (maxL < minL || maxT < minT) return null;
+  const clampL = (v: number) => Math.min(Math.max(v, minL), maxL);
+  const clampT = (v: number) => Math.min(Math.max(v, minT), maxT);
+
+  const xs = new Set<number>([clampL(box.left), minL, maxL]);
+  const ys = new Set<number>([clampT(box.top), minT, maxT]);
+  for (const { box: o, gap } of obstacles) {
+    xs.add(clampL(o.left - gap - width));
+    xs.add(clampL(o.left + o.width + gap));
+    xs.add(clampL(o.left));
+    ys.add(clampT(o.top - gap - height));
+    ys.add(clampT(o.top + o.height + gap));
+    ys.add(clampT(o.top));
+  }
+
+  const free = (l: number, t: number) =>
+    obstacles.every(
+      ({ box: o, gap }) =>
+        l + width + gap <= o.left ||
+        o.left + o.width + gap <= l ||
+        t + height + gap <= o.top ||
+        o.top + o.height + gap <= t,
+    );
+
+  let best: { left: number; top: number } | null = null;
+  let bestD = Infinity;
+  for (const l of xs) {
+    for (const t of ys) {
+      const d = (l - box.left) ** 2 + (t - box.top) ** 2;
+      if (d >= bestD || !free(l, t)) continue;
+      best = { left: l, top: t };
+      bestD = d;
+    }
+  }
+  return best;
+}
+
+/**
+ * View-only layout for all widgets: stored coords → on-screen spot that stays inside
+ * the canvas, outside the chrome wall and off earlier widgets. Deterministic for a given
+ * canvas size, so resizing back restores the original layout. Never written to the store.
+ */
+export function layoutWidgetsVisual(
+  widgets: HomeWidget[],
+  metrics: CanvasMetrics,
+  chromeBoxes: Box[],
+): HomeWidget[] {
+  return placeWidgets(widgets, metrics, chromeBoxes).widgets;
+}
+
+/** False when the canvas is too small to keep every widget clear of the wall and each other. */
+export function widgetsFitCanvas(
+  widgets: HomeWidget[],
+  metrics: CanvasMetrics,
+  chromeBoxes: Box[],
+): boolean {
+  return placeWidgets(widgets, metrics, chromeBoxes).fits;
+}
+
+function placeWidgets(
+  widgets: HomeWidget[],
+  metrics: CanvasMetrics,
+  chromeBoxes: Box[],
+): { widgets: HomeWidget[]; fits: boolean } {
+  const wall = chromeBoxes.map((box) => ({ box, gap: CHROME_WALL_GAP }));
+  const placed: { box: Box; gap: number }[] = [];
+  let fits = true;
+  const out = widgets.map((w) => {
+    const { w: width, h: height } = sizeToPx(w.size, w.type);
+    const want: Box = {
+      left: placeLeftPx(w.anchor, w.x, width, metrics.width),
+      top: placeTopPx(w.y),
+      width,
+      height,
+    };
+    let spot = findFreeSpot(want, [...wall, ...placed], metrics);
+    if (!spot) {
+      fits = false;
+      spot = findFreeSpot(want, wall, metrics) ?? {
+        left: Math.min(Math.max(EDGE_PAD, want.left), Math.max(EDGE_PAD, metrics.width - width - EDGE_PAD)),
+        top: Math.min(Math.max(EDGE_PAD, want.top), Math.max(EDGE_PAD, metrics.height - height - EDGE_PAD)),
+      };
+    }
+    placed.push({ box: { ...spot, width, height }, gap: WIDGET_GAP });
+    if (spot.left === want.left && spot.top === want.top) return w;
+    return { ...w, ...pxToWidgetPos(spot.left, spot.top, width, height, metrics, w.anchor) };
+  });
+  return { widgets: out, fits };
 }
 
 export function clampWidgetsToCanvas(

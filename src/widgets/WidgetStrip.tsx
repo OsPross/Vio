@@ -1,7 +1,9 @@
 import {
+  Fragment,
   useCallback,
   useLayoutEffect,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -51,10 +53,14 @@ import { ClockWidget } from './ClockWidget';
 import { SearchWidget } from './SearchWidget';
 import { ShortcutsWidget } from './ShortcutsWidget';
 import {
+  CHROME_WALL_GAP,
+  anchorFor,
   chromeToPx,
   clampWidgetPos,
-  layoutWidgetVisual,
+  findFreeSpot,
+  layoutWidgetsVisual,
   nextFlexFallback,
+  widgetsFitCanvas,
   placeCssVars,
   pxToWidgetPos,
   resolveCollision,
@@ -242,9 +248,9 @@ export function WidgetStrip({
     }
   }, [patchSettings, settings.homeLayoutPreset]);
 
-  /* Measure canvas for drag/snap ONLY — resting paint uses CSS calc. */
+  /* Measure the zone (same box as the canvas, stable when the strip takes over). */
   useLayoutEffect(() => {
-    const el = rootRef.current;
+    const el = rootRef.current?.parentElement;
     if (!el) return;
     const measure = () => {
       const width = el.offsetWidth || el.clientWidth;
@@ -269,6 +275,35 @@ export function WidgetStrip({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  const chromeBoxes = useCallback(
+    (m: CanvasMetrics, excludeKey?: string): PlaceBox[] =>
+      chrome
+        .filter((c) => {
+          if (`chrome:${c.id}` === excludeKey) return false;
+          if (c.id === 'clock')
+            return settings.homeShowClock || settings.homeShowDate || settings.homeShowGreeting;
+          if (c.id === 'search') return settings.homeShowSearch !== false;
+          if (c.id === 'shortcuts') return settings.homeShowApps;
+          return true;
+        })
+        .map((c) => chromeToPx(c, m)),
+    [
+      chrome,
+      settings.homeShowClock,
+      settings.homeShowDate,
+      settings.homeShowGreeting,
+      settings.homeShowSearch,
+      settings.homeShowApps,
+    ],
+  );
+
+  // Too small to keep every widget clear of the chrome wall → stacked column instead of overlap
+  const fitsCanvas = useMemo(
+    () => !metrics || widgetsFitCanvas(widgets, metrics, chromeBoxes(metrics)),
+    [metrics, widgets, chromeBoxes],
+  );
+  const stripMode = flexFallback || !fitsCanvas;
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -312,7 +347,7 @@ export function WidgetStrip({
       }
       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
       const m = metricsRef.current;
-      if (!m || flexFallback || !selectedKey) return;
+      if (!m || stripMode || !selectedKey) return;
       e.preventDefault();
       const step = e.shiftKey ? 4 : 1;
       const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
@@ -337,7 +372,7 @@ export function WidgetStrip({
   }, [
     editMode,
     locked,
-    flexFallback,
+    stripMode,
     widgets,
     chrome,
     onChange,
@@ -357,31 +392,18 @@ export function WidgetStrip({
     [onChange, widgets],
   );
 
+  /** On-screen boxes (after the chrome wall / resize relayout) of everything except `excludeKey`. */
   const allOtherBoxes = useCallback(
     (excludeKey: string, m: CanvasMetrics): PlaceBox[] => {
-      const boxes: PlaceBox[] = [];
-      for (const c of chrome) {
-        const key = `chrome:${c.id}`;
-        if (key === excludeKey) continue;
-        if (c.id === 'clock' && !settings.homeShowClock && !settings.homeShowDate) continue;
-        if (c.id === 'search' && settings.homeShowSearch === false) continue;
-        if (c.id === 'shortcuts' && !settings.homeShowApps) continue;
-        boxes.push(chromeToPx(c, m));
-      }
-      for (const w of widgets) {
-        if (w.id === excludeKey) continue;
-        boxes.push(widgetToPx(w, m));
-      }
-      return boxes;
+      const walls = chromeBoxes(m, excludeKey);
+      const visual = layoutWidgetsVisual(
+        widgets.filter((w) => w.id !== excludeKey),
+        m,
+        chromeBoxes(m),
+      );
+      return [...walls, ...visual.map((w) => widgetToPx(w, m))];
     },
-    [
-      chrome,
-      widgets,
-      settings.homeShowClock,
-      settings.homeShowDate,
-      settings.homeShowSearch,
-      settings.homeShowApps,
-    ],
+    [chromeBoxes, widgets],
   );
 
   const clearDragVisual = (key: string) => {
@@ -484,8 +506,18 @@ export function WidgetStrip({
       const dim = sizeToPx(w.size, w.type);
       width = dim.w;
       height = dim.h;
-      const resolved = resolveCollision(d.left, d.top, width, height, allOtherBoxes(d.key, m), m);
-      const pos = pxToWidgetPos(resolved.left, resolved.top, width, height, m, w.anchor);
+      const want = { left: d.left, top: d.top, width, height };
+      const walls = chromeBoxes(m).map((box) => ({ box, gap: CHROME_WALL_GAP }));
+      const others = layoutWidgetsVisual(
+        widgets.filter((x) => x.id !== d.key),
+        m,
+        chromeBoxes(m),
+      ).map((x) => ({ box: widgetToPx(x, m), gap: 12 }));
+      const resolved =
+        findFreeSpot(want, [...walls, ...others], m) ??
+        findFreeSpot(want, walls, m) ??
+        resolveCollision(d.left, d.top, width, height, allOtherBoxes(d.key, m), m);
+      const pos = pxToWidgetPos(resolved.left, resolved.top, width, height, m, anchorFor(resolved.left + width / 2, m));
       const next = clampWidgetPos({ ...w, ...pos }, m);
       pushUndo(widgets, chrome);
       markCustom();
@@ -495,7 +527,7 @@ export function WidgetStrip({
 
   const onCardPointerDown = useCallback(
     (e: ReactPointerEvent, key: string, box: PlaceBox) => {
-      if (!editMode || locked || flexFallback || !metricsRef.current) return;
+      if (!editMode || locked || stripMode || !metricsRef.current) return;
       if (isInteractiveTarget(e.target)) return;
       setSelectedKey(key);
       e.preventDefault();
@@ -545,7 +577,7 @@ export function WidgetStrip({
       window.addEventListener('pointerup', onUp, { once: true });
       window.addEventListener('pointercancel', onUp, { once: true });
     },
-    [editMode, locked, flexFallback, applyDragFrame, endDrag],
+    [editMode, locked, stripMode, applyDragFrame, endDrag],
   );
 
   const centerAll = () => {
@@ -589,22 +621,12 @@ export function WidgetStrip({
       headerBottom: 320,
     };
 
-  const chromeBoxesFor = (m: CanvasMetrics) =>
-    visibleChrome.map((c) => chromeToPx(c, m));
+  /** Stored coords → on-screen place (canvas + chrome wall + no stacking). Does not mutate store. */
+  const restMetrics = metricsOrFallback();
+  const visualWidgets = layoutWidgetsVisual(widgets, restMetrics, chromeBoxes(restMetrics));
 
-  /** Stored coords → on-screen place (clamp + avoid chrome). Does not mutate store. */
-  const visualWidget = (w: HomeWidget, m: CanvasMetrics): HomeWidget =>
-    layoutWidgetVisual(w, m, chromeBoxesFor(m));
-
-  const restingBox = (
-    key: string,
-    item: HomeChromeItem | HomeWidget,
-    kind: 'chrome' | 'widget',
-  ): PlaceBox => {
-    const m = metricsOrFallback();
-    if (kind === 'chrome') return chromeToPx(item as HomeChromeItem, m);
-    return widgetToPx(visualWidget(item as HomeWidget, m), m);
-  };
+  const restingBox = (key: string, item: HomeChromeItem): PlaceBox =>
+    chromeToPx(item, restMetrics);
 
   return (
     <div className="hw-zone">
@@ -629,7 +651,7 @@ export function WidgetStrip({
       <div
         ref={rootRef}
         className={[
-          flexFallback ? 'hw-strip' : 'hw-canvas',
+          stripMode ? 'hw-strip' : 'hw-canvas',
           editMode ? 'is-edit' : '',
           locked ? 'is-locked' : '',
           draggingKey ? 'is-dragging' : '',
@@ -640,7 +662,7 @@ export function WidgetStrip({
           .join(' ')}
         style={{ '--hw-radius': `${radius}px` } as CSSProperties}
       >
-        {!flexFallback &&
+        {!stripMode &&
           guides.map((g, i) =>
             g.axis === 'x' ? (
               <div key={`gx-${i}`} className="hw-guide hw-guide-x" style={{ left: g.pos }} />
@@ -656,8 +678,8 @@ export function WidgetStrip({
           const dim = chromeSizeToPx(c.id);
           let style: CSSProperties = { width: '100%', maxWidth: 'var(--home-chrome-w, 540px)' };
           let box: PlaceBox = { left: 0, top: 0, width: dim.w, height: dim.h };
-          if (!flexFallback) {
-            box = restingBox(key, c, 'chrome');
+          if (!stripMode) {
+            box = restingBox(key, c);
             const chromeW = c.id === 'search' ? Math.min(540, Math.round(typeof window !== 'undefined' ? window.innerWidth * 0.9 : 540)) : dim.w;
             style = {
               ...placeCssVars(c.anchor, c.x, c.y, chromeW, dim.h),
@@ -668,14 +690,14 @@ export function WidgetStrip({
             } as CSSProperties;
           }
           return (
+            <Fragment key={key}>
             <div
-              key={key}
               ref={(n) => bindCardRef(key, n)}
               className={[
                 'hw-card',
                 'hw-chrome',
                 `hw-chrome-${c.id}`,
-                !flexFallback ? `hw-place hw-place-${c.anchor}` : '',
+                !stripMode ? `hw-place hw-place-${c.anchor}` : '',
                 editMode ? 'editable' : '',
                 draggingKey === key ? 'is-dragging' : '',
                 selectedKey === key ? 'is-selected' : '',
@@ -699,6 +721,8 @@ export function WidgetStrip({
                 {c.id === 'shortcuts' && <ShortcutsWidget onGo={onGo} />}
               </WidgetFrame>
             </div>
+            {stripMode && <div className="hw-strip-break" aria-hidden />}
+            </Fragment>
           );
         })}
 
@@ -713,10 +737,9 @@ export function WidgetStrip({
           const stackZ = 2 + wi;
           let style: CSSProperties = { width: px, maxWidth: '100%', zIndex: stackZ };
           let box: PlaceBox = { left: 0, top: 0, width: px, height: h };
-          if (!flexFallback) {
-            const m = metricsOrFallback();
-            const placed = visualWidget(w, m);
-            box = widgetToPx(placed, m);
+          if (!stripMode) {
+            const placed = visualWidgets[wi];
+            box = widgetToPx(placed, restMetrics);
             style = {
               ...placeCssVars(placed.anchor, placed.x, placed.y, px, h),
               zIndex: draggingKey === w.id ? 80 : selectedKey === w.id ? 40 : stackZ,
@@ -730,7 +753,7 @@ export function WidgetStrip({
                 'hw-card',
                 `hw-type-${w.type}`,
                 `hw-style-${resolvedStyle}`,
-                !flexFallback ? `hw-place hw-place-${w.anchor}` : '',
+                !stripMode ? `hw-place hw-place-${visualWidgets[wi].anchor}` : '',
                 editMode ? 'editable' : '',
                 draggingKey === w.id ? 'is-dragging' : '',
                 selectedKey === w.id ? 'is-selected' : '',
