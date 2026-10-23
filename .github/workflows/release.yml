@@ -1,7 +1,7 @@
 name: Release
 
 # Tag vX.Y.Z (musi zgadzać się z version w package.json) → build exe + rpm + AppImage + flatpak
-# → draft release w publicznym OsPross/vio-releases (stamtąd czyta electron-updater).
+# → opublikowany release w publicznym OsPross/vio-releases (exe do pobrania + electron-updater).
 on:
   push:
     tags: ['v*']
@@ -22,9 +22,20 @@ jobs:
       - run: npm run release
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+      - name: Keep Windows installer as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vio-windows
+          path: |
+            release/*.exe
+            release/*.yml
+            release/*.blockmap
+          if-no-files-found: warn
+          retention-days: 14
 
   linux:
-    needs: windows # ten sam draft release — nie twórz go dwa razy równolegle
+    needs: windows # jeden release naraz — Windows tworzy, Linux dokłada assety
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,3 +51,15 @@ jobs:
       - run: npm run release:linux
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+      - name: Keep Linux packages as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vio-linux
+          path: |
+            release/*.AppImage
+            release/*.rpm
+            release/*.flatpak
+            release/*.yml
+          if-no-files-found: warn
+          retention-days: 14
