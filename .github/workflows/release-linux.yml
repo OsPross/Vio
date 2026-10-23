@@ -1,7 +1,10 @@
 name: Release Linux
 
-# Dokłada AppImage / rpm / flatpak do istniejącego releasu w OsPross/vio-releases
+# Dokłada AppImage / rpm / flatpak do istniejącego releasu w OsPross/Vio
 # (np. gdy Windows już wrzucił exe, a Linux się wyłożył / został pominięty).
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
     inputs:
@@ -31,7 +34,7 @@ jobs:
       - run: npm ci
       - run: npm run release:linux
         env:
-          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Keep Linux packages as artifact
         if: always()
         uses: actions/upload-artifact@v4

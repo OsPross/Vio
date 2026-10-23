@@ -122,7 +122,7 @@ More: `docs/ARCHITECTURE.md`, `PROJECT_OVERVIEW.md` (Tor/privacy details), `docs
 - Do not install new plugins or MCP servers without asking (limit ~6 in total).
 
 ## Known issues / TODO (as of 2026-10-16)
-- Source repo is private `OsPross/Vio`. Updater releases go to the separate PUBLIC repo `OsPross/vio-releases`, which must exist before the first `npm run release`.
+- Source repo `OsPross/Vio` is public. Releases and updater feed live in the same repo (GitHub Actions `release.yml` with `GITHUB_TOKEN`); the old `OsPross/vio-releases` is no longer used.
 - Guest-callable extension IPC (`extensions-list`, `extensions-install-store`) is allowed only from Chrome Web Store URLs (`isChromeWebStoreUrl`), and guest installs need the in-app consent bar (fail-closed).
 - `main.cjs` loads `scripts/probe-*`/`smoke-*` via env flags, but only when unpackaged (`!app.isPackaged`). Only `perf-bench.cjs` ships in the build.
 - There is also an old local `cleanup-2` branch. `beats/` (an audio file) is local-only and not committed.

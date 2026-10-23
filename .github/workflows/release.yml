@@ -1,7 +1,10 @@
 name: Release
 
 # Tag vX.Y.Z (musi zgadzać się z version w package.json) → build exe + rpm + AppImage + flatpak
-# → opublikowany release w publicznym OsPross/vio-releases (exe do pobrania + electron-updater).
+# → opublikowany release w tym samym repo (OsPross/Vio): exe do pobrania + electron-updater.
+permissions:
+  contents: write # GITHUB_TOKEN tworzy release, osobny sekret niepotrzebny
+
 on:
   push:
     tags: ['v*']
@@ -19,18 +22,18 @@ jobs:
         if: github.ref_type == 'tag'
         shell: bash
         run: test "${GITHUB_REF_NAME}" = "v$(node -p "require('./package.json').version")"
-      # electron-builder uploads in parallel and would create duplicate drafts, so create the one draft first
-      - name: Draft release
+      # electron-builder uploads in parallel and would create duplicate releases, so create the one first
+      - name: Create release
         shell: bash
         run: |
           TAG="v$(node -p "require('./package.json').version")"
-          gh release view "$TAG" --repo OsPross/vio-releases >/dev/null 2>&1 \
-            || gh release create "$TAG" --repo OsPross/vio-releases --draft --title "$TAG" --notes ""
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --notes ""
         env:
-          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run release
         env:
-          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Keep Windows installer as artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -61,7 +64,7 @@ jobs:
       - run: npm ci
       - run: npm run release:linux
         env:
-          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Keep Linux packages as artifact
         if: always()
         uses: actions/upload-artifact@v4
