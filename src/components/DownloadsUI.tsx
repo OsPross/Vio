@@ -33,6 +33,7 @@ import { t as tCore } from '../i18n/core';
 import { useStore } from '../store';
 import { Input } from './ui/Input';
 import { InternalPage } from './InternalPage';
+import { LibrarySwitcher } from './LibrarySwitcher';
 
 export type DownloadRow = {
   id: string;
@@ -511,42 +512,36 @@ export function DownloadsPage() {
     void window.shell?.downloadsClear?.().then(reload);
   };
 
+  const isEmpty = !rows.length && !q.trim();
+
   return (
     <InternalPage
-      className="dl-page"
+      className="dl-page library-page"
       title={t('internal.downloads')}
-      subtitle={
-        <span>
-          {t(rows.length === 1 ? 'internal.downloadsSubOne' : 'internal.downloadsSub', {
-            n: rows.length,
-          })}
-        </span>
-      }
+      subtitle={<LibrarySwitcher active="downloads" />}
       toolbar={
-        <>
-          <label className="history-search">
-            <Search size={14} strokeWidth={1.75} />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t('internal.searchDownloads')}
-              spellCheck={false}
-            />
-          </label>
-          <button type="button" className="history-sbtn secondary" onClick={clearList}>
-            {t('internal.clearList')}
-          </button>
-        </>
+        isEmpty ? null : (
+          <>
+            <label className="history-search">
+              <Search size={14} strokeWidth={1.75} />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t('internal.searchDownloads')}
+                spellCheck={false}
+              />
+            </label>
+            <button type="button" className="history-sbtn secondary" onClick={clearList}>
+              {t('internal.clearList')}
+            </button>
+          </>
+        )
       }
     >
       <div className="history-scroll">
         {!groups.length && (
-          <div className="ip-empty">
-            <span className="ip-empty-ico" aria-hidden>
-              <Download size={28} strokeWidth={1.5} />
-            </span>
+          <div className="ip-empty library-empty">
             <p>{q.trim() ? t('internal.downloadsEmptyQuery') : t('internal.downloadsEmpty')}</p>
-            <span className="muted">{t('internal.downloadsEmptyHint')}</span>
           </div>
         )}
         {groups.map((g) => (

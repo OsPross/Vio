@@ -212,6 +212,22 @@
   opacity: 1;
 }
 
+.library-empty .ip-empty-ico,
+.library-empty.bm-empty .ip-empty-ico {
+  display: none;
+}
+
+.library-empty,
+.library-empty.bm-empty,
+.library-empty.ip-empty {
+  margin: 64px auto;
+  padding: 12px 16px;
+  max-width: 360px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .ip-empty-ico svg,
 .history-empty > svg,
 .dl-empty-page > svg,
@@ -336,6 +352,193 @@
 .dl-row-meta {
   font-size: 12px;
   color: var(--fg-3);
+}
+
+/* Vio Library switcher */
+.library-switch {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  max-width: 100%;
+}
+.library-switch button {
+  border: 0;
+  background: transparent;
+  color: var(--fg-3);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.library-switch button.on {
+  background: #fff;
+  color: var(--fg);
+  box-shadow: 0 1px 3px rgba(15, 15, 25, 0.12);
+}
+html:not([data-theme='paper']) .library-switch button.on {
+  background: color-mix(in srgb, var(--fg) 12%, var(--bg-elev));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.library-page .internal-page-subtitle {
+  margin-top: 6px;
+}
+
+/* Extensions card grid */
+.ext-card-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 14px;
+}
+.ext-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 14px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 70%, transparent);
+}
+.ext-card.off {
+  opacity: 0.62;
+}
+.ext-card-ico {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  color: var(--fg-2);
+  overflow: hidden;
+}
+.ext-card-ico img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.ext-card-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ext-card-meta strong {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ext-card-ver {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.ext-card-info {
+  color: var(--fg-3);
+  flex-shrink: 0;
+}
+.ext-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ext-card-more {
+  position: relative;
+}
+.ext-card-menu,
+.ext-add-pop,
+.bm-import-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 180px;
+  padding: 6px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-elev) 96%, transparent);
+  border: 1px solid rgba(15, 15, 25, 0.06);
+  box-shadow:
+    0 8px 24px -4px rgba(15, 15, 25, 0.08),
+    0 2px 6px rgba(15, 15, 25, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ext-card-menu button,
+.ext-add-pop > button,
+.bm-import-pop button {
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ext-card-menu button:hover,
+.ext-add-pop > button:hover,
+.bm-import-pop button:hover {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.ext-card-menu button.danger {
+  color: #c44;
+}
+.ext-card-details {
+  grid-column: 1 / -1;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 40%, transparent);
+}
+.ext-add-wrap,
+.bm-import-menu {
+  position: relative;
+}
+.ext-add-link {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+}
+.ext-add-link input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  border: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+  padding: 0 8px;
+  font-size: 12.5px;
+}
+.bm-import-sep {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  margin: 4px 6px;
+}
+.bm-bar-menu-label {
+  padding: 6px 10px 2px;
+  font-size: 11px;
+  color: var(--fg-3);
+}
+.bm-import-pop button.on {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 /* Extensions */

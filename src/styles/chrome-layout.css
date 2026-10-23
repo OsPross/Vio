@@ -252,67 +252,22 @@
   padding: 0 4px;
 }
 
-/* —— Sidebar rail —— */
-.side-rail {
-  gap: 0;
-  padding: 10px 8px 12px;
-  align-items: center;
-}
-
-.side-rail-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-}
-
-.side-rail-sep {
-  width: 22px;
-  height: 1px;
-  margin: 10px 0;
-  background: var(--line);
-  flex-shrink: 0;
-  border: 0;
-}
-
-.side-rail-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  color: var(--fg-3);
-}
-
+/* —— Sidebar rail (labeled Arc-like; sizing lives in styles.css) —— */
 .side-rail-btn:hover {
   color: var(--fg);
   background: color-mix(in srgb, var(--fg) 7%, transparent);
 }
 
 .side-rail-btn.on {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
   border-color: transparent;
-}
-
-.side-rail-ico {
-  width: 18px;
-  height: 18px;
 }
 
 .side-rail-ico img,
 .side-rail-btn img {
   width: 18px;
   height: 18px;
-}
-
-.side-rail-foot {
-  margin-top: auto;
-  padding-top: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
 }
 
 /* —— New tab page —— */

@@ -216,9 +216,8 @@ function SortableAppBtn({
     <button
       ref={setNodeRef}
       type="button"
-      className={`side-rail-btn ${on ? 'on' : ''} ${isDragging ? 'dragging' : ''}`}
+      className={`side-rail-btn side-rail-app ${on ? 'on' : ''} ${isDragging ? 'dragging' : ''}`}
       style={style}
-      data-tip={app.label}
       title={app.label}
       onClick={onOpen}
       onContextMenu={onContext}
@@ -236,6 +235,7 @@ function SortableAppBtn({
       <span className="side-rail-ico">
         <SideAppIcon app={app} />
       </span>
+      <span className="side-rail-label">{app.label}</span>
       {badge > 0 && (
         <span className={`side-rail-badge ${badge > 9 ? '' : badge === 1 ? 'dot' : ''}`}>
           {badge > 9 ? (badge > 99 ? '99+' : String(badge)) : badge === 1 ? '' : String(badge)}
@@ -359,7 +359,7 @@ export function AppSidebar({
     if (app) {
       app.style.setProperty('--panel-w', `${next}px`);
       if (app.classList.contains('side-panel-open') && !app.classList.contains('no-side')) {
-        app.style.setProperty('--side-total', `${56 + next}px`);
+        app.style.setProperty('--side-total', `${200 + next}px`);
       }
     }
     return next;
@@ -452,20 +452,20 @@ export function AppSidebar({
             <button
               type="button"
               className="side-rail-btn"
-              data-tip={t('sidebar.home')}
               title={t('sidebar.home')}
               onClick={onHome}
             >
-              <Home size={18} strokeWidth={1.75} />
+              <Home size={18} strokeWidth={1.6} />
+              <span className="side-rail-label">{t('sidebar.home')}</span>
             </button>
             <button
               type="button"
               className="side-rail-btn"
-              data-tip={t('sidebar.search')}
               title={t('sidebar.search')}
               onClick={onHome}
             >
-              <Search size={18} strokeWidth={1.75} />
+              <Search size={18} strokeWidth={1.6} />
+              <span className="side-rail-label">{t('sidebar.search')}</span>
             </button>
           </div>
 
@@ -503,20 +503,17 @@ export function AppSidebar({
             <button
               type="button"
               className="side-rail-btn"
-              data-tip={canPin ? t('sidebar.addApp') : t('sidebar.addAppDisabled')}
               title={canPin ? t('sidebar.addApp') : t('sidebar.addAppDisabled')}
               disabled={!canPin}
               onClick={pinActivePage}
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <Plus size={18} strokeWidth={1.75} />
+              <Plus size={18} strokeWidth={1.6} />
+              <span className="side-rail-label">{t('common.add')}</span>
             </button>
             <button
               type="button"
               className="side-rail-btn"
-              data-tip={
-                settings.sidebarMode === 'auto' ? t('sidebar.collapseRail') : t('sidebar.hideSidebar')
-              }
               title={
                 settings.sidebarMode === 'auto'
                   ? t('sidebar.collapseRail')
@@ -525,16 +522,21 @@ export function AppSidebar({
               onClick={toggleSidebarChrome}
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <PanelLeftClose size={18} strokeWidth={1.75} />
+              <PanelLeftClose size={18} strokeWidth={1.6} />
+              <span className="side-rail-label">
+                {settings.sidebarMode === 'auto'
+                  ? t('sidebar.collapseRail')
+                  : t('sidebar.hideSidebar')}
+              </span>
             </button>
             <button
               type="button"
               className="side-rail-btn"
-              data-tip={t('sidebar.settings')}
               title={t('sidebar.settings')}
               onClick={() => setSettingsTab('general')}
             >
-              <Settings2 size={18} strokeWidth={1.75} />
+              <Settings2 size={18} strokeWidth={1.6} />
+              <span className="side-rail-label">{t('sidebar.settings')}</span>
             </button>
           </div>
         </LayoutGroup>

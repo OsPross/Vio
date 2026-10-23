@@ -382,7 +382,8 @@ export function AppChrome({
         .join(' ')}
       style={
         {
-          ['--rail-w' as string]: '56px',
+          /* Labeled rail (Arc-like) — icons + titles; never a 56px icon strip */
+          ['--rail-w' as string]: '200px',
           ['--panel-w' as string]:
             (settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') &&
             settings.sidePanelOpen
@@ -391,8 +392,8 @@ export function AppChrome({
           ['--side-total' as string]:
             settings.sidebarMode === 'on'
               ? settings.sidePanelOpen
-                ? `${56 + settings.sidePanelWidth}px`
-                : '56px'
+                ? `${200 + settings.sidePanelWidth}px`
+                : '200px'
               : '0px',
         } as CSSProperties
       }

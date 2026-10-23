@@ -7,7 +7,7 @@ import {
   useState,
   type MouseEvent,
 } from 'react';
-import { ExternalLink, Globe, History, Search, Trash2 } from 'lucide-react';
+import { ExternalLink, Globe, Search, Trash2 } from 'lucide-react';
 import { letterFavicon } from '../lib/favicon';
 import { formatUrlForDisplay } from '../lib/url-display';
 import { Dropdown } from './ui/Dropdown';
@@ -15,6 +15,7 @@ import { Input } from './ui/Input';
 import { useT, useUiLocale } from '../i18n';
 import { t as tCore } from '../i18n/core';
 import { InternalPage } from './InternalPage';
+import { LibrarySwitcher } from './LibrarySwitcher';
 
 type Visit = {
   id: string;
@@ -371,42 +372,42 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
 
   const slice = flatRows.slice(renderStart, renderEnd);
 
+  const isEmpty = ready && total === 0 && !q.trim();
+
   return (
     <InternalPage
-      className="history-page"
+      className="history-page library-page"
       title={t('internal.history')}
-      subtitle={
-        <span>
-          {t(total === 1 ? 'internal.historySubOne' : 'internal.historySub', { n: total })}
-        </span>
-      }
+      subtitle={<LibrarySwitcher active="history" />}
       toolbar={
-        <>
-          <label className="history-search">
-            <Search size={14} strokeWidth={1.75} />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t('internal.searchHistory')}
-              spellCheck={false}
-            />
-          </label>
-          <div className="history-clear">
-            <Dropdown
-              value={clearRange}
-              options={clearOptions}
-              onChange={(id) => setClearRange(id as typeof clearRange)}
-              aria-label={t('internal.historyClearRangeAria')}
-            />
-            <button
-              type="button"
-              className="history-sbtn secondary"
-              onClick={() => void clearData()}
-            >
-              {t('internal.historyClearData')}
-            </button>
-          </div>
-        </>
+        isEmpty ? null : (
+          <>
+            <label className="history-search">
+              <Search size={14} strokeWidth={1.75} />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t('internal.searchHistory')}
+                spellCheck={false}
+              />
+            </label>
+            <div className="history-clear">
+              <Dropdown
+                value={clearRange}
+                options={clearOptions}
+                onChange={(id) => setClearRange(id as typeof clearRange)}
+                aria-label={t('internal.historyClearRangeAria')}
+              />
+              <button
+                type="button"
+                className="history-sbtn secondary"
+                onClick={() => void clearData()}
+              >
+                {t('internal.historyClearData')}
+              </button>
+            </div>
+          </>
+        )
       }
     >
       {selectionActive && (
@@ -424,12 +425,8 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
 
       <div className="history-scroll" ref={scrollRef}>
         {ready && !flatRows.length && (
-          <div className="ip-empty">
-            <span className="ip-empty-ico" aria-hidden>
-              <History size={28} strokeWidth={1.5} />
-            </span>
+          <div className="ip-empty library-empty">
             <p>{q.trim() ? t('internal.historyEmptyQuery') : t('internal.historyEmpty')}</p>
-            <span className="muted">{t('internal.historyEmptyHint')}</span>
           </div>
         )}
         {!!flatRows.length && (

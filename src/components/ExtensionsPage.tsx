@@ -1,7 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Puzzle, FolderOpen, Trash2, RefreshCw, Pin, Link2, AlertTriangle } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ExternalLink,
+  FolderOpen,
+  Info,
+  MoreHorizontal,
+  Pin,
+  Plus,
+  Puzzle,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react';
 import { useT } from '../i18n';
+import { useStore } from '../store';
 import { InternalPage } from './InternalPage';
+import { LibrarySwitcher } from './LibrarySwitcher';
 import { Switch } from './ui/Switch';
 
 type ExtRow = {
@@ -25,13 +37,21 @@ type ExtRow = {
   canUpdate?: boolean;
 };
 
+const WEBSTORE = 'https://chromewebstore.google.com/';
+
 export function ExtensionsPage() {
   const t = useT();
+  const activeId = useStore((s) => s.activeId);
+  const updateTab = useStore((s) => s.updateTab);
   const [rows, setRows] = useState<ExtRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const [storeInput, setStoreInput] = useState('');
+  const [menuId, setMenuId] = useState<string | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
+  const addRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const reload = useCallback(async () => {
     const res = await window.shell?.extensionsList?.();
@@ -41,6 +61,28 @@ export function ExtensionsPage() {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    if (!addOpen && !menuId) return;
+    const onPtr = (e: PointerEvent) => {
+      const n = e.target as Node;
+      if (addOpen && !addRef.current?.contains(n)) setAddOpen(false);
+      if (menuId && !menuRef.current?.contains(n)) setMenuId(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setAddOpen(false);
+        setMenuId(null);
+        setDetailsId(null);
+      }
+    };
+    window.addEventListener('pointerdown', onPtr, true);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('pointerdown', onPtr, true);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [addOpen, menuId]);
 
   const installFolder = async () => {
     setBusy(true);
@@ -52,6 +94,7 @@ export function ExtensionsPage() {
       await reload();
     } finally {
       setBusy(false);
+      setAddOpen(false);
     }
   };
 
@@ -67,12 +110,14 @@ export function ExtensionsPage() {
       await reload();
     } finally {
       setBusy(false);
+      setAddOpen(false);
     }
   };
 
   const updateOne = async (id: string) => {
     setBusy(true);
     setErr(null);
+    setMenuId(null);
     try {
       const res = await window.shell?.extensionsUpdate?.(id);
       if (!res?.ok) setErr(res?.error || t('internal.extUpdateFailed'));
@@ -82,116 +127,102 @@ export function ExtensionsPage() {
     }
   };
 
+  const displayName = (ext: ExtRow) => {
+    if (!ext.name || ext.name.startsWith('__MSG_')) return ext.chromeId || ext.id;
+    return ext.name;
+  };
+
   return (
     <InternalPage
-      className="extensions-page"
+      className="extensions-page library-page"
       title={t('internal.extensions')}
-      subtitle={t('internal.extensionsSub')}
+      subtitle={<LibrarySwitcher active="extensions" />}
       toolbar={
         <>
           <button
             type="button"
             className="history-sbtn secondary"
-            onClick={() => void reload()}
-            title={t('common.refresh')}
+            onClick={() => {
+              if (activeId) updateTab(activeId, { url: WEBSTORE, title: 'Chrome Web Store' });
+            }}
           >
-            <RefreshCw size={14} />
+            <ExternalLink size={14} strokeWidth={1.6} />
+            {t('internal.extOpenWebStore')}
           </button>
-          <button
-            type="button"
-            className="history-sbtn secondary"
-            disabled={busy}
-            onClick={() => void installFolder()}
-          >
-            <FolderOpen size={14} />
-            {t('internal.extFolderZip')}
-          </button>
+          <div className="ext-add-wrap" ref={addRef}>
+            <button
+              type="button"
+              className="history-sbtn secondary"
+              disabled={busy}
+              onClick={() => setAddOpen((v) => !v)}
+            >
+              <Plus size={14} strokeWidth={1.6} />
+              {t('internal.extAddCompact')}
+            </button>
+            {addOpen && (
+              <div className="ext-add-pop">
+                <button type="button" disabled={busy} onClick={() => void installFolder()}>
+                  <FolderOpen size={14} />
+                  {t('internal.extFolderZip')}
+                </button>
+                <div className="ext-add-link">
+                  <input
+                    type="text"
+                    value={storeInput}
+                    onChange={(e) => setStoreInput(e.target.value)}
+                    placeholder={t('internal.extStorePlaceholder')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void installStore();
+                    }}
+                    disabled={busy}
+                  />
+                  <button
+                    type="button"
+                    className="history-sbtn secondary sm"
+                    disabled={busy || !storeInput.trim()}
+                    onClick={() => void installStore()}
+                  >
+                    {t('internal.extInstall')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </>
       }
     >
-      <div className="extensions-store-row">
-        <Link2 size={14} />
-        <input
-          type="text"
-          className="extensions-store-input"
-          placeholder={t('internal.extStorePlaceholder')}
-          value={storeInput}
-          onChange={(e) => setStoreInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void installStore();
-          }}
-          disabled={busy}
-        />
-        <button
-          type="button"
-          className="history-sbtn secondary"
-          disabled={busy || !storeInput.trim()}
-          onClick={() => void installStore()}
-        >
-          {t('internal.extInstall')}
-        </button>
-      </div>
-
       {err ? <p className="extensions-err">{err}</p> : null}
 
       {rows.length === 0 ? (
-        <div className="ip-empty">
-          <span className="ip-empty-ico" aria-hidden>
-            <Puzzle size={28} strokeWidth={1.5} />
-          </span>
+        <div className="ip-empty library-empty">
           <p>{t('internal.extensionsEmpty')}</p>
-          <span className="muted">{t('internal.extensionsEmptyHint')}</span>
         </div>
       ) : (
-        <ul className="extensions-list">
+        <ul className="ext-card-grid">
           {rows.map((ext) => (
-            <li key={ext.id} className={`extensions-row ${ext.enabled ? '' : 'off'}`}>
-              <div className="extensions-ico" aria-hidden>
+            <li key={ext.id} className={`ext-card ${ext.enabled ? '' : 'off'}`}>
+              <div className="ext-card-ico" aria-hidden>
                 {ext.icon ? (
-                  <img src={ext.icon} alt="" width={32} height={32} />
+                  <img src={ext.icon} alt="" width={40} height={40} />
                 ) : (
-                  <Puzzle size={20} strokeWidth={1.5} />
+                  <Puzzle size={22} strokeWidth={1.5} />
                 )}
               </div>
-              <div className="extensions-meta">
-                <strong>{ext.name}</strong>
-                <span className="muted">
-                  v{ext.version}
-                  {ext.manifestVersion ? ` · MV${ext.manifestVersion}` : ''}
-                  {ext.loaded
-                    ? ` · ${t('internal.extActive')}`
-                    : ` · ${t('internal.extDisabledSession')}`}
-                  {ext.usesWebRequest ? ` · ${t('internal.extWebRequestGhostery')}` : ''}
+              <div className="ext-card-meta">
+                <strong title={displayName(ext)}>{displayName(ext)}</strong>
+                <span className="ext-card-ver">
+                  {ext.version}
+                  {ext.limitedSupport || (ext.warnings && ext.warnings.length > 0) ? (
+                    <span
+                      className="ext-card-info"
+                      title={ext.warnings?.[0] || t('internal.extLimitedSupport')}
+                    >
+                      <Info size={12} strokeWidth={1.75} aria-hidden />
+                    </span>
+                  ) : null}
                 </span>
-                {ext.limitedSupport ? (
-                  <p className="extensions-warn">
-                    <AlertTriangle size={12} strokeWidth={2} />
-                    {t('internal.extLimitedSupport')}
-                    {ext.warnings?.[0] ? ` — ${ext.warnings[0]}` : ''}
-                  </p>
-                ) : null}
-                {detailsId === ext.id && ext.permissions && ext.permissions.length > 0 ? (
-                  <ul className="extensions-perms-list">
-                    {ext.permissions.map((p) => (
-                      <li key={p}>
-                        <code>{p}</code>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
               </div>
-              <div className="extensions-actions">
-                <Switch
-                  on={ext.enabled}
-                  onChange={(on) => {
-                    void window.shell?.extensionsSetEnabled?.(ext.id, on).then(() => reload());
-                  }}
-                  aria-label={
-                    ext.enabled
-                      ? t('chrome.disableExtension', { name: ext.name })
-                      : t('chrome.enableExtension', { name: ext.name })
-                  }
-                />
+              <div className="ext-card-actions">
                 <button
                   type="button"
                   className={`icon-btn sm ${ext.pinned ? 'on' : ''}`}
@@ -205,39 +236,64 @@ export function ExtensionsPage() {
                 >
                   <Pin size={13} strokeWidth={1.75} />
                 </button>
-                <button
-                  type="button"
-                  className="history-sbtn secondary sm"
-                  onClick={() => setDetailsId((cur) => (cur === ext.id ? null : ext.id))}
-                >
-                  {t('internal.extDetails')}
-                </button>
-                {ext.canUpdate ? (
+                <Switch
+                  on={ext.enabled}
+                  onChange={(on) => {
+                    void window.shell?.extensionsSetEnabled?.(ext.id, on).then(() => reload());
+                  }}
+                  aria-label={
+                    ext.enabled
+                      ? t('chrome.disableExtension', { name: displayName(ext) })
+                      : t('chrome.enableExtension', { name: displayName(ext) })
+                  }
+                />
+                <div className="ext-card-more" ref={menuId === ext.id ? menuRef : undefined}>
                   <button
                     type="button"
-                    className="history-sbtn secondary sm"
-                    disabled={busy}
-                    title={t('internal.extUpdate')}
-                    onClick={() => void updateOne(ext.id)}
+                    className="icon-btn sm"
+                    title={t('common.more')}
+                    onClick={() => setMenuId((id) => (id === ext.id ? null : ext.id))}
                   >
-                    <RefreshCw size={12} />
-                    {t('internal.extUpdate')}
+                    <MoreHorizontal size={14} strokeWidth={1.75} />
                   </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="icon-btn"
-                  title={t('common.delete')}
-                  onClick={() => {
-                    if (!window.confirm(t('internal.extRemoveConfirm', { name: ext.name }))) return;
-                    void window.shell?.extensionsRemove?.(ext.id).then(() => reload());
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
+                  {menuId === ext.id && (
+                    <div className="ext-card-menu">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDetailsId((cur) => (cur === ext.id ? null : ext.id));
+                          setMenuId(null);
+                        }}
+                      >
+                        {t('internal.extDetails')}
+                      </button>
+                      {ext.canUpdate ? (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void updateOne(ext.id)}
+                        >
+                          <RefreshCw size={12} /> {t('internal.extUpdate')}
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => {
+                          setMenuId(null);
+                          if (!window.confirm(t('internal.extRemoveConfirm', { name: displayName(ext) })))
+                            return;
+                          void window.shell?.extensionsRemove?.(ext.id).then(() => reload());
+                        }}
+                      >
+                        <Trash2 size={12} /> {t('common.delete')}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               {detailsId === ext.id ? (
-                <div className="extensions-details">
+                <div className="ext-card-details">
                   <label className="extensions-toggle">
                     <input
                       type="checkbox"
@@ -250,19 +306,21 @@ export function ExtensionsPage() {
                     />
                     {t('internal.extPrivate')}
                   </label>
-                  <span className="muted extensions-id" title={ext.id}>
-                    ID: {ext.chromeId || ext.electronId || ext.id}
-                  </span>
+                  {ext.permissions && ext.permissions.length > 0 ? (
+                    <ul className="extensions-perms-list">
+                      {ext.permissions.map((p) => (
+                        <li key={p}>
+                          <code>{p}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
               ) : null}
             </li>
           ))}
         </ul>
       )}
-
-      <footer className="extensions-foot muted">
-        <p>{t('internal.extFootnote')}</p>
-      </footer>
     </InternalPage>
   );
 }

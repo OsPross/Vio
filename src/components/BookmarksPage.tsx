@@ -42,6 +42,7 @@ import {
 } from '../store';
 import { useT } from '../i18n';
 import { InternalPage } from './InternalPage';
+import { LibrarySwitcher } from './LibrarySwitcher';
 import { Input } from './ui/Input';
 
 type Props = {
@@ -457,34 +458,101 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
 
   return (
     <InternalPage
-      className="bookmarks-page"
+      className="bookmarks-page library-page"
       title={t('internal.bookmarks')}
-      subtitle={
-        <span>
-          {t(
-            bookmarks.length === 1 ? 'internal.bookmarksSubOne' : 'internal.bookmarksSub',
-            { n: bookmarks.length },
-          )}
-        </span>
-      }
+      subtitle={<LibrarySwitcher active="bookmarks" />}
       toolbar={
-        <>
-          <label className="history-search">
-            <Search size={14} strokeWidth={1.75} />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t('internal.searchBookmarks')}
-              spellCheck={false}
-            />
-          </label>
+        emptyAll ? null : (
+          <>
+            <label className="history-search">
+              <Search size={14} strokeWidth={1.75} />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t('internal.searchBookmarks')}
+                spellCheck={false}
+              />
+            </label>
+            <button type="button" className="history-sbtn secondary" onClick={newFolder}>
+              <FolderPlus size={14} /> {t('internal.newFolder')}
+            </button>
+            <div className="bm-import-menu" ref={importRef}>
+              <button
+                type="button"
+                className="icon-btn sm"
+                title={t('common.more')}
+                onClick={() => setImportOpen((v) => !v)}
+              >
+                <MoreHorizontal size={14} />
+              </button>
+              {importOpen && (
+                <div className="bm-import-pop">
+                  <button type="button" onClick={() => fileRef.current?.click()}>
+                    <Upload size={14} /> {t('internal.import')}
+                  </button>
+                  {profiles.map((p) => (
+                    <button
+                      key={p.path}
+                      type="button"
+                      disabled={!p.exists}
+                      onClick={() => void onImportChrome(p.path)}
+                    >
+                      {t('internal.bookmarksImportFrom', { browser: p.browser })}
+                      {!p.exists ? t('internal.bookmarksNoProfile') : ''}
+                    </button>
+                  ))}
+                  <button type="button" onClick={onExport} disabled={!bookmarks.length}>
+                    <Download size={14} /> {t('internal.export')}
+                  </button>
+                  <hr className="bm-import-sep" />
+                  <div className="bm-bar-menu-label">{t('internal.bookmarksShowBar')}</div>
+                  {(
+                    [
+                      ['always', t('settings.look.bookmarksBarAlways')],
+                      ['newtab', t('settings.look.bookmarksBarNewtab')],
+                      ['never', t('settings.look.bookmarksBarNever')],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={barMode === id ? 'on' : ''}
+                      onClick={() => {
+                        patchSettings({ bookmarksBarMode: id, showBookmarksBar: id !== 'never' });
+                        setImportOpen(false);
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )
+      }
+    >
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".html,.htm,.json,text/html,application/json"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void onImportFile(f);
+          e.target.value = '';
+        }}
+      />
+      {emptyAll ? (
+        <div className="ip-empty library-empty bm-empty">
+          <p>{t('internal.bookmarksEmpty')}</p>
           <div className="bm-import-menu" ref={importRef}>
             <button
               type="button"
               className="history-sbtn secondary"
               onClick={() => setImportOpen((v) => !v)}
             >
-              <Upload size={14} /> {t('internal.import')}
+              <Upload size={14} /> {t('internal.bookmarksImportBtn')}
             </button>
             {importOpen && (
               <div className="bm-import-pop">
@@ -505,49 +573,8 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
               </div>
             )}
           </div>
-          <button
-            type="button"
-            className="history-sbtn secondary"
-            onClick={onExport}
-            disabled={!bookmarks.length}
-          >
-            <Download size={14} /> {t('internal.export')}
-          </button>
-          <button type="button" className="history-sbtn secondary" onClick={newFolder}>
-            <FolderPlus size={14} /> {t('internal.newFolder')}
-          </button>
-          <label className="bm-toolbar-switch">
-            <span className="muted" style={{ marginRight: 8 }}>
-              {t('internal.bookmarksShowBar')}
-            </span>
-            <select
-              className="bm-bar-mode"
-              value={barMode || 'never'}
-              aria-label={t('internal.bookmarksShowBar')}
-              onChange={(e) => {
-                const v = e.target.value as 'always' | 'newtab' | 'never';
-                patchSettings({ bookmarksBarMode: v, showBookmarksBar: v !== 'never' });
-              }}
-            >
-              <option value="always">{t('settings.look.bookmarksBarAlways')}</option>
-              <option value="newtab">{t('settings.look.bookmarksBarNewtab')}</option>
-              <option value="never">{t('settings.look.bookmarksBarNever')}</option>
-            </select>
-          </label>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".html,.htm,.json,text/html,application/json"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void onImportFile(f);
-              e.target.value = '';
-            }}
-          />
-        </>
-      }
-    >
+        </div>
+      ) : (
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -613,25 +640,9 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
 
           <div className="bm-list-wrap">
             {!filtered.length ? (
-              <div className="ip-empty bm-empty">
-                <span className="ip-empty-ico" aria-hidden>
-                  <Bookmark size={28} strokeWidth={1.5} />
-                </span>
+              <div className="ip-empty library-empty bm-empty">
                 <p>{q.trim() ? t('internal.bookmarksEmptyQuery') : t('internal.bookmarksEmpty')}</p>
-                {emptyAll && !q ? (
-                  <>
-                    <button
-                      type="button"
-                      className="history-sbtn secondary"
-                      onClick={() => setImportOpen(true)}
-                    >
-                      {t('internal.bookmarksImportChrome')}
-                    </button>
-                    <span className="muted">{t('internal.bookmarksAddHint')}</span>
-                  </>
-                ) : (
-                  <span className="muted">{t('internal.bookmarksEmptyFilterHint')}</span>
-                )}
+                <span className="muted">{t('internal.bookmarksEmptyFilterHint')}</span>
               </div>
             ) : (
               <SortableContext
@@ -678,6 +689,7 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
           ) : null}
         </DragOverlay>
       </DndContext>
+      )}
 
       {ctx && (
         <div
