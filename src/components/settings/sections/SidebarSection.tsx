@@ -21,7 +21,6 @@ export function SidebarSection() {
       <SettingsGroup title={t('settings.sidebar.rail')}>
         <Toggle
           label={t('settings.sidebar.showSidebar')}
-          hint="Ctrl+B, Ctrl+Shift+M, Ctrl+Shift+G"
           on={settings.showSidebar}
           onChange={(v) =>
             patchSettings({ showSidebar: v, ...(v ? {} : { sidePanelOpen: false }) })
@@ -29,7 +28,6 @@ export function SidebarSection() {
         />
         <SliderRow
           label={t('settings.sidebar.panelWidth')}
-          desc={t('settings.sidebar.panelWidthDesc')}
           value={`${settings.sidePanelWidth} px`}
           min={280}
           max={720}

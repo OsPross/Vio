@@ -119,7 +119,6 @@ export function ExtensionsPopup({ open, onClose, onManage, tabId }: Props) {
           {rows.length === 0 ? (
             <div className="chrome-flyout-empty">
               <p>{t('chrome.extensionsEmpty')}</p>
-              <span>{t('chrome.extensionsEmptyDesc')}</span>
             </div>
           ) : (
             <ul className="ext-menu-list">

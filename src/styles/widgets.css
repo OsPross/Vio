@@ -519,9 +519,9 @@
   min-width: 0;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--fg-3);
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--fg-2);
   line-height: 1;
 }
 

@@ -86,7 +86,6 @@ export function ExtensionsPage() {
     <InternalPage
       className="extensions-page"
       title={t('internal.extensions')}
-      icon={<Puzzle size={18} strokeWidth={1.75} />}
       subtitle={t('internal.extensionsSub')}
       toolbar={
         <>

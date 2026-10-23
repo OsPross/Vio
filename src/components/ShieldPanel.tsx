@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronDown, Shield, ShieldOff, Trash2 } from 'lucide-react';
+import { ChevronDown, Trash2 } from 'lucide-react';
 import { Switch } from './ui/Switch';
 import { useT } from '../i18n';
 import { isMotionOff, popupTransition } from '../lib/motionPresets';
@@ -102,14 +102,7 @@ export function ShieldPanel({
           style={{ transformOrigin: 'top right' }}
         >
           <header className="chrome-flyout-head chrome-flyout-head-clean">
-            <div className="chrome-flyout-head-label">
-              {protectionOn ? (
-                <Shield size={14} strokeWidth={1.75} />
-              ) : (
-                <ShieldOff size={14} strokeWidth={1.75} />
-              )}
-              <strong title={protectionLabel}>{protectionLabel}</strong>
-            </div>
+            <strong title={protectionLabel}>{protectionLabel}</strong>
           </header>
 
           <div className="chrome-flyout-body">

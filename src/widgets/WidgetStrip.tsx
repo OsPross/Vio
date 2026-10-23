@@ -8,8 +8,8 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import {
-  Activity,
   CalendarDays,
+  Cpu,
   Check,
   CheckSquare,
   Clock3,
@@ -76,7 +76,7 @@ export const WIDGET_ICONS: Record<HomeWidgetType, WidgetFrameIcon> = {
   calendar: CalendarDays,
   recent: History,
   downloads: Download,
-  resources: Activity,
+  resources: Cpu,
   spotify: SpotifyGlyph,
 };
 

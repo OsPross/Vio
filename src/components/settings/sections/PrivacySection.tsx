@@ -185,7 +185,6 @@ export function PrivacySection() {
         />
         <Toggle
           label={t('settings.privacy.dnt')}
-          hint={t('settings.privacy.dntHint')}
           on={settings.privacyDnt}
           onChange={(v) => patchSettings({ privacyDnt: v })}
         />
@@ -196,7 +195,6 @@ export function PrivacySection() {
         />
         <Toggle
           label={t('settings.privacy.clearOnQuit')}
-          hint={t('settings.privacy.clearOnQuitHint')}
           on={settings.privacyClearOnQuit}
           onChange={(v) => patchSettings({ privacyClearOnQuit: v })}
         />
@@ -305,7 +303,6 @@ export function PrivacySection() {
         />
         <Toggle
           label={t('settings.privacy.searchSuggest')}
-          hint={t('settings.privacy.searchSuggestHint')}
           on={settings.privacySearchSuggest}
           onChange={(v) => patchSettings({ privacySearchSuggest: v })}
         />

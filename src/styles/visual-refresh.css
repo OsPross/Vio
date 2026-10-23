@@ -450,7 +450,7 @@ html:not([data-theme='paper']).glass-on .omnibox.glass {
 .chrome-flyout-head-clean {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 8px;
   padding: 14px 16px 10px;
   border-bottom: 1px solid color-mix(in srgb, var(--fg) 6%, transparent);
@@ -598,4 +598,33 @@ html:not([data-theme='paper']).glass-on .omnibox.glass {
 .bm-row:hover > .icon-btn.sm,
 .bm-row:focus-within > .icon-btn.sm {
   opacity: 1;
+}
+
+/* —— Anti-AI chrome: no icon boxes, no shouting caps —— */
+.settings-page .settings-nav-item .sn-ico,
+.settings-page .settings-nav-item > .sn-ico {
+  all: unset;
+  display: contents;
+}
+.settings-page .settings-nav-label {
+  display: none !important;
+}
+.settings-page .settings-hero h2,
+.chrome-flyout-head-clean strong,
+.internal-page-head-text h1 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.internal-page-ico {
+  display: none !important;
+}
+.chrome-flyout-head-clean svg {
+  display: none;
+}
+.home-suggest-ico {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  width: 16px !important;
+  height: 16px !important;
 }

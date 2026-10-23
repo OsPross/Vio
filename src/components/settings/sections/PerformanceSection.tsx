@@ -61,11 +61,10 @@ export function PerformanceSection() {
       <SettingsGroup title={t('settings.perf.memoryTabs')}>
         <Toggle
           label={t('settings.perf.lazyTabs')}
-          hint={t('settings.perf.lazyTabsHint')}
           on={settings.perfLazyTabs}
           onChange={(v) => patchSettings({ perfLazyTabs: v })}
         />
-        <Row label={t('settings.perf.discardAfter')} desc={t('settings.perf.discardTabsHint')}>
+        <Row label={t('settings.perf.discardAfter')}>
           <Select
             aria-label={t('settings.perf.discardAfterAria')}
             value={
@@ -93,12 +92,11 @@ export function PerformanceSection() {
         {settings.perfDiscardTabs && (
           <Toggle
             label={t('settings.perf.discardKeepPinned')}
-            hint={t('settings.perf.discardKeepPinnedHint')}
             on={settings.perfDiscardKeepPinned !== false}
             onChange={(v) => patchSettings({ perfDiscardKeepPinned: v })}
           />
         )}
-        <Row label={t('settings.perf.archiveAfter')} desc={t('settings.perf.archiveHint')}>
+        <Row label={t('settings.perf.archiveAfter')}>
           <Select
             aria-label={t('settings.perf.archiveAfterAria')}
             value={String(settings.tabArchiveHours ?? 12)}
@@ -143,7 +141,6 @@ export function PerformanceSection() {
         />
         <Toggle
           label={t('settings.perf.bgThrottle')}
-          hint={t('settings.perf.bgThrottleHint')}
           on={settings.perfBackgroundThrottling}
           onChange={(v) => {
             patchSettings({ perfBackgroundThrottling: v });
@@ -153,7 +150,6 @@ export function PerformanceSection() {
         />
         <Toggle
           label={t('settings.perf.smoothScroll')}
-          hint={t('settings.perf.smoothScrollHint')}
           on={settings.perfSmoothScrolling}
           onChange={(v) => {
             patchSettings({ perfSmoothScrolling: v });
@@ -168,19 +164,16 @@ export function PerformanceSection() {
         />
         <Toggle
           label={t('settings.perf.lowPowerClock')}
-          hint={t('settings.perf.lowPowerClockHint')}
           on={settings.perfLowPowerClock}
           onChange={(v) => patchSettings({ perfLowPowerClock: v })}
         />
         <Toggle
           label={t('settings.perf.blockHeavyMedia')}
-          hint={t('settings.perf.blockHeavyMediaHint')}
           on={settings.perfBlockHeavyMedia}
           onChange={(v) => patchSettings({ perfBlockHeavyMedia: v })}
         />
         <Toggle
           label={t('settings.perf.spellcheck')}
-          hint={t('settings.perf.spellcheckHint')}
           on={settings.perfSpellcheck}
           onChange={(v) => patchSettings({ perfSpellcheck: v })}
         />

@@ -1,20 +1,19 @@
 import { useMemo } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import {
-  Activity,
   ArrowLeft,
+  Filter,
   Gauge,
   Home,
+  Info,
   KeyRound,
   LayoutGrid,
+  Lock,
   Monitor,
   PanelLeft,
   Search,
-  Shield,
-  ShieldBan,
   SlidersHorizontal,
-  Sparkles,
-  Wrench,
+  Sun,
 } from 'lucide-react';
 import { useT } from '../../i18n';
 import { useStore, type SettingsTab } from '../../store';
@@ -44,89 +43,77 @@ export function SettingsPage() {
   const nav = useMemo(
     () => [
       {
-        title: t('settings.nav.browser'),
+        id: 'browser',
         items: [
           {
             id: 'general' as TabId,
             label: t('settings.nav.general'),
             icon: SlidersHorizontal,
-            hint: t('settings.nav.generalHint'),
           },
           {
             id: 'home' as TabId,
             label: t('settings.nav.home'),
             icon: Home,
-            hint: t('settings.nav.homeHint'),
           },
           {
             id: 'search' as TabId,
             label: t('settings.nav.search'),
             icon: Search,
-            hint: t('settings.nav.searchHint'),
           },
         ],
       },
       {
-        title: t('settings.nav.interface'),
+        id: 'interface',
         items: [
           {
             id: 'look' as TabId,
             label: t('settings.nav.look'),
-            icon: Sparkles,
-            hint: t('settings.nav.lookHint'),
+            icon: Sun,
           },
           {
             id: 'sidebar' as TabId,
             label: t('settings.nav.sidebar'),
             icon: PanelLeft,
-            hint: t('settings.nav.sidebarHint'),
           },
           {
             id: 'shortcuts' as TabId,
             label: t('settings.nav.shortcuts'),
             icon: LayoutGrid,
-            hint: t('settings.nav.shortcutsHint'),
           },
         ],
       },
       {
-        title: t('settings.nav.system'),
+        id: 'system',
         items: [
           {
             id: 'privacy' as TabId,
             label: t('settings.nav.privacy'),
-            icon: Shield,
-            hint: t('settings.nav.privacyHint'),
+            icon: Lock,
           },
           {
             id: 'adblock' as TabId,
             label: t('settings.nav.adblock'),
-            icon: ShieldBan,
-            hint: t('settings.nav.adblockHint'),
+            icon: Filter,
           },
           {
             id: 'passwords' as TabId,
             label: t('settings.nav.passwords'),
             icon: KeyRound,
-            hint: t('settings.nav.passwordsHint'),
           },
           {
             id: 'performance' as TabId,
             label: t('settings.nav.performance'),
             icon: Gauge,
-            hint: t('settings.nav.performanceHint'),
           },
           {
             id: 'resources' as TabId,
             label: t('settings.nav.resources'),
-            icon: Activity,
-            hint: t('settings.nav.resourcesHint'),
+            icon: Monitor,
           },
           {
             id: 'advanced' as TabId,
             label: t('settings.nav.advanced'),
-            icon: Wrench,
-            hint: t('settings.nav.advancedHint'),
+            icon: Info,
           },
         ],
       },
@@ -137,31 +124,19 @@ export function SettingsPage() {
   const titles = useMemo(
     () =>
       ({
-        general: { title: t('settings.titles.general'), desc: t('settings.titles.generalDesc') },
-        home: { title: t('settings.titles.home'), desc: t('settings.titles.homeDesc') },
-        search: { title: t('settings.titles.search'), desc: t('settings.titles.searchDesc') },
-        look: { title: t('settings.titles.look'), desc: t('settings.titles.lookDesc') },
-        sidebar: { title: t('settings.titles.sidebar'), desc: t('settings.titles.sidebarDesc') },
-        shortcuts: {
-          title: t('settings.titles.shortcuts'),
-          desc: t('settings.titles.shortcutsDesc'),
-        },
-        privacy: { title: t('settings.titles.privacy'), desc: t('settings.titles.privacyDesc') },
-        adblock: { title: t('settings.titles.adblock'), desc: t('settings.titles.adblockDesc') },
-        passwords: {
-          title: t('settings.titles.passwords'),
-          desc: t('settings.titles.passwordsDesc'),
-        },
-        performance: {
-          title: t('settings.titles.performance'),
-          desc: t('settings.titles.performanceDesc'),
-        },
-        resources: {
-          title: t('settings.titles.resources'),
-          desc: t('settings.titles.resourcesDesc'),
-        },
-        advanced: { title: t('settings.titles.advanced'), desc: t('settings.titles.advancedDesc') },
-      }) satisfies Record<TabId, { title: string; desc: string }>,
+        general: t('settings.titles.general'),
+        home: t('settings.titles.home'),
+        search: t('settings.titles.search'),
+        look: t('settings.titles.look'),
+        sidebar: t('settings.titles.sidebar'),
+        shortcuts: t('settings.titles.shortcuts'),
+        privacy: t('settings.titles.privacy'),
+        adblock: t('settings.titles.adblock'),
+        passwords: t('settings.titles.passwords'),
+        performance: t('settings.titles.performance'),
+        resources: t('settings.titles.resources'),
+        advanced: t('settings.titles.advanced'),
+      }) satisfies Record<TabId, string>,
     [t],
   );
 
@@ -173,23 +148,21 @@ export function SettingsPage() {
     <div className="settings-page">
       <aside className="settings-nav">
         <button type="button" className="settings-back" onClick={() => setView('browser')}>
-          <ArrowLeft size={16} strokeWidth={1.75} />
+          <ArrowLeft size={16} strokeWidth={1.6} />
           {t('settings.backToBrowser')}
         </button>
 
         <div className="settings-brand">
-          <Monitor size={16} strokeWidth={1.75} />
           <div>
             <strong>{t('settings.brand')}</strong>
             <span>{settings.appName || 'Vio'}</span>
           </div>
         </div>
 
-        <nav className="settings-nav-groups">
+        <nav className="settings-nav-groups" aria-label={t('settings.brand')}>
           <LayoutGroup id="settings-nav">
             {nav.map((group) => (
-              <div key={group.title} className="settings-nav-group">
-                <span className="settings-nav-label">{group.title}</span>
+              <div key={group.id} className="settings-nav-group">
                 {group.items.map((item) => {
                   const Icon = item.icon;
                   const on = settingsTab === item.id;
@@ -198,7 +171,6 @@ export function SettingsPage() {
                       key={item.id}
                       type="button"
                       className={`settings-nav-item ${on ? 'active' : ''}`}
-                      title={item.hint}
                       onClick={() => setSettingsTab(item.id)}
                     >
                       {on && !motionOff && (
@@ -209,12 +181,8 @@ export function SettingsPage() {
                         />
                       )}
                       {on && motionOff && <span className="settings-nav-indicator" />}
-                      <span className="sn-ico">
-                        <Icon size={16} strokeWidth={1.75} />
-                      </span>
-                      <span>
-                        <strong>{item.label}</strong>
-                      </span>
+                      <Icon size={16} strokeWidth={1.6} aria-hidden />
+                      <strong>{item.label}</strong>
                     </button>
                   );
                 })}
@@ -226,8 +194,7 @@ export function SettingsPage() {
 
       <div className="settings-body">
         <header className="settings-hero">
-          <h2>{head.title}</h2>
-          <p>{head.desc}</p>
+          <h2>{head}</h2>
         </header>
 
         <AnimatePresence mode="wait" initial={false}>

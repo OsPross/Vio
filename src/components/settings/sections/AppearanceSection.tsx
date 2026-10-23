@@ -65,7 +65,6 @@ export function AppearanceSection() {
         </div>
         <Toggle
           label={t('settings.look.themeAccent')}
-          hint={t('settings.look.themeAccentHint')}
           on={settings.useThemeAccent}
           onChange={(v) => {
             const theme = THEMES[settings.theme];
@@ -106,10 +105,7 @@ export function AppearanceSection() {
       </SettingsGroup>
 
       <SettingsGroup title={t('settings.look.bookmarksBar')}>
-        <Row
-          label={t('settings.look.bookmarksBarMode')}
-          desc={t('settings.look.bookmarksBarModeDesc')}
-        >
+        <Row label={t('settings.look.bookmarksBarMode')}>
           <Segmented
             value={settings.bookmarksBarMode || 'never'}
             options={[
@@ -128,7 +124,7 @@ export function AppearanceSection() {
       </SettingsGroup>
 
       <SettingsGroup title={t('settings.look.pages')}>
-        <Row label={t('settings.look.pageAppearance')} desc={t('settings.look.pageAppearanceDesc')}>
+        <Row label={t('settings.look.pageAppearance')}>
           <Segmented
             value={settings.pageColorScheme || 'system'}
             options={[

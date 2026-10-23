@@ -37,7 +37,7 @@ import {
   Puzzle,
   TerminalSquare,
   Trash2,
-  Wrench,
+  MoreHorizontal,
   ZoomIn,
 } from 'lucide-react';
 import { acceleratorForMenuId } from '../lib/shortcutsRegistry';
@@ -318,7 +318,7 @@ export function AppMenu({ actions }: Props) {
         kind: 'submenu',
         id: 'more',
         label: t('chrome.moreTools'),
-        icon: <Wrench size={16} strokeWidth={1.75} />,
+        icon: <MoreHorizontal size={16} strokeWidth={1.75} />,
         children: [
           {
             kind: 'action',

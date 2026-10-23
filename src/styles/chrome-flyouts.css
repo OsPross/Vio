@@ -47,11 +47,11 @@
 }
 
 .chrome-flyout-head-label strong {
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--fg-3);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--fg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -214,9 +214,9 @@
 .shield-panel-stats em {
   display: block;
   font-style: normal;
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: -0.01em;
+  text-transform: none;
   color: var(--fg-3);
   margin-bottom: 4px;
 }
@@ -268,10 +268,10 @@
 
 .shield-blocked-label {
   display: block;
-  font-size: 10.5px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
   color: var(--fg-3);
   margin-bottom: 8px;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock3, Search, Sparkles, X } from 'lucide-react';
+import { Clock3, Hash, Search, X } from 'lucide-react';
 import {
   SEARCH_ENGINES,
   engineLabel,
@@ -165,7 +165,7 @@ function SuggestPortal({
         >
           <span className="home-suggest-ico">
             {s.kind === 'bang' ? (
-              <Sparkles size={16} strokeWidth={1.75} />
+              <Hash size={16} strokeWidth={1.6} />
             ) : s.kind === 'history' ? (
               <Clock3 size={16} strokeWidth={1.75} />
             ) : (

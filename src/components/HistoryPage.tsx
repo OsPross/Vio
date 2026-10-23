@@ -375,7 +375,6 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
     <InternalPage
       className="history-page"
       title={t('internal.history')}
-      icon={<History size={18} strokeWidth={1.75} />}
       subtitle={
         <span>
           {t(total === 1 ? 'internal.historySubOne' : 'internal.historySub', { n: total })}

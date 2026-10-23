@@ -33,7 +33,6 @@ import {
   RefreshCw,
   Search,
   Settings2,
-  Sparkles,
   X,
 } from 'lucide-react';
 import { useT } from '../i18n';
@@ -97,7 +96,6 @@ function SideAppIcon({ app }: { app: SideApp }) {
   }, [app.id, app.url]);
 
   if (app.id === 'messenger') return <MessageCircle size={18} strokeWidth={1.75} />;
-  if (app.id === 'gemini') return <Sparkles size={18} strokeWidth={1.75} />;
   if (src) {
     return (
       <img

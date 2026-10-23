@@ -401,11 +401,8 @@ export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: But
             transition={popMotion.transition}
             style={{ transformOrigin: 'top right' }}
           >
-            <div className="chrome-flyout-head">
-              <div className="chrome-flyout-head-label">
-                <Download size={14} strokeWidth={1.75} aria-hidden />
-                <strong>{t('pages.downloads')}</strong>
-              </div>
+            <div className="chrome-flyout-head chrome-flyout-head-clean">
+              <strong>{t('pages.downloads')}</strong>
               <button
                 type="button"
                 className="sbtn text"
@@ -419,9 +416,7 @@ export function DownloadsButton({ onOpenAll, open: openProp, onOpenChange }: But
             </div>
             {!recent.length ? (
               <div className="chrome-flyout-empty">
-                <Download size={22} strokeWidth={1.5} aria-hidden />
                 <p>{t('internal.downloadsEmpty')}</p>
-                <span>{t('internal.dlPanelEmptyHint')}</span>
               </div>
             ) : (
               <ul className="dl-panel-list">
@@ -520,7 +515,6 @@ export function DownloadsPage() {
     <InternalPage
       className="dl-page"
       title={t('internal.downloads')}
-      icon={<Download size={18} strokeWidth={1.75} />}
       subtitle={
         <span>
           {t(rows.length === 1 ? 'internal.downloadsSubOne' : 'internal.downloadsSub', {

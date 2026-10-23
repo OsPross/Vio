@@ -459,7 +459,6 @@ export function BookmarksPage({ onOpen, onEditBookmark }: Props) {
     <InternalPage
       className="bookmarks-page"
       title={t('internal.bookmarks')}
-      icon={<Bookmark size={18} strokeWidth={1.75} />}
       subtitle={
         <span>
           {t(

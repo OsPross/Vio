@@ -171,14 +171,13 @@ export function AdblockSection() {
       <SettingsGroup title={t('settings.adblock.blocking')}>
         <Toggle
           label={t('settings.adblock.enable')}
-          hint={t('settings.adblock.enableHint')}
           on={settings.adblockEnabled}
           onChange={(v) => {
             patchSettings({ adblockEnabled: v });
             pushEngine({ enabled: v });
           }}
         />
-        <Row label={t('settings.adblock.level')} desc={t('settings.adblock.levelDesc')}>
+        <Row label={t('settings.adblock.level')}>
           <Select
             aria-label={t('settings.adblock.level')}
             value={settings.adblockLevel || 'standard'}

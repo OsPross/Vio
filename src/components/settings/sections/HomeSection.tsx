@@ -196,7 +196,6 @@ export function HomeSection() {
         />
         <Toggle
           label={t('settings.home.widgetResources')}
-          hint={t('settings.home.widgetResourcesHint')}
           on={settings.homeWidgets.some((w) => w.type === 'resources')}
           onChange={(v) => {
             const cur = settings.homeWidgets.length

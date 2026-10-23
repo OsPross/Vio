@@ -1,4 +1,4 @@
-import { Activity } from 'lucide-react';
+import { Cpu } from 'lucide-react';
 import { useMetrics } from '../lib/useMetrics';
 import { useStore } from '../store';
 
@@ -70,4 +70,4 @@ export function ResourcesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; prev
   );
 }
 
-export const ResourcesIcon = Activity;
+export const ResourcesIcon = Cpu;

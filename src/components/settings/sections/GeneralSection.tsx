@@ -41,14 +41,10 @@ export function GeneralSection() {
       <SettingsGroup title={t('settings.general.downloads')}>
         <Toggle
           label={t('settings.general.askWhere')}
-          hint={t('settings.general.askWhereHint')}
           on={settings.downloadsAskWhere}
           onChange={(v) => patchSettings({ downloadsAskWhere: v })}
         />
-        <FieldRow
-          label={t('settings.general.downloadsFolder')}
-          desc={t('settings.general.downloadsFolderDesc')}
-        >
+        <FieldRow label={t('settings.general.downloadsFolder')}>
           <Input
             value={settings.downloadsFolder || ''}
             onChange={(e) => patchSettings({ downloadsFolder: e.target.value })}
@@ -99,19 +95,16 @@ export function GeneralSection() {
         />
         <Toggle
           label={t('settings.general.openExternalInApp')}
-          hint={t('settings.general.openExternalInAppHint')}
           on={settings.openExternalInApp}
           onChange={(v) => patchSettings({ openExternalInApp: v })}
         />
         <Toggle
           label={t('settings.general.autoPip')}
-          hint={t('settings.general.autoPipHint')}
           on={settings.autoPipOnTabSwitch}
           onChange={(v) => patchSettings({ autoPipOnTabSwitch: v })}
         />
         <Toggle
           label={t('settings.general.linkPreview')}
-          hint={t('settings.general.linkPreviewHint')}
           on={settings.linkPreviewEnabled !== false}
           onChange={(v) => patchSettings({ linkPreviewEnabled: v })}
         />

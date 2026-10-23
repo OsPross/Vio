@@ -94,22 +94,17 @@
 .settings-page .settings-nav-groups {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .settings-page .settings-nav-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .settings-page .settings-nav-label {
-  margin: 0 8px 6px;
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--fg-3);
+  display: none;
 }
 
 .settings-page .settings-nav-item {
@@ -118,38 +113,39 @@
   gap: 10px;
   width: 100%;
   min-height: 34px;
-  padding: 5px 8px;
+  padding: 6px 10px;
   border-radius: 8px;
   text-align: left;
   color: var(--fg-2);
-  border: 1px solid transparent;
+  border: 0;
   background: transparent;
   position: relative;
   z-index: 0;
 }
 
 .settings-page .settings-nav-item .sn-ico {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
-  color: var(--fg-3);
-  flex-shrink: 0;
+  display: contents;
+  background: none;
+  width: auto;
+  height: auto;
+  border-radius: 0;
 }
 
-.settings-page .settings-nav-item svg {
+.settings-page .settings-nav-item > svg {
   margin: 0;
-  opacity: 1;
+  flex-shrink: 0;
+  opacity: 0.72;
+  color: inherit;
 }
 
 .settings-page .settings-nav-item strong {
   display: block;
   font-size: 13px;
-  font-weight: 450;
-  letter-spacing: -0.01em;
+  font-weight: 500;
+  letter-spacing: -0.015em;
   color: inherit;
+  position: relative;
+  z-index: 1;
 }
 
 .settings-page .settings-nav-item em {
@@ -161,15 +157,21 @@
   color: var(--fg);
 }
 
+.settings-page .settings-nav-item:hover > svg {
+  opacity: 1;
+}
+
 .settings-page .settings-nav-item.active {
   background: transparent;
-  border-color: transparent;
   color: var(--fg);
 }
 
+.settings-page .settings-nav-item.active > svg {
+  opacity: 1;
+}
+
 .settings-page .settings-nav-item.active .sn-ico {
-  color: var(--fg);
-  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  background: none;
 }
 
 .settings-page .settings-nav-indicator {
@@ -226,21 +228,16 @@
 }
 
 .settings-page .settings-hero h2 {
-  margin: 0 0 6px;
-  font-size: 24px;
-  font-weight: 550;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
   color: var(--fg);
 }
 
 .settings-page .settings-hero p {
-  margin: 0;
-  max-width: 48ch;
-  color: var(--fg-3);
-  font-size: 13px;
-  line-height: 1.5;
-  font-weight: 400;
+  display: none;
 }
 
 .settings-page .settings-stack {
@@ -261,20 +258,20 @@
 
 .settings-page .sg-label {
   display: block;
-  margin: 0 0 9px 2px;
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--fg-3);
+  margin: 0 0 8px 2px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--fg);
 }
 
 .settings-page .sg-block {
   border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  background: color-mix(in srgb, var(--bg-elev) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  background: transparent;
   overflow: hidden;
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--fg) 3%, transparent);
+  box-shadow: none;
 }
 
 .settings-page .sg-block > .sr:last-child,
@@ -399,11 +396,11 @@
 .settings-page .sdense-group-label {
   display: block;
   padding: 10px 16px 4px;
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--fg-3);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--fg-2);
 }
 
 .settings-page .sdense-row {

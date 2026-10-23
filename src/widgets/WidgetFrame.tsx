@@ -12,7 +12,7 @@ export type WidgetFrameIcon = ComponentType<{
 
 export function WidgetFrame({
   title,
-  icon: Icon,
+  icon: _Icon,
   editMode,
   locked,
   onRemove,
@@ -52,7 +52,6 @@ export function WidgetFrame({
           .join(' ')}
       >
         <header className="hw-frame-head" style={showEditChrome ? { cursor: 'grab' } : undefined}>
-          <Icon size={14} strokeWidth={1.75} className="hw-frame-ico" aria-hidden />
           <span className="hw-frame-title">{title}</span>
           {showEditChrome && (
             <div className="hw-frame-edit-chrome" onPointerDown={(e) => e.stopPropagation()}>
@@ -104,7 +103,6 @@ export function WidgetFrame({
     <div className={['hw-bare', 'hw-bare-edit', className || ''].filter(Boolean).join(' ')}>
       {showEditChrome && (
         <header className="hw-frame-head" style={{ cursor: 'grab' }}>
-          <Icon size={14} strokeWidth={1.75} className="hw-frame-ico" aria-hidden />
           <span className="hw-frame-title">{title}</span>
           <div className="hw-frame-edit-chrome" onPointerDown={(e) => e.stopPropagation()}>
             {onOpenSettings && (
