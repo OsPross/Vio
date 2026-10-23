@@ -361,9 +361,9 @@ export function AppChrome({
     <div
       className={[
         'app',
-        settings.sidebarMode === 'off' || settings.sidebarMode === 'auto' || !settings.showSidebar
-          ? 'no-side'
-          : '',
+        /* Rail never takes a grid column: docked + auto both sit under the toolbar */
+        'no-side',
+        settings.sidebarMode === 'on' && settings.showSidebar ? 'sidebar-docked' : '',
         settings.sidebarMode === 'auto' ? 'sidebar-auto' : '',
         settings.sidebarMode === 'auto' && sidebarAutoOpen ? 'sidebar-auto-open' : '',
         (settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') && settings.sidePanelOpen

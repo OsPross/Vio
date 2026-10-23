@@ -28,6 +28,8 @@ import {
   ExternalLink,
   Home,
   MessageCircle,
+  PanelLeftClose,
+  Pin,
   Plus,
   RefreshCw,
   Search,
@@ -353,7 +355,7 @@ export function AppSidebar({
     const app = document.querySelector('.app') as HTMLElement | null;
     if (app) {
       app.style.setProperty('--panel-w', `${next}px`);
-      if (app.classList.contains('side-panel-open') && !app.classList.contains('no-side')) {
+      if (app.classList.contains('side-panel-open') && app.classList.contains('sidebar-docked')) {
         app.style.setProperty('--side-total', `${52 + next}px`);
       }
     }
@@ -424,6 +426,14 @@ export function AppSidebar({
   };
 
   const ctxApp = ctx ? sideApps.find((a) => a.id === ctx.appId) : null;
+  const docked = settings.sidebarMode === 'on';
+  const onHomePage = activeTab?.url === HOME_URL || activeTab?.url === TOR_HOME_URL;
+
+  const focusAddressBar = () => {
+    const el = document.getElementById('omnibox-input') as HTMLInputElement | null;
+    el?.focus();
+    el?.select();
+  };
 
   return (
     <div
@@ -434,8 +444,9 @@ export function AppSidebar({
           <div className="side-rail-group" role="group" aria-label={t('sidebar.navGroup')}>
             <button
               type="button"
-              className="side-rail-btn"
+              className={`side-rail-btn ${onHomePage ? 'is-current' : ''}`}
               title={t('sidebar.home')}
+              aria-current={onHomePage ? 'page' : undefined}
               onClick={onHome}
             >
               <Home size={18} strokeWidth={1.75} />
@@ -444,7 +455,7 @@ export function AppSidebar({
               type="button"
               className="side-rail-btn"
               title={t('sidebar.search')}
-              onClick={onHome}
+              onClick={focusAddressBar}
             >
               <Search size={18} strokeWidth={1.75} />
             </button>
@@ -490,6 +501,19 @@ export function AppSidebar({
               onPointerDown={(e) => e.stopPropagation()}
             >
               <Plus size={18} strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              className="side-rail-btn"
+              title={docked ? t('sidebar.autoHide') : t('sidebar.pinRail')}
+              aria-pressed={docked}
+              onClick={() => patchSettings({ sidebarMode: docked ? 'auto' : 'on' })}
+            >
+              {docked ? (
+                <PanelLeftClose size={18} strokeWidth={1.75} />
+              ) : (
+                <Pin size={18} strokeWidth={1.75} />
+              )}
             </button>
             <button
               type="button"

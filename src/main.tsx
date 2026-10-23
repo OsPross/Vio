@@ -20,6 +20,7 @@ import './styles/ui.css';
 import './styles/chrome-layout.css';
 import './styles/widgets.css';
 import './styles/visual-refresh.css';
+import './styles/sidebar.css';
 
 /** Secondary surfaces — load after first paint (settings, vault, Tor, about pages…). */
 function loadDeferredStyles() {

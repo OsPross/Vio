@@ -739,6 +739,8 @@
     "addApp": "Dodaj bieżącą stronę jako aplikację",
     "addAppDisabled": "Dostępne tylko na stronach http(s)",
     "collapseRail": "Zwiń sidebar",
+    "pinRail": "Przypnij sidebar",
+    "autoHide": "Chowaj sidebar automatycznie",
     "ctxOpen": "Otwórz",
     "ctxUnpin": "Odepnij",
     "ctxMute": "Wycisz",
