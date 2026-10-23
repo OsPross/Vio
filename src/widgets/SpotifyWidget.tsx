@@ -347,13 +347,20 @@ export function SpotifyWidget({
   /* Niezalogowany / ładowanie — duży Zaloguj, zawsze klikalny */
   if (!preview && (!status || !status.connected)) {
     return (
-      <div className={`hw-spotify hw-spotify-setup hw-size-${size}`}>
-        <div className="hw-spotify-setup-inner" onPointerDown={(e) => e.stopPropagation()}>
-          <span className="hw-spotify-badge">
-            <SpotifyGlyph size={36} />
-          </span>
-          <p className="hw-spotify-setup-title">{t('widgets.ui.spotify.connectTitle')}</p>
-          <p className="hw-muted">{t('widgets.ui.spotify.connectHint')}</p>
+      <div
+        className={`hw-spotify hw-spotify-idle hw-size-${size}`}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div className="hw-spotify-now-row">
+          <div className="hw-spotify-art" aria-hidden>
+            <SpotifyGlyph size={24} />
+          </div>
+          <div className="hw-spotify-meta">
+            <strong className="hw-spotify-title">{t('widgets.ui.spotify.connectTitle')}</strong>
+            <span className="hw-spotify-artists">{t('widgets.ui.spotify.connectHint')}</span>
+          </div>
+        </div>
+        <div className="hw-spotify-actions">
           <button
             type="button"
             className="hw-btn hw-spotify-login-btn"
@@ -365,8 +372,8 @@ export function SpotifyWidget({
           >
             {busy ? t('widgets.ui.spotify.loggingIn') : t('widgets.ui.spotify.login')}
           </button>
-          {msg ? <p className="hw-spotify-err">{msg}</p> : null}
         </div>
+        {msg ? <p className="hw-spotify-err">{msg}</p> : null}
       </div>
     );
   }
@@ -379,52 +386,53 @@ export function SpotifyWidget({
 
   if (!preview && idle) {
     return (
-      <div className={`hw-spotify hw-spotify-setup hw-size-${size}`}>
-        <div className="hw-spotify-setup-inner" onPointerDown={(e) => e.stopPropagation()}>
-          <span className="hw-spotify-badge">
-            <SpotifyGlyph size={32} />
-          </span>
-          <p className="hw-spotify-setup-title">{t('widgets.ui.spotify.nothingPlaying')}</p>
-          <p className="hw-muted">{t('widgets.ui.spotify.playSomething')}</p>
-          <div className="hw-spotify-actions">
-            <button
-              type="button"
-              className="hw-btn"
-              disabled={busy}
-              onClick={() => void refreshPlayback()}
-            >
-              {t('common.refresh')}
-            </button>
-            <button
-              type="button"
-              className="hw-btn hw-btn-ghost"
-              onClick={async () => {
-                await window.shell?.spotifyLogout?.();
-                setPlayback(null);
-                await refreshStatus();
-              }}
-            >
-              {t('widgets.ui.spotify.logout')}
-            </button>
+      <div
+        className={`hw-spotify hw-spotify-idle hw-size-${size}`}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div className="hw-spotify-now-row">
+          <div className="hw-spotify-art" aria-hidden>
+            <SpotifyGlyph size={24} />
           </div>
-          {msg ? <p className="hw-spotify-err">{msg}</p> : null}
+          <div className="hw-spotify-meta">
+            <strong className="hw-spotify-title">{t('widgets.ui.spotify.nothingPlaying')}</strong>
+            <span className="hw-spotify-artists">{t('widgets.ui.spotify.playSomething')}</span>
+          </div>
         </div>
+        <div className="hw-spotify-actions">
+          <button
+            type="button"
+            className="hw-btn"
+            disabled={busy}
+            onClick={() => void refreshPlayback()}
+          >
+            {t('common.refresh')}
+          </button>
+          <button
+            type="button"
+            className="hw-btn hw-btn-ghost"
+            onClick={async () => {
+              await window.shell?.spotifyLogout?.();
+              setPlayback(null);
+              await refreshStatus();
+            }}
+          >
+            {t('widgets.ui.spotify.logout')}
+          </button>
+        </div>
+        {msg ? <p className="hw-spotify-err">{msg}</p> : null}
       </div>
     );
   }
 
-  const glow = item?.art
-    ? ({ ['--spotify-glow' as string]: `url("${item.art}")` } as CSSProperties)
-    : undefined;
-
   return (
-    <div className={`hw-spotify hw-spotify-now hw-spotify-ios hw-size-${size}`} style={glow}>
+    <div className={`hw-spotify hw-spotify-now hw-size-${size}`}>
       <div className="hw-spotify-now-row">
         <div className="hw-spotify-art" aria-hidden>
           {item?.art ? (
             <img src={item.art} alt="" draggable={false} />
           ) : (
-            <SpotifyGlyph size={size === 'S' ? 22 : 28} />
+            <SpotifyGlyph size={24} />
           )}
         </div>
         <div className="hw-spotify-meta">
@@ -434,6 +442,7 @@ export function SpotifyWidget({
       </div>
 
       <div className="hw-spotify-progress">
+        <span className="hw-spotify-time">{fmtMs(progress)}</span>
         <div
           ref={barRef}
           className={`hw-spotify-seek ${scrubbing ? 'is-scrub' : ''}`}
@@ -448,10 +457,7 @@ export function SpotifyWidget({
         >
           <i style={{ width: `${pct}%` }} />
         </div>
-        <div className="hw-spotify-times">
-          <span>{fmtMs(progress)}</span>
-          <span>{fmtMs(dur)}</span>
-        </div>
+        <span className="hw-spotify-time">{fmtMs(dur)}</span>
       </div>
 
       <div className="hw-spotify-controls" onPointerDown={(e) => e.stopPropagation()}>

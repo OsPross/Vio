@@ -304,6 +304,14 @@
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 16px;
+}
+.hw-chrome-shortcuts .home-dock-item,
+.hw-chrome-shortcuts .home-dock-add {
+  flex: 0 0 auto;
 }
 .hw-chrome-search,
 .hw-chrome-search .hw-bare,
@@ -317,37 +325,43 @@
 }
 
 /* CSS anchor placement — 50%/10%/90% of .hw-canvas (stage content), never the full window */
+.hw-canvas {
+  --hw-edge: 20px;
+}
 .hw-canvas > .hw-card.hw-place {
   position: absolute;
-  width: min(var(--hw-w), calc(100% - 16px));
-  max-width: calc(100% - 16px);
+  width: min(var(--hw-w), calc(100% - 2 * var(--hw-edge)));
+  max-width: calc(100% - 2 * var(--hw-edge));
   height: var(--hw-h);
   top: var(--hw-y);
   margin: 0;
   box-sizing: border-box;
 }
+.hw-canvas > .hw-card.hw-place:not(.hw-chrome) {
+  top: clamp(var(--hw-edge), var(--hw-y), calc(100% - var(--hw-h) - var(--hw-edge)));
+}
 .hw-canvas > .hw-chrome.hw-place {
-  width: min(var(--hw-w, var(--home-chrome-w, 540px)), calc(100% - 16px));
+  width: min(var(--hw-w, var(--home-chrome-w, 540px)), calc(100% - 2 * var(--hw-edge)));
 }
 .hw-canvas > .hw-card.hw-place-center {
   left: clamp(
-    8px,
+    var(--hw-edge),
     calc(50% + var(--hw-x) - var(--hw-w) / 2),
-    calc(100% - min(var(--hw-w), calc(100% - 16px)) - 8px)
+    calc(100% - min(var(--hw-w), calc(100% - 2 * var(--hw-edge))) - var(--hw-edge))
   );
 }
 .hw-canvas > .hw-card.hw-place-left {
   left: clamp(
-    8px,
+    var(--hw-edge),
     calc(10% + var(--hw-x) - var(--hw-w) / 2),
-    calc(100% - min(var(--hw-w), calc(100% - 16px)) - 8px)
+    calc(100% - min(var(--hw-w), calc(100% - 2 * var(--hw-edge))) - var(--hw-edge))
   );
 }
 .hw-canvas > .hw-card.hw-place-right {
   left: clamp(
-    8px,
+    var(--hw-edge),
     calc(90% + var(--hw-x) - var(--hw-w) / 2),
-    calc(100% - min(var(--hw-w), calc(100% - 16px)) - 8px)
+    calc(100% - min(var(--hw-w), calc(100% - 2 * var(--hw-edge))) - var(--hw-edge))
   );
 }
 .hw-canvas > .hw-card.hw-place.is-dragging {
@@ -454,7 +468,7 @@
   user-select: none;
 }
 .hw-card.is-dragging .hw-frame {
-  box-shadow: 0 16px 40px color-mix(in srgb, #000 28%, transparent);
+  box-shadow: 0 12px 28px -6px rgba(15, 15, 25, 0.14);
   outline: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
   outline-offset: 2px;
   /* lift without fighting position transform on the card */
@@ -483,62 +497,39 @@
   cursor: grabbing;
 }
 
-/* —— iOS Sonoma glass frame (no title bars) —— */
-.hw-frame {
+/* —— Single widget card (light / dark). Every widget type uses this surface. —— */
+:root {
+  --hw-card-bg: rgba(28, 28, 34, 0.82);
+  --hw-card-border: rgba(255, 255, 255, 0.07);
+  --hw-card-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.35);
+}
+html[data-theme='paper'] {
+  --hw-card-bg: rgba(255, 255, 255, 0.86);
+  --hw-card-border: rgba(15, 15, 25, 0.06);
+  --hw-card-shadow: 0 6px 20px -4px rgba(15, 15, 25, 0.06);
+}
+.hw-frame,
+.hw-card .hw-frame,
+.hw-card[class*='hw-style-'] .hw-frame,
+[class*='hw-style-'] .hw-card .hw-frame {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 140px;
+  min-height: 0;
   height: 100%;
-  border-radius: 22px;
+  border-radius: 20px;
   box-sizing: border-box;
-  padding: 16px 16px 14px;
+  padding: 16px;
   overflow: visible;
-  border: 0;
-  background: color-mix(in srgb, var(--bg-elev, #fff) 55%, transparent);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
-    0 10px 30px -8px rgba(15, 15, 25, 0.08);
+  border: 1px solid var(--hw-card-border);
+  background: var(--hw-card-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--hw-card-shadow);
   transition:
     width 320ms cubic-bezier(0.22, 1, 0.36, 1),
     height 320ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 220ms ease;
-}
-html:not([data-theme='paper']) .hw-frame {
-  background: color-mix(in srgb, var(--bg-elev, #1c1e24) 62%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 10px 30px -8px rgba(0, 0, 0, 0.35);
-}
-
-.hw-style-transparent .hw-card .hw-frame,
-.hw-card.hw-style-transparent .hw-frame,
-.hw-style-glass .hw-card .hw-frame,
-.hw-card.hw-style-glass .hw-frame,
-.hw-style-solid .hw-card .hw-frame,
-.hw-card.hw-style-solid .hw-frame {
-  /* All styles converge on Sonoma glass */
-  border: 0;
-  background: color-mix(in srgb, var(--bg-elev, #fff) 55%, transparent);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
-    0 10px 30px -8px rgba(15, 15, 25, 0.08);
-}
-html:not([data-theme='paper']) .hw-style-transparent .hw-card .hw-frame,
-html:not([data-theme='paper']) .hw-card.hw-style-transparent .hw-frame,
-html:not([data-theme='paper']) .hw-style-glass .hw-card .hw-frame,
-html:not([data-theme='paper']) .hw-card.hw-style-glass .hw-frame,
-html:not([data-theme='paper']) .hw-style-solid .hw-card .hw-frame,
-html:not([data-theme='paper']) .hw-card.hw-style-solid .hw-frame {
-  background: color-mix(in srgb, var(--bg-elev, #1c1e24) 62%, transparent);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 10px 30px -8px rgba(0, 0, 0, 0.35);
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .hw-frame-head {
@@ -552,8 +543,8 @@ html:not([data-theme='paper']) .hw-card.hw-style-solid .hw-frame {
 
 .hw-ios-minus {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: -8px;
+  left: -8px;
   z-index: 8;
   width: 24px;
   height: 24px;
@@ -582,18 +573,15 @@ html:not([data-theme='paper']) .hw-ios-minus {
   color: #f2f2f7;
 }
 
-.hw-frame.is-edit {
-  padding-bottom: 42px;
-}
 .hw-frame.is-edit .hw-frame-body {
-  overflow: hidden;
-  border-radius: calc(var(--hw-radius, 22px) - 2px);
   min-height: 0;
 }
+/* Sits on the bottom edge: the half inside the card stays within its 16px padding. */
 .hw-ios-size-pill {
   position: absolute;
-  right: 10px;
-  bottom: 8px;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 50%);
   z-index: 8;
   display: inline-flex;
   gap: 2px;
@@ -764,16 +752,16 @@ html:not([data-theme='paper']) .hw-ios-edit-capsule {
   width: 100%;
   height: 34px;
   padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
-  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  border-radius: 10px;
+  border: 0;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
   color: var(--fg);
   font: inherit;
   font-size: 13px;
   outline: none;
 }
 .hw-input:focus {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .hw-btn {
@@ -888,19 +876,6 @@ html:not([data-theme='paper']) .hw-ios-edit-capsule {
   background-size: 200% 100%;
   animation: hw-skel 1.2s ease infinite;
 }
-.hw-skel-temp {
-  width: 64px;
-  height: 36px;
-  margin-bottom: 8px;
-}
-.hw-skel-line {
-  width: 70%;
-  height: 12px;
-  margin-bottom: 6px;
-}
-.hw-skel-line.short {
-  width: 40%;
-}
 @keyframes hw-skel {
   0% {
     background-position: 100% 0;
@@ -1001,44 +976,9 @@ html:not([data-theme='paper']) .hw-ios-edit-capsule {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
-.hw-weather-main {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 .hw-weather-ico {
   color: var(--fg-2);
   flex-shrink: 0;
-}
-.hw-weather-temp {
-  font-size: 28px;
-  font-weight: 650;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  color: var(--fg);
-}
-.hw-size-M .hw-weather-temp {
-  font-size: 32px;
-}
-.hw-size-L .hw-weather-temp {
-  font-size: 36px;
-}
-.hw-weather-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-.hw-weather-meta em {
-  font-style: normal;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--fg);
-}
-.hw-weather-meta span {
-  font-size: 12px;
-  color: var(--fg-3);
 }
 .hw-weather-days,
 .hw-weather-hours {
@@ -1070,7 +1010,7 @@ html:not([data-theme='paper']) .hw-ios-edit-capsule {
 
 /* —— Notes (Apple Notes / Arc style) —— */
 .hw-notes {
-  --notes-surface: color-mix(in srgb, var(--bg-elev) 92%, var(--bg) 8%);
+  --notes-surface: color-mix(in srgb, var(--fg) 4%, transparent);
   --notes-list-hover: color-mix(in srgb, var(--fg) 6%, transparent);
   --notes-list-active: color-mix(in srgb, var(--accent) 18%, transparent);
   --notes-toolbar: color-mix(in srgb, var(--fg) 5%, transparent);
@@ -1232,9 +1172,9 @@ html:not([data-theme='paper']) .hw-ios-edit-capsule {
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--bg) 40%, transparent);
-  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  border: 0;
 }
 .hw-notes-search input {
   flex: 1;
@@ -1362,7 +1302,7 @@ html:not([data-theme='paper']) .hw-ios-edit-capsule {
   flex-direction: column;
   gap: 6px;
   overflow: hidden;
-  background: var(--bg, #0c0e12);
+  background: transparent;
   border-radius: 12px;
   padding: 6px;
 }
@@ -1538,28 +1478,15 @@ html[data-theme='paper'] .hw-notes-ctx {
 .hw-todo-list li {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 6px 2px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
   font-size: 13px;
 }
-.hw-todo-list li.done span {
-  text-decoration: line-through;
-  color: var(--fg-3);
-}
 .hw-todo-check {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 1.5px solid color-mix(in srgb, var(--fg) 28%, transparent);
   background: transparent;
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
-}
-.hw-todo-check.on {
-  background: var(--accent);
-  border-color: var(--accent);
 }
 
 .hw-list {
@@ -1663,86 +1590,60 @@ html[data-theme='paper'] .hw-notes-ctx {
 }
 
 /* —— Resources —— */
-.hw-resources {
-  display: grid;
-  place-items: center;
-  width: 100% !important;
-  flex: 1 1 auto;
-  align-self: stretch;
-  height: 100%;
-  min-height: 0;
-  box-sizing: border-box;
-}
-.hw-resources-inner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(20px, 8%, 36px);
-  width: max-content;
-  max-width: 100%;
-  margin: 0 auto;
-}
-.hw-card.hw-type-resources .hw-frame {
-  align-items: center;
-}
 .hw-card.hw-type-resources .hw-frame-body {
-  display: grid !important;
-  place-items: center;
-  width: 100% !important;
-  flex: 1;
-}
-.hw-res-ring {
-  position: relative;
-  width: 72px;
-  height: 72px;
-  flex-shrink: 0;
-}
-.hw-res-ring svg {
-  transform: rotate(-90deg);
-}
-.hw-res-ring-track {
-  fill: none;
-  stroke: color-mix(in srgb, var(--fg) 10%, transparent);
-  stroke-width: 5;
-}
-.hw-res-ring-val {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 5;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.hw-res-ring-label {
-  position: absolute;
-  inset: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  pointer-events: none;
+  width: 100%;
 }
-.hw-res-ring-label strong {
-  font-size: 16px;
+.hw-resources {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.hw-res-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.hw-res-label {
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--fg-3);
+}
+.hw-res-value {
+  font-size: 24px;
+  font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1;
   color: var(--fg);
+  font-variant-numeric: tabular-nums;
 }
-.hw-res-ring-label span {
-  margin-top: 2px;
-  font-size: 9px;
+.hw-res-value small {
+  margin-left: 2px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--fg-3);
 }
-.hw-skel-ring {
-  width: 72px;
-  height: 72px;
+.hw-res-bar {
+  position: relative;
+  display: block;
+  height: 6px;
   border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
 }
-.hw-resources-skel {
-  gap: 8px;
+.hw-res-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--pct, 0%);
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* —— Spotify: shared .hw-style-* card chrome; only accent the icon —— */
@@ -1761,14 +1662,14 @@ html[data-theme='paper'] .hw-notes-ctx {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 12px;
   width: 100%;
   min-height: 0;
 }
-.hw-spotify-now {
-  flex: 0 0 auto;
-  gap: 5px;
-  justify-content: flex-start;
+.hw-spotify-now,
+.hw-spotify-idle {
+  flex: 1 1 auto;
+  justify-content: center;
 }
 .hw-spotify-setup {
   justify-content: center;
@@ -1789,12 +1690,16 @@ html[data-theme='paper'] .hw-notes-ctx {
 }
 .hw-spotify-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
   flex-shrink: 0;
-  padding-bottom: 2px;
+}
+.hw-spotify-actions .hw-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 32px;
 }
 .hw-spotify-badge {
   display: grid;
@@ -1862,28 +1767,19 @@ html[data-theme='paper'] .hw-notes-ctx {
 .hw-spotify-now-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 .hw-spotify-art {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
   overflow: hidden;
-  background: color-mix(in srgb, #1db954 18%, var(--bg-elev));
+  background: color-mix(in srgb, #1db954 14%, transparent);
   display: grid;
   place-items: center;
   color: #1db954;
-}
-.hw-size-S .hw-spotify-art {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-}
-.hw-size-L .hw-spotify-art {
-  width: 48px;
-  height: 48px;
 }
 .hw-spotify-now-actions {
   display: flex;
@@ -1905,18 +1801,15 @@ html[data-theme='paper'] .hw-notes-ctx {
   gap: 2px;
 }
 .hw-spotify-title {
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--fg);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.hw-size-L .hw-spotify-title {
-  font-size: 15px;
-}
 .hw-spotify-artists {
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--fg-3);
   white-space: nowrap;
   overflow: hidden;
@@ -1931,20 +1824,27 @@ html[data-theme='paper'] .hw-notes-ctx {
   text-overflow: ellipsis;
 }
 .hw-spotify-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.hw-spotify-time {
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-3);
+  line-height: 1;
 }
 .hw-spotify-seek {
   position: relative;
-  height: 5px;
-  border-radius: 99px;
+  height: 4px;
+  border-radius: 999px;
   background: color-mix(in srgb, var(--fg) 12%, transparent);
   cursor: pointer;
   touch-action: none;
 }
 .hw-spotify-seek.is-scrub {
-  height: 7px;
+  height: 6px;
 }
 .hw-spotify-seek i {
   position: absolute;
@@ -1973,35 +1873,27 @@ html[data-theme='paper'] .hw-notes-ctx {
 .hw-spotify-seek.is-scrub::after {
   opacity: 1;
 }
-.hw-spotify-times {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  color: var(--fg-3);
-  line-height: 1;
-}
 .hw-spotify-controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 14px;
   margin-top: 0;
 }
 .hw-spotify-controls .hw-icon-btn.on {
   color: #1db954;
 }
 .hw-spotify-play {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
   border: 0;
-  background: #1db954;
-  color: #041;
+  background: var(--fg);
+  color: var(--bg, #fff);
   display: grid;
   place-items: center;
   cursor: pointer;
-  margin: 0 2px;
+  flex: 0 0 auto;
 }
 .hw-spotify-play:hover:not(:disabled) {
   filter: brightness(1.08);
@@ -2023,9 +1915,6 @@ html[data-theme='paper'] .hw-notes-ctx {
   height: 4px;
 }
 .hw-spotify-login-btn {
-  min-width: 148px;
-  height: 36px;
-  margin-top: 4px;
   background: #1db954 !important;
   color: #041 !important;
   font-weight: 700;
@@ -2326,19 +2215,6 @@ html[data-theme='paper'] .hw-notes-ctx {
   text-align: right;
 }
 
-[data-theme='paper'] .hw-style-glass .hw-item.is-panel .hw-frame,
-.paper .hw-style-glass .hw-item.is-panel .hw-frame,
-[data-theme='paper'] .hw-card.hw-style-glass .hw-frame,
-.paper .hw-card.hw-style-glass .hw-frame {
-  background: color-mix(in srgb, #fff 72%, transparent);
-  border-color: color-mix(in srgb, #000 10%, transparent);
-}
-[data-theme='paper'] .hw-card.hw-style-solid .hw-frame,
-.paper .hw-card.hw-style-solid .hw-frame {
-  background: #fff;
-  border-color: color-mix(in srgb, #000 12%, transparent);
-  box-shadow: 0 1px 3px color-mix(in srgb, #000 8%, transparent);
-}
 [data-theme='paper'] .hw-settings-pop,
 .paper .hw-settings-pop {
   background: #fff;
@@ -2367,9 +2243,6 @@ html[data-theme='paper'] .hw-notes-ctx {
 /* Edit-mode lift + iOS jiggle */
 .home.is-editing-widgets .hw-card.editable > .hw-frame.is-edit {
   outline: none;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
-    0 14px 36px -10px rgba(15, 15, 25, 0.16);
 }
 .home.is-editing-widgets .hw-card.editable:not(.is-dragging) > .hw-frame.is-edit {
   animation: iosJiggle 0.28s ease-in-out infinite alternate;
@@ -2514,54 +2387,81 @@ html[data-theme='paper'] .hw-notes-ctx {
 .hw-weather-ios {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  width: 100%;
   height: 100%;
-  justify-content: flex-end;
-  padding: 4px 2px;
+  min-height: 0;
+  background: none;
 }
-.hw-weather-ios .hw-weather-main {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
-.hw-weather-place {
+.hw-weather-top {
   display: flex;
   align-items: center;
-  gap: 6px;
-  width: 100%;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
 }
-.hw-weather-place em {
-  font-style: normal;
-  font-size: 13px;
+.hw-weather-city {
+  font-size: 14px;
   font-weight: 600;
-  color: var(--fg);
   letter-spacing: -0.01em;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hw-weather-refresh {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--fg-3);
+  opacity: 0.7;
+  cursor: pointer;
+}
+.hw-weather-refresh:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
 }
 .hw-weather-ios .hw-weather-temp {
-  font-size: 38px;
-  font-weight: 300;
-  letter-spacing: -0.04em;
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
   line-height: 1;
+  color: var(--fg);
 }
-.hw-size-S.hw-weather-ios .hw-weather-temp { font-size: 32px; }
-.hw-size-L.hw-weather-ios .hw-weather-temp { font-size: 42px; }
+.hw-weather-bottom {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  font-size: 12.5px;
+}
 .hw-weather-cond {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  min-width: 0;
   color: var(--fg-2);
+  line-height: 1.25;
 }
-.hw-weather-ios .hw-weather-range {
-  margin-top: 4px;
-  font-size: 12px;
+.hw-weather-range {
+  flex: 0 0 auto;
+  display: inline-flex;
+  gap: 6px;
+  white-space: nowrap;
   color: var(--fg-3);
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
-.hw-weather-morning { background: linear-gradient(160deg, rgba(255,196,120,0.22), transparent 55%); }
-.hw-weather-day { background: linear-gradient(160deg, rgba(120,180,255,0.2), transparent 55%); }
-.hw-weather-eve { background: linear-gradient(160deg, rgba(255,140,100,0.22), transparent 55%); }
-.hw-weather-night { background: linear-gradient(160deg, rgba(80,100,180,0.28), transparent 55%); }
+.hw-weather-ios .hw-weather-hours {
+  margin: 0;
+}
 
 .hw-todo-check {
   width: 20px;
@@ -2614,45 +2514,6 @@ html[data-theme='paper'] .hw-notes-ctx {
 }
 .hw-todo-inline::placeholder {
   color: var(--fg-3);
-}
-
-.hw-spotify-ios {
-  position: relative;
-  isolation: isolate;
-}
-.hw-spotify-ios::before {
-  content: "";
-  position: absolute;
-  inset: -20%;
-  z-index: -1;
-  background-image: var(--spotify-glow);
-  background-size: cover;
-  background-position: center;
-  filter: blur(40px) saturate(1.4);
-  opacity: 0.28;
-  pointer-events: none;
-}
-.hw-spotify-ios .hw-spotify-art {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
-}
-.hw-size-S .hw-spotify-ios .hw-spotify-art {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-}
-.hw-spotify-ios .hw-spotify-seek {
-  height: 4px;
-}
-.hw-spotify-ios .hw-spotify-play {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--fg) 10%, transparent);
-  display: grid;
-  place-items: center;
 }
 
 .hw-gallery-ios {

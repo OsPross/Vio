@@ -42,10 +42,13 @@ const SIZE_W_CELLS: Record<HomeWidgetSize, number> = { S: 28, M: 38, L: 58 }; //
 const SIZE_H_CELLS: Record<HomeWidgetSize, number> = { S: 18, M: 20, L: 22 };
 /** Spotify — szersza / niższa karta (landscape), bez pustego dołu. */
 const SPOTIFY_W_CELLS: Record<HomeWidgetSize, number> = { S: 34, M: 44, L: 58 }; // ~272/352/464
-const SPOTIFY_H_CELLS: Record<HomeWidgetSize, number> = { S: 22, M: 24, L: 28 }; // ~176/192/224 — Odśwież/Wyloguj fit
+const SPOTIFY_H_CELLS: Record<HomeWidgetSize, number> = { S: 19, M: 20, L: 24 }; // 152/160/192 — row + seek + controls (+ volume on L)
+
+const RESOURCES_H_CELLS: Record<HomeWidgetSize, number> = { S: 13, M: 14, L: 15 }; // two stat columns, no rings
 
 export function widgetSizeCells(size: HomeWidgetSize, type?: HomeWidgetType) {
   if (type === 'spotify') return { w: SPOTIFY_W_CELLS[size], h: SPOTIFY_H_CELLS[size] };
+  if (type === 'resources') return { w: SIZE_W_CELLS[size], h: RESOURCES_H_CELLS[size] };
   return { w: SIZE_W_CELLS[size], h: SIZE_H_CELLS[size] };
 }
 
@@ -167,7 +170,7 @@ export function chromeSizeToPx(id: HomeChromeId): { w: number; h: number } {
     case 'search':
       return { w, h: 72 };
     case 'shortcuts':
-      return { w: 480, h: 104 };
+      return { w: 560, h: 104 };
     default:
       return { w: 400, h: 120 };
   }

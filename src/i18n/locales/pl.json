@@ -1058,6 +1058,8 @@
         "setCityHintLive": "Otwórz ustawienia karty (⋮ lub tryb edycji) i wpisz miasto.",
         "privacyOff": "Zapytania aplikacji wyłączone — włącz je w Ustawieniach → Prywatność.",
         "changeCity": "Zmień miasto",
+        "max": "Maks.",
+        "min": "Min.",
         "demoCity": "Warszawa",
         "demoCountry": "Polska",
         "demoAdmin": "Mazowieckie",

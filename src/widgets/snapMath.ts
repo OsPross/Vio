@@ -17,7 +17,7 @@ export type CanvasMetrics = {
 /** Left/right edge inset used by CSS `hw-place-left` / `hw-place-right` (10%). */
 export const EDGE_INSET_RATIO = 0.1;
 /** Padding from canvas edges when clamping / colliding. */
-const EDGE_PAD = 8;
+const EDGE_PAD = 20;
 
 export function sizeToPx(size: HomeWidgetSize, type?: HomeWidget['type']) {
   const cells = widgetSizeCells(size, type);
@@ -217,7 +217,7 @@ export function resolveCollision(
     }
   }
   L = Math.max(EDGE_PAD, Math.min(L, metrics.width - width - EDGE_PAD));
-  T = Math.max(0, Math.min(T, Math.max(0, metrics.height - height - EDGE_PAD)));
+  T = Math.max(EDGE_PAD, Math.min(T, Math.max(EDGE_PAD, metrics.height - height - EDGE_PAD)));
   return { left: L, top: T };
 }
 
@@ -259,9 +259,9 @@ export function clampWidgetPos(w: HomeWidget, metrics: CanvasMetrics): HomeWidge
   let left = placeLeftPx(w.anchor, w.x, width, metrics.width);
   let top = placeTopPx(w.y);
   const maxLeft = Math.max(EDGE_PAD, metrics.width - width - EDGE_PAD);
-  const maxTop = Math.max(0, metrics.height - height - EDGE_PAD);
+  const maxTop = Math.max(EDGE_PAD, metrics.height - height - EDGE_PAD);
   left = Math.min(Math.max(EDGE_PAD, left), maxLeft);
-  top = Math.min(Math.max(0, top), maxTop);
+  top = Math.min(Math.max(EDGE_PAD, top), maxTop);
   const pos = pxToWidgetPos(left, top, width, height, metrics, w.anchor);
   if (pos.anchor === w.anchor && pos.x === w.x && pos.y === w.y) return w;
   return { ...w, ...pos };

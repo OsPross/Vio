@@ -150,17 +150,7 @@ export function WeatherWidget({
     return <WidgetEmpty icon={MapPin} text={t('widgets.ui.weather.privacyOff')} />;
   }
 
-  if (loading && !data) {
-    return (
-      <div className={`hw-weather hw-size-${size}`}>
-        <div className="hw-skeleton hw-skel-temp" />
-        <div className="hw-skeleton hw-skel-line" />
-        <div className="hw-skeleton hw-skel-line short" />
-      </div>
-    );
-  }
-
-  if (err && !data) {
+  if (err && !data && !loading) {
     return (
       <div className="hw-empty">
         <CloudSun size={22} strokeWidth={1.5} />
@@ -179,92 +169,67 @@ export function WeatherWidget({
   const temp = data?.current?.temperature_2m;
   const code = data?.current?.weather_code ?? 0;
   const wmoKey = WMO_KEYS[code] || WMO_KEYS[Math.floor(code / 10) * 10];
-  const label = wmoKey ? t(wmoKey) : t('widgets.ui.weather.fallback');
+  const label = !data && loading
+    ? t('common.loading')
+    : wmoKey
+      ? t(wmoKey)
+      : t('widgets.ui.weather.fallback');
   const Icon = weatherIcon(code);
   const tmax = data?.daily?.temperature_2m_max?.[0];
   const tmin = data?.daily?.temperature_2m_min?.[0];
-
-  const hour = new Date().getHours();
-  const dayPart = hour < 6 || hour >= 20 ? 'night' : hour < 11 ? 'morning' : hour < 17 ? 'day' : 'eve';
+  const deg = (v: number | undefined) => (v != null ? `${Math.round(v)}°` : '—');
 
   return (
-    <div className={`hw-weather hw-weather-ios hw-size-${size} hw-weather-${dayPart}`}>
-      <div className="hw-weather-main">
-        <div className="hw-weather-place">
-          <em>{data?.place?.name || location}</em>
-          {!preview && (
-            <button
-              type="button"
-              className="hw-icon-btn"
-              title={t('widgets.ui.weather.changeCity')}
-              onClick={() => {
-                onPatchSettings?.({ location: '', lat: undefined, lon: undefined });
-                setData(null);
-              }}
-            >
-              <RefreshCw size={12} />
-            </button>
-          )}
-        </div>
-        <strong className="hw-weather-temp">{temp != null ? `${Math.round(temp)}°` : '—'}</strong>
-        <div className="hw-weather-cond">
-          <Icon size={16} strokeWidth={1.6} className="hw-weather-ico" aria-hidden />
-          <span>{label}</span>
-        </div>
-        {(tmax != null || tmin != null) && (
-          <span className="hw-weather-range">
-            H:{tmax != null ? Math.round(tmax) : '—'}° · L:{tmin != null ? Math.round(tmin) : '—'}°
-          </span>
+    <div className={`hw-weather hw-weather-ios hw-size-${size}`}>
+      <div className="hw-weather-top">
+        <span className="hw-weather-city">{data?.place?.name || location}</span>
+        {!preview && (
+          <button
+            type="button"
+            className="hw-weather-refresh"
+            title={t('widgets.ui.weather.changeCity')}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => {
+              onPatchSettings?.({ location: '', lat: undefined, lon: undefined });
+              setData(null);
+            }}
+          >
+            <RefreshCw size={12} />
+          </button>
         )}
       </div>
+      <strong className="hw-weather-temp">{deg(temp)}</strong>
 
-      {size === 'M' && data?.daily?.time && (
-        <ul className="hw-weather-days">
-          {data.daily.time.slice(0, 3).map((day, i) => (
-            <li key={day}>
-              <span>{new Date(day).toLocaleDateString(dateLocale, { weekday: 'short' })}</span>
-              <strong>
-                {Math.round(data.daily!.temperature_2m_max?.[i] ?? 0)}°/
-                {Math.round(data.daily!.temperature_2m_min?.[i] ?? 0)}°
-              </strong>
+      {size === 'L' && data?.hourly?.time && (
+        <ul className="hw-weather-hours">
+          {data.hourly.time.slice(0, 6).map((hour, i) => (
+            <li key={hour}>
+              <span>
+                {new Date(hour).toLocaleTimeString(dateLocale, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+              <strong>{Math.round(data.hourly!.temperature_2m?.[i] ?? 0)}°</strong>
             </li>
           ))}
         </ul>
       )}
 
-      {size === 'L' && (
-        <>
-          {data?.hourly?.time && (
-            <ul className="hw-weather-hours">
-              {data.hourly.time.slice(0, 6).map((hour, i) => (
-                <li key={hour}>
-                  <span>
-                    {new Date(hour).toLocaleTimeString(dateLocale, {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                  <strong>{Math.round(data.hourly!.temperature_2m?.[i] ?? 0)}°</strong>
-                </li>
-              ))}
-            </ul>
-          )}
-          {data?.daily?.time && (
-            <ul className="hw-weather-days">
-              {data.daily.time.slice(0, 5).map((day, i) => (
-                <li key={day}>
-                  <span>{new Date(day).toLocaleDateString(dateLocale, { weekday: 'short' })}</span>
-                  <strong>
-                    {Math.round(data.daily!.temperature_2m_max?.[i] ?? 0)}°/
-                    {Math.round(data.daily!.temperature_2m_min?.[i] ?? 0)}°
-                  </strong>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
-      {err && data && <p className="hw-muted">{err}</p>}
+      <div className="hw-weather-bottom">
+        <span className="hw-weather-cond">
+          <Icon size={15} strokeWidth={1.6} className="hw-weather-ico" aria-hidden />
+          <span>{label}</span>
+        </span>
+        <span className="hw-weather-range">
+          <span>
+            {t('widgets.ui.weather.max')} {deg(tmax)}
+          </span>
+          <span>
+            {t('widgets.ui.weather.min')} {deg(tmin)}
+          </span>
+        </span>
+      </div>
     </div>
   );
 }

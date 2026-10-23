@@ -1058,6 +1058,8 @@
         "setCityHintLive": "Open the card settings (⋮ or edit mode) and enter a city.",
         "privacyOff": "App network requests are off — enable them in Settings → Privacy.",
         "changeCity": "Change city",
+        "max": "H",
+        "min": "L",
         "demoCity": "Warsaw",
         "demoCountry": "Poland",
         "demoAdmin": "Masovian",
