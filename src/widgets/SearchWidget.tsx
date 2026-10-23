@@ -351,6 +351,7 @@ export function SearchWidget({
     <form
       ref={formRef}
       className={`home-search hw-search hw-size-${size} ${focused ? 'is-focus' : ''}`}
+      style={{ width: '100%', minWidth: 'min(540px, 90vw)', maxWidth: '100%', boxSizing: 'border-box' }}
       onSubmit={(e) => {
         e.preventDefault();
         const s = suggestions[idx];

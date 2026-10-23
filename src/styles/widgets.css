@@ -1664,10 +1664,9 @@ html[data-theme='paper'] .hw-notes-ctx {
 
 /* —— Resources —— */
 .hw-resources {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
+  display: grid;
+  place-items: center;
+  width: 100% !important;
   flex: 1 1 auto;
   align-self: stretch;
   height: 100%;
@@ -1678,15 +1677,18 @@ html[data-theme='paper'] .hw-notes-ctx {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 28px;
-  width: 100%;
+  gap: clamp(20px, 8%, 36px);
+  width: max-content;
+  max-width: 100%;
   margin: 0 auto;
 }
-.hw-card.hw-type-resources .hw-frame-body {
-  display: flex;
+.hw-card.hw-type-resources .hw-frame {
   align-items: center;
-  justify-content: center;
-  width: 100%;
+}
+.hw-card.hw-type-resources .hw-frame-body {
+  display: grid !important;
+  place-items: center;
+  width: 100% !important;
   flex: 1;
 }
 .hw-res-ring {
