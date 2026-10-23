@@ -2332,21 +2332,27 @@ html[data-theme='paper'] .hw-notes-ctx {
 }
 .hw-city-suggest {
   list-style: none;
-  margin: 0;
+  margin: 6px 0 0;
   padding: 4px;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
   background: var(--bg-elev, var(--elev));
   box-shadow: 0 10px 28px color-mix(in srgb, #000 24%, transparent);
-  max-height: 180px;
-  overflow: auto;
+  max-height: 148px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  z-index: 4;
+}
+.hw-city-suggest li + li {
+  margin-top: 2px;
 }
 .hw-city-suggest button {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1px;
+  gap: 2px;
   width: 100%;
+  min-width: 0;
   padding: 8px 10px;
   border: 0;
   border-radius: 7px;
@@ -2355,17 +2361,36 @@ html[data-theme='paper'] .hw-notes-ctx {
   font: inherit;
   text-align: left;
   cursor: pointer;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .hw-city-suggest button:hover {
   background: color-mix(in srgb, var(--fg) 7%, transparent);
 }
 .hw-city-suggest strong {
+  display: block;
+  width: 100%;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .hw-city-suggest span {
+  display: block;
+  width: 100%;
   font-size: 11px;
+  line-height: 1.3;
   color: var(--fg-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hw-weather-setup-inner > .hw-btn {
+  align-self: center;
+  margin-top: 4px;
+  flex-shrink: 0;
 }
 
 .hw-empty-cta {
@@ -2499,22 +2524,33 @@ html[data-theme='paper'] .hw-notes-ctx {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
+  width: 100%;
   font-size: 12.5px;
 }
 .hw-weather-cond {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
+  flex: 1 1 auto;
   min-width: 0;
   color: var(--fg-2);
   line-height: 1.25;
 }
+.hw-weather-cond > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hw-weather-cond .hw-weather-ico {
+  flex-shrink: 0;
+}
 .hw-weather-range {
   flex: 0 0 auto;
   display: inline-flex;
-  gap: 6px;
+  gap: 8px;
   white-space: nowrap;
   color: var(--fg-3);
   font-weight: 500;
