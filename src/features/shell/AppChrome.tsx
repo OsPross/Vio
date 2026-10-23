@@ -382,8 +382,8 @@ export function AppChrome({
         .join(' ')}
       style={
         {
-          /* Labeled rail (Arc-like) — icons + titles; never a 56px icon strip */
-          ['--rail-w' as string]: '200px',
+          /* Icon rail — icons only (~52px); labels via title tooltip */
+          ['--rail-w' as string]: '52px',
           ['--panel-w' as string]:
             (settings.sidebarMode === 'on' || settings.sidebarMode === 'auto') &&
             settings.sidePanelOpen
@@ -392,8 +392,8 @@ export function AppChrome({
           ['--side-total' as string]:
             settings.sidebarMode === 'on'
               ? settings.sidePanelOpen
-                ? `${200 + settings.sidePanelWidth}px`
-                : '200px'
+                ? `${52 + settings.sidePanelWidth}px`
+                : '52px'
               : '0px',
         } as CSSProperties
       }
@@ -439,7 +439,6 @@ export function AppChrome({
               <AppSidebar
                 onHome={() => navigateActive(HOME_URL)}
                 onOpenTab={(url) => newTab(url)}
-                onCollapseSidebar={() => setSidebarAutoOpen(false)}
                 onSideAppMenuOpenChange={setSideAppMenuOpen}
               />
             </Suspense>

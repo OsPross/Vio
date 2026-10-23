@@ -252,7 +252,7 @@
   padding: 0 4px;
 }
 
-/* —— Sidebar rail (labeled Arc-like; sizing lives in styles.css) —— */
+/* —— Sidebar icon rail (sizing lives in styles.css) —— */
 .side-rail-btn:hover {
   color: var(--fg);
   background: color-mix(in srgb, var(--fg) 7%, transparent);

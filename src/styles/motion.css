@@ -222,8 +222,8 @@ a:focus-visible,
   filter: none;
 }
 
-/* Soft background drift */
-.home.home-bg-soft.home-drift {
+/* Soft background drift on `.app` so icon rail + NTP share one plane */
+.app.bg-soft.home-drift {
   background:
     radial-gradient(
       ellipse 55% 45% at var(--drift-x, 18%) var(--drift-y, 12%),
@@ -246,6 +246,10 @@ a:focus-visible,
     140% 140%,
     100% 100%;
   animation: home-soft-drift 30s var(--ease-in-out) infinite alternate;
+}
+.home.home-bg-soft.home-drift {
+  background: transparent !important;
+  animation: none !important;
 }
 
 @keyframes home-soft-drift {
@@ -406,7 +410,8 @@ html.theme-fading #root {
   transition-timing-function: linear !important;
 }
 
-[data-reduce-motion='on'] .home.home-bg-soft.home-drift {
+[data-reduce-motion='on'] .home.home-bg-soft.home-drift,
+[data-reduce-motion='on'] .app.bg-soft.home-drift {
   animation: none !important;
 }
 
@@ -433,7 +438,8 @@ html.theme-fading #root {
     --dur-slow: 120ms;
   }
 
-  .home.home-bg-soft.home-drift {
+  .home.home-bg-soft.home-drift,
+  .app.bg-soft.home-drift {
     animation: none !important;
   }
 

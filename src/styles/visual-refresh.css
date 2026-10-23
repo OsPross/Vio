@@ -77,7 +77,17 @@ html:not([data-theme='paper']).glass-on .omnibox.glass {
 }
 .app:not(.sidebar-auto) .side-shell,
 .app:not(.sidebar-auto) .side-rail {
-  background: var(--chrome) !important;
+  background: transparent !important;
+}
+.app:not(.sidebar-auto) .side-panel:not(.open) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 [data-theme='paper'] .bookmarks-bar-wrap {
   border-bottom-color: rgba(15, 15, 25, 0.06);
@@ -632,4 +642,18 @@ html:not([data-theme='paper']).glass-on .omnibox.glass {
   box-shadow: none !important;
   width: 16px !important;
   height: 16px !important;
+}
+
+/* Icon rail: transparent plane, no seam against NTP */
+.app:not(.sidebar-auto) .side-shell,
+.app:not(.sidebar-auto) .side-rail,
+.app:not(.sidebar-auto) .side-panel:not(.open),
+.home.home-bg-soft,
+.home.home-bg-panel,
+.home.home-bg-mesh,
+.home.home-bg-vignette,
+.home.home-bg-soft.home-drift {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-right: none !important;
 }

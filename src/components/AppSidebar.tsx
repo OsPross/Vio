@@ -28,7 +28,6 @@ import {
   ExternalLink,
   Home,
   MessageCircle,
-  PanelLeftClose,
   Plus,
   RefreshCw,
   Search,
@@ -235,7 +234,6 @@ function SortableAppBtn({
       <span className="side-rail-ico">
         <SideAppIcon app={app} />
       </span>
-      <span className="side-rail-label">{app.label}</span>
       {badge > 0 && (
         <span className={`side-rail-badge ${badge > 9 ? '' : badge === 1 ? 'dot' : ''}`}>
           {badge > 9 ? (badge > 99 ? '99+' : String(badge)) : badge === 1 ? '' : String(badge)}
@@ -267,13 +265,10 @@ function placeSideAppCtx(anchor: DOMRect, menuW: number, menuH: number) {
 export function AppSidebar({
   onHome,
   onOpenTab,
-  onCollapseSidebar,
   onSideAppMenuOpenChange,
 }: {
   onHome: () => void;
   onOpenTab: (url: string) => void;
-  /** Auto mode: hide the overlay rail (AppChrome setSidebarAutoOpen(false)). */
-  onCollapseSidebar?: () => void;
   /** Keep auto-sidebar open while the app context menu is visible. */
   onSideAppMenuOpenChange?: (open: boolean) => void;
 }) {
@@ -359,7 +354,7 @@ export function AppSidebar({
     if (app) {
       app.style.setProperty('--panel-w', `${next}px`);
       if (app.classList.contains('side-panel-open') && !app.classList.contains('no-side')) {
-        app.style.setProperty('--side-total', `${200 + next}px`);
+        app.style.setProperty('--side-total', `${52 + next}px`);
       }
     }
     return next;
@@ -428,18 +423,6 @@ export function AppSidebar({
     addSideApp({ label, url: pinUrl });
   };
 
-  const toggleSidebarChrome = (e?: { preventDefault?: () => void; stopPropagation?: () => void }) => {
-    e?.preventDefault?.();
-    e?.stopPropagation?.();
-    if (settings.sidebarMode === 'auto') {
-      closeSidePanel();
-      onCollapseSidebar?.();
-      return;
-    }
-    // Pinned rail: hide entirely (same as Ctrl+B / menu).
-    patchSettings({ showSidebar: false, sidePanelOpen: false, sidebarMode: 'off' });
-  };
-
   const ctxApp = ctx ? sideApps.find((a) => a.id === ctx.appId) : null;
 
   return (
@@ -455,8 +438,7 @@ export function AppSidebar({
               title={t('sidebar.home')}
               onClick={onHome}
             >
-              <Home size={18} strokeWidth={1.6} />
-              <span className="side-rail-label">{t('sidebar.home')}</span>
+              <Home size={18} strokeWidth={1.75} />
             </button>
             <button
               type="button"
@@ -464,8 +446,7 @@ export function AppSidebar({
               title={t('sidebar.search')}
               onClick={onHome}
             >
-              <Search size={18} strokeWidth={1.6} />
-              <span className="side-rail-label">{t('sidebar.search')}</span>
+              <Search size={18} strokeWidth={1.75} />
             </button>
           </div>
 
@@ -508,26 +489,7 @@ export function AppSidebar({
               onClick={pinActivePage}
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <Plus size={18} strokeWidth={1.6} />
-              <span className="side-rail-label">{t('common.add')}</span>
-            </button>
-            <button
-              type="button"
-              className="side-rail-btn"
-              title={
-                settings.sidebarMode === 'auto'
-                  ? t('sidebar.collapseRail')
-                  : t('sidebar.hideSidebarShortcut')
-              }
-              onClick={toggleSidebarChrome}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <PanelLeftClose size={18} strokeWidth={1.6} />
-              <span className="side-rail-label">
-                {settings.sidebarMode === 'auto'
-                  ? t('sidebar.collapseRail')
-                  : t('sidebar.hideSidebar')}
-              </span>
+              <Plus size={18} strokeWidth={1.75} />
             </button>
             <button
               type="button"
@@ -535,8 +497,7 @@ export function AppSidebar({
               title={t('sidebar.settings')}
               onClick={() => setSettingsTab('general')}
             >
-              <Settings2 size={18} strokeWidth={1.6} />
-              <span className="side-rail-label">{t('sidebar.settings')}</span>
+              <Settings2 size={18} strokeWidth={1.75} />
             </button>
           </div>
         </LayoutGroup>

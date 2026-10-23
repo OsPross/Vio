@@ -49,6 +49,14 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
     return () => window.removeEventListener('keydown', onKey);
   }, [customize, editMode]);
 
+  /* Drift wash on `.app` so the icon rail shares the NTP plane */
+  useEffect(() => {
+    const app = document.querySelector('.app');
+    if (!app) return;
+    app.classList.toggle('home-drift', drift);
+    return () => app.classList.remove('home-drift');
+  }, [drift]);
+
   const bgFile = homeBgCssUrl(settings.homeBgImage);
   const bgVars: CSSProperties =
     settings.bgStyle === 'custom' && bgFile
