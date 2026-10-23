@@ -184,32 +184,37 @@ export function WeatherWidget({
   const tmax = data?.daily?.temperature_2m_max?.[0];
   const tmin = data?.daily?.temperature_2m_min?.[0];
 
+  const hour = new Date().getHours();
+  const dayPart = hour < 6 || hour >= 20 ? 'night' : hour < 11 ? 'morning' : hour < 17 ? 'day' : 'eve';
+
   return (
-    <div className={`hw-weather hw-size-${size}`}>
+    <div className={`hw-weather hw-weather-ios hw-size-${size} hw-weather-${dayPart}`}>
       <div className="hw-weather-main">
-        <Icon size={size === 'S' ? 22 : 28} strokeWidth={1.5} className="hw-weather-ico" />
-        <strong className="hw-weather-temp">{temp != null ? `${Math.round(temp)}°` : '—'}</strong>
-        <div className="hw-weather-meta">
+        <div className="hw-weather-place">
           <em>{data?.place?.name || location}</em>
-          <span>{label}</span>
-          {(tmax != null || tmin != null) && (
-            <span className="hw-weather-range">
-              {tmax != null ? Math.round(tmax) : '—'}° / {tmin != null ? Math.round(tmin) : '—'}°
-            </span>
+          {!preview && (
+            <button
+              type="button"
+              className="hw-icon-btn"
+              title={t('widgets.ui.weather.changeCity')}
+              onClick={() => {
+                onPatchSettings?.({ location: '', lat: undefined, lon: undefined });
+                setData(null);
+              }}
+            >
+              <RefreshCw size={12} />
+            </button>
           )}
         </div>
-        {!preview && (
-          <button
-            type="button"
-            className="hw-icon-btn"
-            title={t('widgets.ui.weather.changeCity')}
-            onClick={() => {
-              onPatchSettings?.({ location: '', lat: undefined, lon: undefined });
-              setData(null);
-            }}
-          >
-            <RefreshCw size={13} />
-          </button>
+        <strong className="hw-weather-temp">{temp != null ? `${Math.round(temp)}°` : '—'}</strong>
+        <div className="hw-weather-cond">
+          <Icon size={16} strokeWidth={1.6} className="hw-weather-ico" aria-hidden />
+          <span>{label}</span>
+        </div>
+        {(tmax != null || tmin != null) && (
+          <span className="hw-weather-range">
+            H:{tmax != null ? Math.round(tmax) : '—'}° · L:{tmin != null ? Math.round(tmin) : '—'}°
+          </span>
         )}
       </div>
 

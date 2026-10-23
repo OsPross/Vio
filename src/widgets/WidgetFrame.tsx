@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
-import { Settings2, X, type LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useT } from '../i18n';
+import type { HomeWidgetSize } from '../store';
 
 /** Lucide icons or custom SVGs that accept the same size/className props. */
 export type WidgetFrameIcon = ComponentType<{
@@ -10,14 +11,18 @@ export type WidgetFrameIcon = ComponentType<{
   'aria-hidden'?: boolean | 'true';
 }>;
 
+const SIZES: HomeWidgetSize[] = ['S', 'M', 'L'];
+
 export function WidgetFrame({
   title,
   icon: _Icon,
   editMode,
   locked,
+  size,
   onRemove,
   onOpenSettings,
   onCycleSize,
+  onSetSize,
   children,
   className,
   bare,
@@ -26,10 +31,12 @@ export function WidgetFrame({
   icon: WidgetFrameIcon;
   editMode?: boolean;
   locked?: boolean;
+  size?: HomeWidgetSize;
   onRemove?: () => void;
   onOpenSettings?: (anchor: HTMLElement) => void;
-  /** Corner control: cycle S → M → L while editing */
+  /** Legacy cycle — preferred: onSetSize */
   onCycleSize?: () => void;
+  onSetSize?: (size: HomeWidgetSize) => void;
   children: ReactNode;
   className?: string;
   /** No card chrome — only for clock/search/shortcuts outside edit outlines */
@@ -38,98 +45,78 @@ export function WidgetFrame({
   const t = useT();
   const showEditChrome = !!editMode && !locked;
 
-  /* bare chrome (clock/search/shortcuts): no card outside edit */
   if (bare && !showEditChrome) {
     return <div className={['hw-bare', className || ''].filter(Boolean).join(' ')}>{children}</div>;
   }
 
-  /* Regular widgets ALWAYS show full card + header (icon + name), even outside edit */
-  if (!bare) {
+  if (bare && showEditChrome) {
     return (
       <div
-        className={['hw-frame', editMode ? 'is-edit' : '', className || '']
-          .filter(Boolean)
-          .join(' ')}
+        className={['hw-bare', 'hw-bare-edit', className || ''].filter(Boolean).join(' ')}
+        style={{ cursor: 'grab' }}
       >
-        <header className="hw-frame-head" style={showEditChrome ? { cursor: 'grab' } : undefined}>
-          <span className="hw-frame-title">{title}</span>
-          {showEditChrome && (
-            <div className="hw-frame-edit-chrome" onPointerDown={(e) => e.stopPropagation()}>
-              {onOpenSettings && (
-                <button
-                  type="button"
-                  className="hw-icon-btn"
-                  title={t('common.settings')}
-                  aria-label={t('widgets.ui.settingsAria', { title })}
-                  onClick={(e) => onOpenSettings(e.currentTarget)}
-                >
-                  <Settings2 size={13} />
-                </button>
-              )}
-              {onRemove && (
-                <button
-                  type="button"
-                  className="hw-icon-btn"
-                  title={t('common.remove')}
-                  aria-label={t('common.remove')}
-                  onClick={onRemove}
-                >
-                  <X size={13} />
-                </button>
-              )}
-            </div>
-          )}
-        </header>
-        <div className="hw-frame-body">{children}</div>
-        {showEditChrome && onCycleSize && (
+        <div className="hw-bare-edit-label">{title}</div>
+        {onOpenSettings && (
           <button
             type="button"
-            className="hw-size-handle"
-            title={t('widgets.ui.cycleSize')}
-            aria-label={t('widgets.ui.cycleSize')}
+            className="hw-ios-gear"
+            title={t('common.settings')}
+            aria-label={t('widgets.ui.settingsAria', { title })}
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onCycleSize();
-            }}
-          />
+            onClick={(e) => onOpenSettings(e.currentTarget)}
+          >
+            ···
+          </button>
         )}
+        <div className="hw-bare-edit-body">{children}</div>
       </div>
     );
   }
 
-  /* bare + edit: dashed outline + gear */
   return (
-    <div className={['hw-bare', 'hw-bare-edit', className || ''].filter(Boolean).join(' ')}>
-      {showEditChrome && (
-        <header className="hw-frame-head" style={{ cursor: 'grab' }}>
-          <span className="hw-frame-title">{title}</span>
-          <div className="hw-frame-edit-chrome" onPointerDown={(e) => e.stopPropagation()}>
-            {onOpenSettings && (
-              <button
-                type="button"
-                className="hw-icon-btn"
-                title={t('common.settings')}
-                aria-label={t('widgets.ui.settingsAria', { title })}
-                onClick={(e) => onOpenSettings(e.currentTarget)}
-              >
-                <Settings2 size={13} />
-              </button>
-            )}
-            {onRemove && (
-              <button
-                type="button"
-                className="hw-icon-btn"
-                title={t('common.remove')}
-                onClick={onRemove}
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
-        </header>
+    <div
+      className={['hw-frame', editMode ? 'is-edit' : '', className || ''].filter(Boolean).join(' ')}
+      style={showEditChrome ? { cursor: 'grab' } : undefined}
+    >
+      {showEditChrome && onRemove && (
+        <button
+          type="button"
+          className="hw-ios-minus"
+          title={t('common.remove')}
+          aria-label={t('common.remove')}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+        >
+          −
+        </button>
       )}
-      <div>{children}</div>
+      <div className="hw-frame-body">{children}</div>
+      {showEditChrome && (onSetSize || onCycleSize) && (
+        <div
+          className="hw-ios-size-pill"
+          role="group"
+          aria-label={t('widgets.ui.cycleSize')}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {SIZES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              className={size === s ? 'on' : ''}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onSetSize) onSetSize(s);
+                else onCycleSize?.();
+              }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

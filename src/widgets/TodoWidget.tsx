@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CheckSquare, Plus, Trash2 } from 'lucide-react';
+import { CheckSquare } from 'lucide-react';
 import { useStore, type HomeTodoItem } from '../store';
 import { useT } from '../i18n';
 import { WidgetEmpty } from './WidgetFrame';
@@ -32,32 +32,7 @@ export function TodoWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?:
 
   return (
     <div className={`hw-todo hw-size-${size}`}>
-      {!preview && (
-        <form
-          className="hw-todo-add"
-          onSubmit={(e) => {
-            e.preventDefault();
-            add();
-          }}
-        >
-          <input
-            className="hw-input"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={t('widgets.ui.todo.placeholder')}
-            spellCheck={false}
-          />
-          <button
-            type="submit"
-            className="hw-icon-btn"
-            title={t('common.add')}
-            disabled={!draft.trim()}
-          >
-            <Plus size={14} />
-          </button>
-        </form>
-      )}
-      {list.length === 0 ? (
+      {list.length === 0 && preview === false ? (
         <WidgetEmpty icon={CheckSquare} text={t('widgets.ui.todo.empty')} />
       ) : (
         <ul className="hw-todo-list">
@@ -73,20 +48,34 @@ export function TodoWidget({ size, preview }: { size: 'S' | 'M' | 'L'; preview?:
                 }
                 aria-label={item.done ? t('widgets.ui.todo.uncheck') : t('widgets.ui.todo.check')}
               />
-              <span>{item.text}</span>
-              {!preview && (
-                <button
-                  type="button"
-                  className="hw-icon-btn"
-                  onClick={() => setTodos(todos.filter((x) => x.id !== item.id))}
-                  title={t('common.remove')}
-                >
-                  <Trash2 size={12} />
-                </button>
-              )}
+              <span
+                onDoubleClick={() => {
+                  if (preview) return;
+                  setTodos(todos.filter((x) => x.id !== item.id));
+                }}
+              >
+                {item.text}
+              </span>
             </li>
           ))}
         </ul>
+      )}
+      {!preview && (
+        <form
+          className="hw-todo-add"
+          onSubmit={(e) => {
+            e.preventDefault();
+            add();
+          }}
+        >
+          <input
+            className="hw-todo-inline"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={t('widgets.ui.todo.placeholder')}
+            spellCheck={false}
+          />
+        </form>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { LayoutGrid, Plus } from 'lucide-react';
+import { LayoutGrid } from 'lucide-react';
 import { migrateHomeWidgets, normalizeHomeWidgets, useStore, type HomeWidget } from '../store';
 import { homeBgCssUrl } from '../lib/homeBg';
 import { WidgetStrip } from '../widgets/WidgetStrip';
@@ -87,11 +87,20 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
       style={
         {
           ...bgVars,
-          '--hw-radius': `${settings.homeWidgetRadius}px`,
+          '--hw-radius': `22px`,
           '--hw-gap': `${settings.homeGridGap}px`,
         } as CSSProperties
       }
-      data-hw-style={settings.homeWidgetStyle}
+      data-hw-style="glass"
+      onContextMenu={(e) => {
+        const tEl = e.target as HTMLElement;
+        if (
+          tEl.closest('input, textarea, button, a, .hw-card, .hw-frame, .home-fab, .hw-ios-edit-capsule')
+        )
+          return;
+        e.preventDefault();
+        if (!settings.homeLayoutLock) setEditMode(true);
+      }}
     >
       {settings.bgStyle === 'custom' && bgFile ? (
         <>
@@ -100,29 +109,27 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
         </>
       ) : null}
 
-      <button
-        type="button"
-        className={`home-fab ${customize || editMode ? 'on' : ''}`}
-        onClick={() => {
-          setCustomize(true);
-          setEditMode(false);
-        }}
-        title={t('home.customize')}
-        aria-label={t('home.customize')}
-        aria-expanded={customize}
-      >
-        <LayoutGrid size={15} strokeWidth={1.75} />
-      </button>
-
-      {editMode && !settings.homeLayoutLock && (
+      {!editMode && (
         <button
           type="button"
-          className="home-fab home-fab-add"
-          onClick={() => setGalleryOpen(true)}
-          title={t('home.addWidget')}
-          aria-label={t('home.addWidget')}
+          className={`home-fab ${customize ? 'on' : ''}`}
+          onClick={() => {
+            if (settings.homeLayoutLock) {
+              setCustomize(true);
+              return;
+            }
+            setEditMode(true);
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setCustomize(true);
+          }}
+          title={t('home.customize')}
+          aria-label={t('home.customize')}
+          aria-expanded={customize || editMode}
         >
-          <Plus size={15} strokeWidth={1.75} />
+          <LayoutGrid size={15} strokeWidth={1.75} />
         </button>
       )}
 
@@ -130,7 +137,6 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
         <div className="hw-empty-cta">
           <p>{t('home.personalize.widgetsEmpty')}</p>
           <button type="button" className="hw-empty-cta-btn" onClick={() => setGalleryOpen(true)}>
-            <Plus size={15} strokeWidth={2} />
             {t('home.personalize.addFirstWidget')}
           </button>
         </div>
@@ -153,10 +159,11 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
           editMode={editMode && !settings.homeLayoutLock}
           onGo={onGo}
           reduced={reduced}
-          widgetStyle={settings.homeWidgetStyle}
-          radius={settings.homeWidgetRadius}
+          widgetStyle="glass"
+          radius={22}
           locked={settings.homeLayoutLock}
           onExitEdit={() => setEditMode(false)}
+          onOpenGallery={() => setGalleryOpen(true)}
         />
       </div>
 

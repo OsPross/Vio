@@ -47,10 +47,9 @@ export function WidgetPreview({
           className="hw-preview-virtual home-preview-virtual"
           style={{ width, height, position: 'relative' }}
         >
-          <WidgetFrame title={meta.label} icon={Icon} className="hw-preview-frame">
+          <WidgetFrame title={meta.label} icon={Icon} size={size} className="hw-preview-frame">
             <WidgetBody widget={widget} size={size} preview reduced />
           </WidgetFrame>
-          <em className="hw-demo-badge">{t('widgets.ui.example')}</em>
         </div>
       </ScaledPreview>
     </div>

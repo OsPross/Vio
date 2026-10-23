@@ -982,6 +982,7 @@
     "galleryPickSize": "Pick type and preview size",
     "gallerySizeAria": "Preview size",
     "galleryAdded": "Added",
+    "galleryAddScreen": "Add to Home Screen",
     "galleryAddAria": "Add {{name}} widget",
     "ui": {
       "example": "Example",

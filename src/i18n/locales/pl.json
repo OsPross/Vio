@@ -982,6 +982,7 @@
     "galleryPickSize": "Wybierz typ i rozmiar podglądu",
     "gallerySizeAria": "Rozmiar podglądu",
     "galleryAdded": "Dodany",
+    "galleryAddScreen": "Dodaj na ekran",
     "galleryAddAria": "Dodaj widżet {{name}}",
     "ui": {
       "example": "Przykład",

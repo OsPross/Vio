@@ -26,12 +26,17 @@ export function AddWidgetGallery({
   reduced: boolean;
 }) {
   const t = useT();
+  const allTypes = useMemo(() => widgetTypes(), []);
   const [size, setSize] = useState<WidgetSizeId>('M');
+  const [focus, setFocus] = useState<(ReturnType<typeof widgetTypes>)[number] | null>(null);
   const used = useMemo(() => new Set(widgets.map((w) => w.type)), [widgets]);
   const chromeRaw = useStore((s) => s.settings.homeChrome);
   const chrome = useMemo(() => normalizeHomeChrome(chromeRaw), [chromeRaw]);
-  const allTypes = useMemo(() => widgetTypes(), []);
   const pop = popupTransition(reduced);
+  const active =
+    (focus && allTypes.includes(focus) ? focus : null) ||
+    allTypes.find((ty) => !used.has(ty)) ||
+    allTypes[0];
 
   const addType = (type: (typeof allTypes)[number]) => {
     if (used.has(type)) return;
@@ -58,7 +63,7 @@ export function AddWidgetGallery({
           onClick={onClose}
         >
           <motion.div
-            className={`hw-gallery motion-popup ${reduced ? 'reduced' : ''}`}
+            className={`hw-gallery hw-gallery-ios motion-popup ${reduced ? 'reduced' : ''}`}
             role="dialog"
             aria-labelledby="hw-gallery-title"
             initial={pop.initial}
@@ -68,10 +73,7 @@ export function AddWidgetGallery({
             onClick={(e) => e.stopPropagation()}
           >
             <header className="hw-gallery-head">
-              <div>
-                <h2 id="hw-gallery-title">{t('home.addWidget')}</h2>
-                <p>{t('widgets.galleryPickSize')}</p>
-              </div>
+              <h2 id="hw-gallery-title">{t('home.addWidget')}</h2>
               <button
                 type="button"
                 className="hw-icon-btn"
@@ -81,60 +83,56 @@ export function AddWidgetGallery({
                 <X size={16} />
               </button>
             </header>
-            <div className="hw-gallery-sizes" role="tablist" aria-label={t('widgets.gallerySizeAria')}>
-              {(['S', 'M', 'L'] as WidgetSizeId[]).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  role="tab"
-                  aria-selected={size === s}
-                  className={size === s ? 'on' : ''}
-                  onClick={() => setSize(s)}
-                  title={t(`widgets.size${s}`)}
-                >
-                  {s}
-                </button>
-              ))}
+
+            <div className="hw-gallery-live">
+              {active && (
+                <>
+                  <WidgetPreview type={active} size={size} className="hw-gallery-live-preview" />
+                  <strong className="hw-gallery-live-name">{WIDGET_REGISTRY[active].label}</strong>
+                  <div className="hw-gallery-dots" role="tablist" aria-label={t('widgets.gallerySizeAria')}>
+                    {(['S', 'M', 'L'] as WidgetSizeId[]).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        role="tab"
+                        aria-selected={size === s}
+                        className={size === s ? 'on' : ''}
+                        onClick={() => setSize(s)}
+                        title={t(`widgets.size${s}`)}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="hw-gallery-add-screen"
+                    disabled={used.has(active)}
+                    onClick={() => addType(active)}
+                  >
+                    <Plus size={15} strokeWidth={2.2} />
+                    {used.has(active) ? t('widgets.galleryAdded') : t('widgets.galleryAddScreen')}
+                  </button>
+                </>
+              )}
             </div>
+
             <div className="hw-gallery-scroll">
-              <div className="hw-gallery-grid">
+              <div className="hw-gallery-rail">
                 {allTypes.map((type) => {
                   const meta = WIDGET_REGISTRY[type];
                   const already = used.has(type);
                   return (
-                    <div
+                    <button
                       key={type}
-                      className={`hw-gallery-card ${already ? 'is-added' : ''}`}
+                      type="button"
+                      className={`hw-gallery-thumb ${active === type ? 'on' : ''} ${already ? 'is-added' : ''}`}
+                      onClick={() => setFocus(type)}
+                      disabled={already}
                     >
-                      <div className="hw-gallery-card-preview">
-                        <WidgetPreview type={type} size={size} />
-                      </div>
-                      <strong>{meta.label}</strong>
-                      <span className="hw-gallery-desc">{meta.description}</span>
-                      <div className="hw-gallery-meta">
-                        <span className="hw-gallery-badge">{size}</span>
-                        {already ? (
-                          <span className="hw-gallery-badge added">{t('widgets.galleryAdded')}</span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="hw-gallery-add"
-                            onClick={() => addType(type)}
-                          >
-                            <Plus size={13} strokeWidth={2} />
-                            {t('common.add')}
-                          </button>
-                        )}
-                      </div>
-                      {!already && (
-                        <button
-                          type="button"
-                          className="hw-gallery-card-hit"
-                          aria-label={t('widgets.galleryAddAria', { name: meta.label })}
-                          onClick={() => addType(type)}
-                        />
-                      )}
-                    </div>
+                      <WidgetPreview type={type} size="S" />
+                      <span>{meta.label}</span>
+                    </button>
                   );
                 })}
               </div>

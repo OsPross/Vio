@@ -10,7 +10,6 @@ import {
 import {
   CalendarDays,
   Cpu,
-  Check,
   CheckSquare,
   Clock3,
   CloudSun,
@@ -186,6 +185,7 @@ export function WidgetStrip({
   radius,
   locked,
   onExitEdit,
+  onOpenGallery,
   preview = false,
 }: {
   widgets: HomeWidget[];
@@ -197,6 +197,7 @@ export function WidgetStrip({
   radius: number;
   locked: boolean;
   onExitEdit?: () => void;
+  onOpenGallery?: () => void;
   /** Live preview in Personalize — no suggest portals / autofocus */
   preview?: boolean;
 }) {
@@ -599,15 +600,20 @@ export function WidgetStrip({
   return (
     <div className="hw-zone">
       {editMode && !locked && (
-        <div className="hw-edit-bar">
-          <button type="button" onClick={centerAll}>
+        <div className="hw-ios-edit-capsule" role="toolbar" aria-label={t('home.customize')}>
+          <button type="button" className="hw-ios-edit-add" onClick={() => onOpenGallery?.()}>
+            + {t('home.addWidget')}
+          </button>
+          {undoStack.length > 0 && (
+            <button type="button" className="hw-ios-edit-ghost" onClick={undo} title={t('widgets.ui.undo')}>
+              <RotateCcw size={14} />
+            </button>
+          )}
+          <button type="button" className="hw-ios-edit-ghost" onClick={centerAll} title={t('widgets.ui.centerAll')}>
             {t('widgets.ui.centerAll')}
           </button>
-          <button type="button" onClick={undo} disabled={!undoStack.length}>
-            <RotateCcw size={13} /> {t('widgets.ui.undo')}
-          </button>
-          <button type="button" className="primary" onClick={() => onExitEdit?.()}>
-            <Check size={13} /> {t('common.done')}
+          <button type="button" className="hw-ios-edit-done" onClick={() => onExitEdit?.()}>
+            {t('common.done')}
           </button>
         </div>
       )}
@@ -727,6 +733,7 @@ export function WidgetStrip({
                 icon={Icon}
                 editMode={editMode}
                 locked={locked}
+                size={w.size}
                 onRemove={() => {
                   pushUndo(widgets, chrome);
                   onChange(widgets.filter((x) => x.id !== w.id));
@@ -744,11 +751,10 @@ export function WidgetStrip({
                     el,
                   )
                 }
-                onCycleSize={() => {
-                  const order: HomeWidgetSize[] = ['S', 'M', 'L'];
-                  const next = order[(order.indexOf(w.size) + 1) % order.length]!;
+                onSetSize={(size) => {
+                  if (size === w.size) return;
                   pushUndo(widgets, chrome);
-                  onChange(widgets.map((x) => (x.id === w.id ? { ...x, size: next } : x)));
+                  onChange(widgets.map((x) => (x.id === w.id ? { ...x, size } : x)));
                 }}
               >
                 <WidgetBody

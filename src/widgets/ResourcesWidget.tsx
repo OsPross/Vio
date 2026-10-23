@@ -2,11 +2,28 @@ import { Cpu } from 'lucide-react';
 import { useMetrics } from '../lib/useMetrics';
 import { useStore } from '../store';
 
-function MiniBar({ value }: { value: number }) {
+function Ring({ value, label }: { value: number; label: string }) {
   const pct = Math.max(0, Math.min(100, value));
+  const r = 28;
+  const c = 2 * Math.PI * r;
+  const offset = c - (pct / 100) * c;
   return (
-    <div className="hw-res-track" aria-hidden>
-      <i style={{ width: `${pct}%` }} />
+    <div className="hw-res-ring" role="img" aria-label={`${label} ${Math.round(pct)}%`}>
+      <svg viewBox="0 0 72 72" width="72" height="72" aria-hidden>
+        <circle className="hw-res-ring-track" cx="36" cy="36" r={r} />
+        <circle
+          className="hw-res-ring-val"
+          cx="36"
+          cy="36"
+          r={r}
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <div className="hw-res-ring-label">
+        <strong>{Math.round(pct)}</strong>
+        <span>{label}</span>
+      </div>
     </div>
   );
 }
@@ -18,20 +35,8 @@ export function ResourcesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; prev
   if (preview) {
     return (
       <div className={`hw-resources hw-size-${size}`}>
-        <div className="hw-res-row">
-          <div className="hw-res-label">
-            <span>CPU</span>
-            <strong>34%</strong>
-          </div>
-          <MiniBar value={34} />
-        </div>
-        <div className="hw-res-row">
-          <div className="hw-res-label">
-            <span>RAM</span>
-            <strong>58%</strong>
-          </div>
-          <MiniBar value={58} />
-        </div>
+        <Ring value={34} label="CPU" />
+        <Ring value={58} label="RAM" />
       </div>
     );
   }
@@ -39,10 +44,8 @@ export function ResourcesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; prev
   if (!data) {
     return (
       <div className={`hw-resources hw-resources-skel hw-size-${size}`}>
-        <div className="hw-skeleton hw-skel-line" />
-        <div className="hw-skeleton hw-skel-bar" />
-        <div className="hw-skeleton hw-skel-line" />
-        <div className="hw-skeleton hw-skel-bar" />
+        <div className="hw-skeleton hw-skel-ring" />
+        <div className="hw-skeleton hw-skel-ring" />
       </div>
     );
   }
@@ -52,20 +55,8 @@ export function ResourcesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; prev
 
   return (
     <div className={`hw-resources hw-size-${size}`}>
-      <div className="hw-res-row">
-        <div className="hw-res-label">
-          <span>CPU</span>
-          <strong>{Math.round(cpu)}%</strong>
-        </div>
-        <MiniBar value={cpu} />
-      </div>
-      <div className="hw-res-row">
-        <div className="hw-res-label">
-          <span>RAM</span>
-          <strong>{Math.round(ram)}%</strong>
-        </div>
-        <MiniBar value={ram} />
-      </div>
+      <Ring value={cpu} label="CPU" />
+      <Ring value={ram} label="RAM" />
     </div>
   );
 }

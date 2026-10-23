@@ -6,16 +6,7 @@ import {
   type CSSProperties,
   type PointerEvent as RE,
 } from 'react';
-import {
-  Copy,
-  ExternalLink,
-  LogOut,
-  Pause,
-  Play,
-  SkipBack,
-  SkipForward,
-  Volume2,
-} from 'lucide-react';
+import { Copy, Pause, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 import type { HomeWidget, HomeWidgetSize } from '../store';
 import { useT } from '../i18n';
 import { SpotifyGlyph } from './SpotifyGlyph';
@@ -422,48 +413,23 @@ export function SpotifyWidget({
     );
   }
 
+  const glow = item?.art
+    ? ({ ['--spotify-glow' as string]: `url("${item.art}")` } as CSSProperties)
+    : undefined;
+
   return (
-    <div className={`hw-spotify hw-spotify-now hw-size-${size}`}>
+    <div className={`hw-spotify hw-spotify-now hw-spotify-ios hw-size-${size}`} style={glow}>
       <div className="hw-spotify-now-row">
         <div className="hw-spotify-art" aria-hidden>
           {item?.art ? (
             <img src={item.art} alt="" draggable={false} />
           ) : (
-            <SpotifyGlyph size={size === 'S' ? 20 : 24} />
+            <SpotifyGlyph size={size === 'S' ? 22 : 28} />
           )}
         </div>
         <div className="hw-spotify-meta">
           <strong className="hw-spotify-title">{item?.name}</strong>
           <span className="hw-spotify-artists">{item?.artists?.join(', ') || '—'}</span>
-          {size === 'L' && playback?.device?.name ? (
-            <em className="hw-spotify-device">{playback.device.name}</em>
-          ) : null}
-        </div>
-        <div className="hw-spotify-now-actions" onPointerDown={(e) => e.stopPropagation()}>
-          {item?.url ? (
-            <button
-              type="button"
-              className="hw-icon-btn"
-              title={t('widgets.ui.spotify.openInSpotify')}
-              onClick={() => onGo?.(item.url!)}
-            >
-              <ExternalLink size={13} />
-            </button>
-          ) : null}
-          {!preview && (
-            <button
-              type="button"
-              className="hw-icon-btn"
-              title={t('widgets.ui.spotify.logout')}
-              onClick={async () => {
-                await window.shell?.spotifyLogout?.();
-                setPlayback(null);
-                await refreshStatus();
-              }}
-            >
-              <LogOut size={13} />
-            </button>
-          )}
         </div>
       </div>
 
