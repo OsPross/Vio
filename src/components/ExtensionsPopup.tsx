@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertTriangle, Pin, Puzzle, Settings2, X } from 'lucide-react';
+import { Pin, Puzzle, Settings2 } from 'lucide-react';
 import { Switch } from './ui/Switch';
 import { useT } from '../i18n';
 import { isMotionOff, popupTransition } from '../lib/motionPresets';
@@ -26,7 +26,6 @@ type Props = {
   onClose: () => void;
   onManage: () => void;
   tabId?: number | null;
-  partition?: string;
 };
 
 export function ExtensionsPopup({ open, onClose, onManage, tabId }: Props) {
@@ -111,21 +110,14 @@ export function ExtensionsPopup({ open, onClose, onManage, tabId }: Props) {
           transition={popMotion.transition}
           style={{ transformOrigin: 'top right' }}
         >
-          <header className="chrome-flyout-head">
-            <div className="chrome-flyout-head-label">
-              <Puzzle size={14} strokeWidth={1.75} />
-              <strong>{t('chrome.extensions')}</strong>
-            </div>
-            <button type="button" className="icon-btn sm" onClick={onClose} title={t('common.close')}>
-              <X size={14} />
-            </button>
+          <header className="chrome-flyout-head chrome-flyout-head-clean">
+            <strong>{t('chrome.extensions')}</strong>
           </header>
 
           {err ? <p className="ext-menu-err">{err}</p> : null}
 
           {rows.length === 0 ? (
             <div className="chrome-flyout-empty">
-              <Puzzle size={22} strokeWidth={1.5} aria-hidden />
               <p>{t('chrome.extensionsEmpty')}</p>
               <span>{t('chrome.extensionsEmptyDesc')}</span>
             </div>
@@ -144,29 +136,13 @@ export function ExtensionsPopup({ open, onClose, onManage, tabId }: Props) {
                   >
                     <span className="ext-menu-ico" aria-hidden>
                       {ext.icon ? (
-                        <img src={ext.icon} alt="" width={18} height={18} />
+                        <img src={ext.icon} alt="" width={32} height={32} />
                       ) : (
-                        <Puzzle size={14} strokeWidth={1.5} />
+                        <Puzzle size={18} strokeWidth={1.5} />
                       )}
                     </span>
                     <div className="ext-menu-meta">
-                      <strong title={displayName(ext)}>
-                        {displayName(ext)}
-                        {ext.limitedSupport ? (
-                          <AlertTriangle
-                            size={11}
-                            className="ext-menu-warn-ico"
-                            aria-label={t('internal.extLimitedSupport')}
-                          />
-                        ) : null}
-                      </strong>
-                      <span className="muted">
-                        v{ext.version}
-                        {ext.manifestVersion ? ` · MV${ext.manifestVersion}` : ''}
-                        {busyId === ext.id
-                          ? ` · ${t('chrome.extOpening')}`
-                          : ` · ${t('chrome.extClickToOpen')}`}
-                      </span>
+                      <strong title={displayName(ext)}>{displayName(ext)}</strong>
                     </div>
                   </button>
                   <button

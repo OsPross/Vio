@@ -164,13 +164,13 @@ export const THEMES: Record<
   paper: {
     label: 'Paper',
     /** Soft iOS-like light — warm gray + gentle Vio violet, never hard #fff base */
-    bg: '#F4F4F8',
+    bg: '#F3F3F7',
     elev: '#FBFBFD',
-    side: '#F7F7FA',
+    side: '#F6F6FA',
     fg: '#1C1C1E',
     fg2: '#6C6C74',
     fg3: '#8E8E96',
-    line: 'rgba(15, 15, 25, 0.07)',
+    line: 'rgba(15, 15, 25, 0.05)',
     accent: '#7B6CF0',
   },
 };
@@ -263,7 +263,7 @@ export const DEFAULT_SETTINGS: Settings = {
   homeHeadline: '',
   homeSubline: '',
   homePlaceholder: '',
-  homeShowGreeting: true,
+  homeShowGreeting: false,
   homeShowClock: true,
   homeShowDate: true,
   homeShowApps: true,

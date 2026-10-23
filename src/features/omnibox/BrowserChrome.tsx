@@ -11,7 +11,7 @@ import {
   ArrowRight,
   AppWindow,
   PictureInPicture2,
-  Globe,
+  Search,
   Lock,
   Mic,
   PanelLeft,
@@ -248,7 +248,7 @@ export function BrowserChrome({
             </span>
           ) : (
             <span className="omnibox-sec" title={t('chrome.connectionHome')}>
-              <Globe size={16} strokeWidth={1.75} />
+              <Search size={16} strokeWidth={1.6} />
             </span>
           )}
           <OmniboxSuggest
@@ -419,11 +419,6 @@ export function BrowserChrome({
                     onClose={() => setExtMenuOpen(false)}
                     onManage={() => navigateActive(EXTENSIONS_URL)}
                     tabId={guestWc[activeId] || null}
-                    partition={
-                      windowMode === 'private' && getWindowPartition()
-                        ? getWindowPartition()!
-                        : 'persist:main'
-                    }
                   />
                 </Suspense>
               </div>
@@ -491,26 +486,6 @@ export function BrowserChrome({
                           ),
                         });
                         void window.shell?.privacyExceptionRemove?.(base || h);
-                      }
-                    } catch {
-                      /* */
-                    }
-                  }}
-                  onDisableOnThisPage={() => {
-                    try {
-                      const h = new URL(active?.url || '').hostname.replace(/^www\./, '');
-                      const base = h.split('.').slice(-2).join('.');
-                      patchSettings({
-                        privacySiteExceptions: [
-                          ...new Set([...(settings.privacySiteExceptions || []), base || h]),
-                        ],
-                      });
-                      void window.shell?.privacyExceptionAdd?.(base || h);
-                      const el = currentView();
-                      try {
-                        el?.reloadIgnoringCache?.();
-                      } catch {
-                        el?.reload?.();
                       }
                     } catch {
                       /* */

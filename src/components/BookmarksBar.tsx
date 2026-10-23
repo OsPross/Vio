@@ -489,7 +489,18 @@ export function BookmarksBar({ onOpen, onEdit, activeUrl }: Props) {
               )}
 
               {!entries.length ? (
-                <span className="bookmarks-bar-empty muted">{t('bookmarks.barEmpty')}</span>
+                <button
+                  type="button"
+                  className="bookmarks-bar-empty-add"
+                  onClick={() => {
+                    if (activeUrl && !activeUrl.startsWith('about:')) {
+                      addDroppedUrl(activeUrl);
+                    }
+                  }}
+                  title={t('bookmarks.barAddPage')}
+                >
+                  {t('bookmarks.barAddPage')}
+                </button>
               ) : null}
             </div>
           </SortableContext>

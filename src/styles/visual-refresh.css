@@ -5,18 +5,22 @@
 
 :root {
   --ease-ios: cubic-bezier(0.22, 1, 0.36, 1);
-  --shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.32);
-  --shadow-lift: 0 10px 32px rgba(0, 0, 0, 0.4);
+  --shadow-soft: 0 8px 28px rgba(15, 15, 25, 0.07);
+  --shadow-lift: 0 12px 32px rgba(15, 15, 25, 0.12);
   --btn-sheen: rgba(255, 255, 255, 0.08);
-  --press-scale: 0.95;
+  --press-scale: 0.96;
+}
+html:not([data-theme='paper']) {
+  --shadow-soft: 0 8px 28px rgba(0, 0, 0, 0.32);
+  --shadow-lift: 0 12px 36px rgba(0, 0, 0, 0.42);
 }
 
 /* —— Soft light (Paper) milk glass —— */
 [data-theme='paper'] {
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(15, 15, 25, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(15, 15, 25, 0.05);
   --glass-blur: 24px;
-  --glass-alpha: 0.8;
+  --glass-alpha: 0.82;
 }
 
 [data-theme='paper'].glass-on .sidebar.glass,
@@ -35,11 +39,11 @@
 [data-theme='paper'] .cmdk-panel,
 [data-theme='paper'] .tab-ctx-menu,
 [data-theme='paper'] .bookmark-popover {
-  background: rgba(255, 255, 255, 0.8);
-  border-color: rgba(15, 15, 25, 0.06);
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(15, 15, 25, 0.05);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  box-shadow: var(--shadow-soft);
+  box-shadow: 0 8px 28px rgba(15, 15, 25, 0.07);
 }
 
 /* Dark themes: same blur/saturate language, deeper glass */
@@ -343,4 +347,255 @@ html:not([data-theme='paper']).glass-on .omnibox.glass {
 /* Soft bookmarks tip / overflow */
 .bookmarks-bar-tip {
   box-shadow: var(--shadow-soft);
+}
+
+/* —— Soft borders (no hard frames) —— */
+.omnibox,
+.home-search-inner,
+.home-ios .home-search-inner,
+.home-ios.home-glass .home-search-inner {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+}
+[data-theme='paper'] .omnibox,
+[data-theme='paper'] .home-search-inner,
+[data-theme='paper'] .home-ios .home-search-inner,
+[data-theme='paper'] .home-ios.home-glass .home-search-inner {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(15, 15, 25, 0.05);
+  box-shadow: 0 8px 28px rgba(15, 15, 25, 0.07);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+.omnibox:focus-within,
+.home-search.is-focus .home-search-inner,
+.home-search-inner:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 8px 28px rgba(15, 15, 25, 0.08);
+}
+
+/* Engine trigger: bare search icon, no boxed square */
+.home-engine-select .ui-select-trigger {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--fg-3);
+}
+.home-engine-select .ui-select-trigger:hover,
+.home-engine-select.is-open .ui-select-trigger {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 6%, transparent) !important;
+}
+.home-engine-select .ui-select-trigger svg {
+  display: block;
+}
+
+/* Speed dial: iOS squircle + letter fill + glass add */
+.home-dock-ico {
+  border-radius: 18px !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  background: color-mix(in srgb, var(--bg-elev) 55%, transparent);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+}
+[data-theme='paper'] .home-dock-ico {
+  border-color: rgba(15, 15, 25, 0.05) !important;
+  box-shadow: 0 6px 18px rgba(15, 15, 25, 0.06);
+}
+.home-dock-fav {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  display: block;
+}
+.home-dock-letter {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  border-radius: inherit;
+}
+.home-dock-add .home-dock-ico {
+  border-style: solid !important;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  color: var(--fg-2);
+  font-size: 24px;
+  font-weight: 300;
+}
+[data-theme='paper'] .home-dock-add .home-dock-ico {
+  background: rgba(255, 255, 255, 0.55);
+}
+.motion-on .home-dock-add:hover .home-dock-ico {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+.motion-on .home-dock-add:active .home-dock-ico,
+.motion-on .home-dock-item:active .home-dock-ico {
+  transform: scale(0.96);
+}
+
+/* Clean flyout headers (no close X / no ALL CAPS) */
+.chrome-flyout-head-clean {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.chrome-flyout-head-clean strong,
+.chrome-flyout-head-clean .chrome-flyout-head-label strong {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--fg);
+}
+.chrome-flyout-head-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.chrome-flyout-head-label strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ext-menu-ico {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px;
+}
+.ext-menu-ico img {
+  width: 32px !important;
+  height: 32px !important;
+}
+.ext-menu-meta strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.ext-menu-meta span,
+.ext-menu-warn,
+.ext-menu-warn-ico {
+  display: none !important;
+}
+
+/* Shield: quiet stats + details disclosure */
+.shield-panel-stats-quiet {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+.shield-panel-stats-quiet em,
+.shield-panel-stats em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg-3);
+}
+.shield-panel-stats-quiet strong {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.shield-details-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+.shield-details-toggle svg {
+  transition: transform 180ms var(--ease-ios);
+}
+.shield-details-toggle.open svg {
+  transform: rotate(180deg);
+}
+.shield-actions {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+/* iOS switch knob — white, no dark ring */
+.ui-switch {
+  width: 42px !important;
+  height: 26px !important;
+  border: 0 !important;
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+}
+.ui-switch::after {
+  width: 22px !important;
+  height: 22px !important;
+  top: 2px !important;
+  left: 2px !important;
+  background: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+}
+.ui-switch.on {
+  background: var(--accent) !important;
+}
+.ui-switch.on::after {
+  transform: translateX(16px) !important;
+  background: #fff !important;
+}
+
+/* Bookmarks bar: discrete add on hover when empty */
+.bookmarks-bar-empty-add {
+  opacity: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-3);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    opacity 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+.bookmarks-bar-wrap:hover .bookmarks-bar-empty-add,
+.bookmarks-bar-empty-add:focus-visible {
+  opacity: 1;
+}
+.bookmarks-bar-empty-add:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+
+/* History / bookmarks: hover-reveal actions */
+.history-actions,
+.bm-row > .icon-btn.sm {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.history-row:hover .history-actions,
+.history-row:focus-within .history-actions,
+.bm-row:hover > .icon-btn.sm,
+.bm-row:focus-within > .icon-btn.sm {
+  opacity: 1;
 }

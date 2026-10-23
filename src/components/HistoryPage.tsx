@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { ExternalLink, Globe, History, Search, Trash2 } from 'lucide-react';
 import { letterFavicon } from '../lib/favicon';
-import { formatUrlForDisplay, formatUrlPlain } from '../lib/url-display';
+import { formatUrlForDisplay } from '../lib/url-display';
 import { Dropdown } from './ui/Dropdown';
 import { Input } from './ui/Input';
 import { useT, useUiLocale } from '../i18n';
@@ -469,7 +469,7 @@ export function HistoryPage({ onOpen, onOpenNewTab }: Props) {
                     title={it.url}
                   >
                     <span className="history-title">{it.title || hostOf(it.url)}</span>
-                    <span className="history-url">{formatUrlPlain(it.url)}</span>
+                    <span className="history-url">{hostOf(it.url).replace(/^www\./i, '')}</span>
                   </button>
                   <div className="history-meta">
                     <span className="history-time">

@@ -1,8 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '../store';
-import { faviconImgFallback, letterFavicon } from '../lib/favicon';
 import { useT } from '../i18n';
+import { tileAccent } from '../lib/tileAccent';
 
 const MAX_DOCK = 12;
 const POP_W = 280;
@@ -10,23 +10,25 @@ const POP_H = 200;
 const POP_GAP = 8;
 
 function ShortcutIcon({ url, label }: { url: string; label: string }) {
-  const [src, setSrc] = useState(() => letterFavicon(url));
+  const [src, setSrc] = useState<string | null>(null);
+  const accent = tileAccent(label || url);
 
   useEffect(() => {
     let cancelled = false;
+    setSrc(null);
     void (async () => {
       const cached = await window.shell?.faviconCacheGet?.(url);
       if (cancelled) return;
-      if (cached) {
+      if (typeof cached === 'string' && cached.startsWith('data:')) {
         setSrc(cached);
         return;
       }
       try {
         const origin = new URL(url).origin;
         const put = await window.shell?.faviconCachePut?.(url, `${origin}/favicon.ico`);
-        if (!cancelled && put) setSrc(put);
+        if (!cancelled && typeof put === 'string' && put.startsWith('data:')) setSrc(put);
       } catch {
-        /* keep letter */
+        /* letter tile */
       }
     })();
     return () => {
@@ -34,7 +36,26 @@ function ShortcutIcon({ url, label }: { url: string; label: string }) {
     };
   }, [url]);
 
-  return <img src={src} alt="" title={label} onError={(e) => faviconImgFallback(e, url)} />;
+  if (src) {
+    return (
+      <img
+        className="home-dock-fav"
+        src={src}
+        alt=""
+        title={label}
+        onError={() => setSrc(null)}
+      />
+    );
+  }
+  return (
+    <span
+      className="home-dock-letter"
+      style={{ background: `linear-gradient(145deg, ${accent.bg}, color-mix(in srgb, ${accent.fg} 18%, ${accent.bg}))`, color: accent.fg }}
+      aria-hidden
+    >
+      {accent.letter}
+    </span>
+  );
 }
 
 function normalizeUrl(raw: string): string | null {

@@ -105,6 +105,22 @@ export function applyOneShotLocalFlags(
   } catch {
     /* */
   }
+  // iOS refresh: Paper + quieter home chrome (no greeting line).
+  try {
+    if (!storage.getItem('vio_ios_refresh_v1')) {
+      if (!out.theme || out.theme === 'midnight') {
+        out.theme = 'paper';
+        out.uiGlass = true;
+        out.uiMotion = true;
+        out.glassBlur = 24;
+        out.glassOpacity = 0.82;
+      }
+      out.homeShowGreeting = false;
+      storage.setItem('vio_ios_refresh_v1', '1');
+    }
+  } catch {
+    /* */
+  }
   return out;
 }
 

@@ -30,7 +30,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { letterFavicon } from '../lib/favicon';
-import { formatUrlPlain } from '../lib/url-display';
+import { formatUrlPlain, suggestDomainLabel } from '../lib/url-display';
 import { exportNetscapeBookmarksHtml, parseNetscapeBookmarksHtml } from '../lib/bookmarksHtml';
 import { countChromeImportPreview, parseChromeBookmarksJson } from '../lib/bookmarksChrome';
 import {
@@ -197,7 +197,7 @@ function SortableRow({
             <span className="bm-row-title">{bookmark.title}</span>
           </button>
           <span className="bm-row-url" title={bookmark.url}>
-            {formatUrlPlain(bookmark.url)}
+            {suggestDomainLabel(bookmark.url) || formatUrlPlain(bookmark.url)}
           </span>
           <span className="bm-row-folder">{folderName}</span>
         </>

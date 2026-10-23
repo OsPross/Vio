@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Shield, ShieldOff, Trash2, X } from 'lucide-react';
+import { ChevronDown, Shield, ShieldOff, Trash2 } from 'lucide-react';
 import { Switch } from './ui/Switch';
 import { useT } from '../i18n';
 import { isMotionOff, popupTransition } from '../lib/motionPresets';
@@ -13,7 +13,6 @@ type Props = {
   blockedToday: number;
   protectionOn: boolean;
   onToggleProtection: (on: boolean) => void;
-  onDisableOnThisPage: () => void;
   onForget: () => void;
 };
 
@@ -24,11 +23,11 @@ export function ShieldPanel({
   blockedToday,
   protectionOn,
   onToggleProtection,
-  onDisableOnThisPage,
   onForget,
 }: Props) {
   const t = useT();
   const [blocked, setBlocked] = useState<{ host: string; url: string }[]>([]);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const settings = useStore((s) => s.settings);
   const setSettingsTab = useStore((s) => s.setSettingsTab);
@@ -43,6 +42,7 @@ export function ShieldPanel({
 
   useEffect(() => {
     if (!open) return;
+    setDetailsOpen(false);
     void window.shell?.privacyBlocked?.('global').then((list) => {
       if (Array.isArray(list)) setBlocked(list.slice(0, 80));
     });
@@ -83,8 +83,8 @@ export function ShieldPanel({
       .sort((a, b) => b.count - a.count);
   }, [blocked]);
 
-  const visible = grouped.slice(0, 5);
-  const hasMore = grouped.length > 5;
+  const visible = grouped.slice(0, 8);
+  const hasMore = grouped.length > 8;
   const protectionLabel = host || t('chrome.protection');
 
   return (
@@ -101,7 +101,7 @@ export function ShieldPanel({
           transition={popMotion.transition}
           style={{ transformOrigin: 'top right' }}
         >
-          <header className="chrome-flyout-head">
+          <header className="chrome-flyout-head chrome-flyout-head-clean">
             <div className="chrome-flyout-head-label">
               {protectionOn ? (
                 <Shield size={14} strokeWidth={1.75} />
@@ -110,13 +110,19 @@ export function ShieldPanel({
               )}
               <strong title={protectionLabel}>{protectionLabel}</strong>
             </div>
-            <button type="button" className="icon-btn sm" onClick={onClose} title={t('common.close')}>
-              <X size={14} />
-            </button>
           </header>
 
           <div className="chrome-flyout-body">
-            <div className="shield-panel-stats">
+            <label className="shield-toggle">
+              <Switch
+                on={protectionOn}
+                onChange={onToggleProtection}
+                aria-label={t('chrome.shieldForPage')}
+              />
+              <span>{t('chrome.shieldForPage')}</span>
+            </label>
+
+            <div className="shield-panel-stats shield-panel-stats-quiet">
               <div>
                 <em>{t('chrome.shieldToday')}</em>
                 <strong>{blockedToday}</strong>
@@ -127,54 +133,49 @@ export function ShieldPanel({
               </div>
             </div>
 
-            <label className="shield-toggle">
-              <Switch
-                on={protectionOn}
-                onChange={onToggleProtection}
-                aria-label={t('chrome.shieldForPage')}
-              />
-              <span>{t('chrome.shieldForPage')}</span>
-            </label>
-            <p className="shield-hint">
-              {protectionOn ? t('chrome.shieldHintOn') : t('chrome.shieldHintOff')}
-            </p>
-
-            <div className="shield-actions">
-              {protectionOn && (
-                <button type="button" className="sbtn ghost" onClick={onDisableOnThisPage}>
-                  {t('chrome.shieldDisablePage')}
+            {(visible.length > 0 || hasMore) && (
+              <div className="shield-details">
+                <button
+                  type="button"
+                  className={`shield-details-toggle ${detailsOpen ? 'open' : ''}`}
+                  onClick={() => setDetailsOpen((v) => !v)}
+                  aria-expanded={detailsOpen}
+                >
+                  <span>{t('chrome.shieldDetails')}</span>
+                  <ChevronDown size={14} strokeWidth={1.75} />
                 </button>
-              )}
-              <button type="button" className="sbtn text" onClick={onForget}>
-                <Trash2 size={13} strokeWidth={1.75} /> {t('chrome.shieldForgetPage')}
-              </button>
-            </div>
-
-            {visible.length > 0 && (
-              <div className="shield-blocked">
-                <span className="shield-blocked-label">{t('chrome.shieldRecentlyBlocked')}</span>
-                <ul>
-                  {visible.map((b) => (
-                    <li key={b.host} title={b.host}>
-                      {b.count > 1 ? `${b.host} ×${b.count}` : b.host}
-                    </li>
-                  ))}
-                </ul>
-                {hasMore && (
-                  <button
-                    type="button"
-                    className="sbtn text"
-                    style={{ marginTop: 6 }}
-                    onClick={() => {
-                      onClose();
-                      setSettingsTab('adblock');
-                    }}
-                  >
-                    {t('chrome.shieldShowAll')}
-                  </button>
+                {detailsOpen && (
+                  <div className="shield-blocked">
+                    <ul>
+                      {visible.map((b) => (
+                        <li key={b.host} title={b.host}>
+                          {b.count > 1 ? `${b.host} ×${b.count}` : b.host}
+                        </li>
+                      ))}
+                    </ul>
+                    {hasMore && (
+                      <button
+                        type="button"
+                        className="sbtn text"
+                        style={{ marginTop: 6 }}
+                        onClick={() => {
+                          onClose();
+                          setSettingsTab('adblock');
+                        }}
+                      >
+                        {t('chrome.shieldShowAll')}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
+
+            <div className="shield-actions">
+              <button type="button" className="sbtn text" onClick={onForget}>
+                <Trash2 size={13} strokeWidth={1.75} /> {t('chrome.shieldClearSite')}
+              </button>
+            </div>
           </div>
         </motion.div>
       )}

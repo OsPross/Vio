@@ -44,8 +44,6 @@ function EngineIconSelect({
 }) {
   const t = useT();
   const settings = useStore((s) => s.settings);
-  const home = searchHome({ ...settings, searchEngine: value });
-  const ico = letterFavicon(home);
 
   const groups = useMemo((): SelectGroup[] => {
     const byId = new Map(SEARCH_ENGINES.map((e) => [e.id, e]));
@@ -82,7 +80,7 @@ function EngineIconSelect({
       aria-label={t('widgets.ui.engineAria', { name: engineLabel(value) })}
       reduced={reduced}
       menuMinWidth={220}
-      trigger={<img src={ico} alt="" width={16} height={16} />}
+      trigger={<Search size={16} strokeWidth={1.6} aria-hidden />}
     />
   );
 }
