@@ -1,0 +1,346 @@
+/**
+ * Visual refresh — iOS / macOS polish layer.
+ * Layout and structure stay untouched; only color, glass, shadow, and micro-interactions.
+ */
+
+:root {
+  --ease-ios: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.32);
+  --shadow-lift: 0 10px 32px rgba(0, 0, 0, 0.4);
+  --btn-sheen: rgba(255, 255, 255, 0.08);
+  --press-scale: 0.95;
+}
+
+/* —— Soft light (Paper) milk glass —— */
+[data-theme='paper'] {
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(15, 15, 25, 0.06);
+  --glass-blur: 24px;
+  --glass-alpha: 0.8;
+}
+
+[data-theme='paper'].glass-on .sidebar.glass,
+[data-theme='paper'].glass-on .bar.glass,
+[data-theme='paper'].glass-on .omnibox.glass,
+[data-theme='paper'].glass-on .settings-nav.glass,
+[data-theme='paper'].glass-on .home-glass .home-search-inner,
+[data-theme='paper'].glass-on .home-glass .home-suggest,
+[data-theme='paper'].glass-on .home-glass .home-panel,
+[data-theme='paper'] .bookmarks-bar-submenu,
+[data-theme='paper'] .bookmarks-bar-overflow-menu,
+[data-theme='paper'] .bookmarks-ctx,
+[data-theme='paper'] .bookmarks-bar-tip,
+[data-theme='paper'] .chrome-flyout,
+[data-theme='paper'] .omni-suggest,
+[data-theme='paper'] .cmdk-panel,
+[data-theme='paper'] .tab-ctx-menu,
+[data-theme='paper'] .bookmark-popover {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(15, 15, 25, 0.06);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Dark themes: same blur/saturate language, deeper glass */
+html:not([data-theme='paper']).glass-on .sidebar.glass,
+html:not([data-theme='paper']).glass-on .bar.glass,
+html:not([data-theme='paper']).glass-on .omnibox.glass {
+  backdrop-filter: blur(var(--glass-blur, 24px)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur, 24px)) saturate(160%);
+}
+
+/* —— Seamless chrome (no hard seams) —— */
+.tabs {
+  border-bottom: none !important;
+}
+.bar {
+  border-bottom: none !important;
+}
+.app.has-bookmarks-bar .bar {
+  border-bottom: none !important;
+}
+.bookmarks-bar-wrap {
+  border-top: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.sidebar,
+.side-rail,
+.sidebar-ctx-host {
+  border-right: none !important;
+  box-shadow: none;
+}
+[data-theme='paper'] .bookmarks-bar-wrap {
+  border-bottom-color: rgba(15, 15, 25, 0.06);
+}
+
+/* —— Shared interactive chrome —— */
+.icon-btn,
+.nav-btn,
+.tab-add,
+.side-rail-btn,
+.bookmarks-bar-item,
+.bookmarks-bar-grid,
+.bookmarks-bar-overflow-btn,
+.sbtn,
+.btn,
+.settings-nav-item,
+.ui-seg button,
+.hc-seg button,
+.home-fab,
+.home-dock-item,
+.home-bang,
+.home-app,
+.home-app-inline {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    transform 180ms var(--ease-ios),
+    opacity 180ms ease,
+    filter 180ms ease;
+}
+
+.motion-on .icon-btn:active:not(:disabled),
+.motion-on .nav-btn:active,
+.motion-on .tab-add:active,
+.motion-on .side-rail-btn:active,
+.motion-on .bookmarks-bar-item:active,
+.motion-on .bookmarks-bar-grid:active,
+.motion-on .bookmarks-bar-overflow-btn:active,
+.motion-on .sbtn:active:not(:disabled),
+.motion-on .btn:active:not(:disabled),
+.motion-on .settings-nav-item:active,
+.motion-on .ui-seg button:active,
+.motion-on .tab:active,
+.motion-on .home-fab:active,
+.motion-on .home-dock-item:active,
+.motion-on .home-bang:active,
+.motion-on .home-app:active,
+.motion-on .home-app-inline:active {
+  transform: scale(var(--press-scale));
+}
+
+/* Sheen on primary pills / active tab */
+.tab.active,
+.sbtn.primary,
+.ui-seg button.on,
+.settings-nav-item.active,
+.side-rail-btn.active {
+  box-shadow:
+    inset 0 1px 0 var(--btn-sheen),
+    var(--shadow-soft);
+}
+
+.tab.active {
+  background: color-mix(in srgb, var(--fg) 7%, var(--chrome));
+}
+
+[data-theme='paper'] .tab.active {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 2px 8px rgba(15, 15, 25, 0.06);
+}
+
+.tab:hover:not(.active) {
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+
+.tab .tab-x {
+  opacity: 0;
+  transition:
+    opacity 160ms ease,
+    background-color 160ms ease,
+    transform 160ms var(--ease-ios);
+}
+.tab:hover .tab-x,
+.tab.active .tab-x,
+.tab:focus-within .tab-x {
+  opacity: 1;
+}
+
+/* Omnibox focus glow (soft, not a hard ring) */
+.omnibox {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms var(--ease-ios);
+}
+.omnibox:hover {
+  background: color-mix(in srgb, var(--chrome-input) 88%, var(--fg) 4%);
+}
+.omnibox:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.home-search-inner {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms var(--ease-ios),
+    transform 180ms var(--ease-ios);
+}
+.home-search.is-focus .home-search-inner,
+.home-search-inner:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  box-shadow:
+    0 0 0 3.5px color-mix(in srgb, var(--accent) 20%, transparent),
+    var(--shadow-soft);
+}
+
+/* Home shortcuts / widgets lift */
+.motion-on .home-app:hover,
+.motion-on .home-app-inline:hover,
+.motion-on .home-bang:hover,
+.motion-on .home-dock-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+}
+.motion-on .hw-frame {
+  transition:
+    box-shadow 200ms var(--ease-ios),
+    transform 200ms var(--ease-ios),
+    background-color 200ms ease,
+    border-color 200ms ease;
+}
+.motion-on .hw-item:hover .hw-frame,
+.motion-on .hw-card:hover .hw-frame {
+  box-shadow: var(--shadow-lift);
+}
+
+[data-theme='paper'] .hw-style-glass .hw-frame,
+[data-theme='paper'] .hw-card.hw-style-glass .hw-frame {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--shadow-soft);
+  border-color: rgba(15, 15, 25, 0.06);
+}
+
+/* iOS-like switches */
+.ui-switch {
+  width: 42px;
+  height: 26px;
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+  transition:
+    background 220ms var(--ease-ios),
+    box-shadow 220ms ease;
+}
+.ui-switch::after {
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(15, 15, 25, 0.18);
+  transition: transform 220ms var(--ease-ios);
+}
+.ui-switch.on {
+  background: var(--accent);
+}
+.ui-switch.on::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+[data-theme='paper'] .ui-switch:not(.on) {
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+
+/* Settings / primary buttons */
+.sbtn,
+.settings-page .sbtn {
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 var(--btn-sheen);
+}
+.sbtn.primary,
+.settings-page .sbtn.primary {
+  box-shadow:
+    inset 0 1px 0 var(--btn-sheen),
+    0 2px 8px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.sbtn:hover:not(:disabled),
+.settings-page .sbtn:hover:not(:disabled) {
+  filter: brightness(1.03);
+}
+
+/* Popovers / menus — spring entrance helper class */
+.motion-on .bookmarks-bar-submenu,
+.motion-on .bookmarks-bar-overflow-menu,
+.motion-on .bookmarks-ctx,
+.motion-on .bookmark-popover,
+.motion-on .chrome-flyout,
+.motion-on .omni-suggest,
+.motion-on .cmdk-panel,
+.motion-on .tab-ctx-menu,
+.motion-on .hw-settings-pop {
+  animation: vio-pop-in 200ms var(--ease-ios) both;
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: var(--shadow-lift);
+}
+
+@keyframes vio-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.motion-on .about-view-fade,
+.motion-on .settings-section-fade {
+  animation: vio-view-in 200ms var(--ease-ios) both;
+}
+
+@keyframes vio-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[data-reduce-motion='on'] .motion-on .bookmarks-bar-submenu,
+[data-reduce-motion='on'] .motion-on .bookmarks-bar-overflow-menu,
+[data-reduce-motion='on'] .motion-on .bookmarks-ctx,
+[data-reduce-motion='on'] .motion-on .bookmark-popover,
+[data-reduce-motion='on'] .motion-on .chrome-flyout,
+[data-reduce-motion='on'] .motion-on .omni-suggest,
+[data-reduce-motion='on'] .motion-on .cmdk-panel,
+[data-reduce-motion='on'] .motion-on .tab-ctx-menu,
+[data-reduce-motion='on'] .motion-on .hw-settings-pop,
+[data-reduce-motion='on'] .motion-on .about-view-fade,
+[data-reduce-motion='on'] .motion-on .settings-section-fade,
+[data-reduce-motion='on'] .motion-on .icon-btn:active:not(:disabled),
+[data-reduce-motion='on'] .motion-on .tab:active,
+[data-reduce-motion='on'] .motion-on .home-app:hover,
+[data-reduce-motion='on'] .motion-on .home-dock-item:hover {
+  animation: none !important;
+  transform: none !important;
+}
+
+/* Side rail active pill */
+.side-rail-btn.active,
+.side-rail-btn.on {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--btn-sheen),
+    var(--shadow-soft);
+}
+[data-theme='paper'] .side-rail-btn.active,
+[data-theme='paper'] .side-rail-btn.on {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Soft bookmarks tip / overflow */
+.bookmarks-bar-tip {
+  box-shadow: var(--shadow-soft);
+}

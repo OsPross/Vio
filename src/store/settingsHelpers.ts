@@ -214,12 +214,12 @@ export function normalizeInput(raw: string, settings: Settings, bangs: Bang[] = 
 }
 
 export function applyThemeToDom(settings: Settings) {
-  const t = THEMES[settings.theme] ?? THEMES.midnight;
+  const t = THEMES[settings.theme] ?? THEMES.paper;
   const root = document.documentElement;
   const chrome = t.elev;
   const chromeInput =
     settings.theme === 'paper'
-      ? 'color-mix(in srgb, var(--bg) 72%, #000 7%)'
+      ? 'color-mix(in srgb, var(--bg) 88%, #000 5%)'
       : 'color-mix(in srgb, var(--bg) 78%, #000 22%)';
 
   const apply = () => {
@@ -228,12 +228,28 @@ export function applyThemeToDom(settings: Settings) {
     root.style.setProperty(
       '--bg-elev-2',
       settings.theme === 'paper'
-        ? 'color-mix(in srgb, var(--bg-elev) 86%, #000 14%)'
+        ? 'color-mix(in srgb, var(--bg-elev) 92%, #000 8%)'
         : 'color-mix(in srgb, var(--bg-elev) 82%, #fff 18%)',
     );
     root.style.setProperty('--bg-side', chrome);
     root.style.setProperty('--chrome', chrome);
     root.style.setProperty('--chrome-input', chromeInput);
+    root.style.setProperty(
+      '--shadow-soft',
+      settings.theme === 'paper'
+        ? '0 4px 16px rgba(15, 15, 25, 0.06)'
+        : '0 4px 18px rgba(0, 0, 0, 0.32)',
+    );
+    root.style.setProperty(
+      '--shadow-lift',
+      settings.theme === 'paper'
+        ? '0 8px 28px rgba(15, 15, 25, 0.08)'
+        : '0 10px 32px rgba(0, 0, 0, 0.4)',
+    );
+    root.style.setProperty(
+      '--btn-sheen',
+      settings.theme === 'paper' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.08)',
+    );
     root.style.setProperty('--fg', t.fg);
     root.style.setProperty('--fg-2', t.fg2);
     root.style.setProperty('--fg-3', t.fg3);

@@ -87,6 +87,24 @@ export function applyOneShotLocalFlags(
   } catch {
     /* */
   }
+  // One-shot: soft light (Paper) for installs still on the old midnight default.
+  // Do not override a theme the user already chose (ocean, violet, …).
+  try {
+    if (!storage.getItem('vio_light_start_v1')) {
+      if (!out.theme || out.theme === 'midnight') {
+        out.theme = 'paper';
+        out.uiGlass = true;
+        out.uiMotion = true;
+        if (typeof out.glassBlur !== 'number' || (out.glassBlur as number) < 20) out.glassBlur = 24;
+        if (typeof out.glassOpacity !== 'number' || (out.glassOpacity as number) < 0.65) {
+          out.glassOpacity = 0.8;
+        }
+      }
+      storage.setItem('vio_light_start_v1', '1');
+    }
+  } catch {
+    /* */
+  }
   return out;
 }
 
