@@ -1,0 +1,46 @@
+name: Release Linux
+
+# Dokłada AppImage / rpm / flatpak do istniejącego releasu w OsPross/vio-releases
+# (np. gdy Windows już wrzucił exe, a Linux się wyłożył / został pominięty).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag do zbudowania (np. v0.1.4)'
+        required: true
+        default: 'v0.1.4'
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Tag zgodny z package.json
+        shell: bash
+        run: test "${{ inputs.tag }}" = "v$(node -p "require('./package.json').version")"
+      - name: Narzędzia do flatpaka
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder rpm
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08 org.electronjs.Electron2.BaseApp//25.08
+      - run: npm ci
+      - run: npm run release:linux
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+      - name: Keep Linux packages as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vio-linux
+          path: |
+            release/*.AppImage
+            release/*.rpm
+            release/*.flatpak
+            release/*.yml
+          if-no-files-found: warn
+          retention-days: 14

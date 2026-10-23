@@ -35,7 +35,9 @@ jobs:
           retention-days: 14
 
   linux:
-    needs: windows # jeden release naraz — Windows tworzy, Linux dokłada assety
+    needs: windows # Windows zwykle tworzy release; Linux dokłada assety
+    # Nie pomijaj Linuxa, gdy Windows padł po wrzuceniu exe (race przy create release)
+    if: always() && needs.windows.result != 'cancelled'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
