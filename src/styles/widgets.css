@@ -958,10 +958,23 @@ html:not([data-theme='paper']) .hw-ios-edit-capsule {
 .hw-weather-setup-inner {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 10px;
   width: 100%;
+  text-align: left;
+}
+.hw-weather-setup-inner > .hw-weather-pin,
+.hw-weather-setup-inner > .hw-weather-setup-title,
+.hw-weather-setup-inner > .hw-muted {
+  align-self: center;
   text-align: center;
+}
+.hw-weather-setup-field {
+  width: 100%;
+  min-width: 0;
+}
+.hw-weather-setup-field .hw-city-label {
+  display: none;
 }
 .hw-weather-pin {
   color: var(--fg-3);
@@ -2434,13 +2447,28 @@ html[data-theme='paper'] .hw-notes-ctx {
   min-width: 0;
 }
 .hw-weather-city {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--fg);
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+}
+.hw-weather-city:disabled {
+  cursor: default;
+}
+.hw-weather-city:not(:disabled):hover {
+  color: var(--accent);
 }
 .hw-weather-refresh {
   flex: 0 0 auto;

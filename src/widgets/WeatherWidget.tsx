@@ -14,6 +14,7 @@ import { useStore, type HomeWidget } from '../store';
 import { useT, useUiLocale } from '../i18n';
 import { t as tCore } from '../i18n/core';
 import { WidgetEmpty } from './WidgetFrame';
+import { WeatherCityField } from './WeatherCityField';
 
 const WMO_KEYS: Record<number, string> = {
   0: 'widgets.ui.weather.clear',
@@ -91,6 +92,7 @@ export function WeatherWidget({
   const [data, setData] = useState<WeatherData | null>(preview ? WEATHER_DEMO : null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [editingCity, setEditingCity] = useState(false);
 
   const fetchWx = async (opts: { location: string; lat?: number; lon?: number }) => {
     if (preview) return;
@@ -134,13 +136,28 @@ export function WeatherWidget({
     return (
       <div className={`hw-weather hw-weather-setup hw-size-${size}`}>
         <div className="hw-weather-setup-inner">
-          <MapPin size={28} strokeWidth={1.5} className="hw-weather-pin" />
+          <MapPin size={22} strokeWidth={1.5} className="hw-weather-pin" />
           <p className="hw-weather-setup-title">{t('widgets.ui.weather.setCity')}</p>
-          <p className="hw-muted">
-            {preview
-              ? t('widgets.ui.weather.setCityHint')
-              : t('widgets.ui.weather.setCityHintLive')}
-          </p>
+          {!preview && onPatchSettings ? (
+            <div
+              className="hw-weather-setup-field"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <WeatherCityField
+                location=""
+                autoFocus
+                onChange={(next) => {
+                  onPatchSettings({
+                    location: next.location,
+                    lat: next.lat,
+                    lon: next.lon,
+                  });
+                }}
+              />
+            </div>
+          ) : (
+            <p className="hw-muted">{t('widgets.ui.weather.setCityHint')}</p>
+          )}
         </div>
       </div>
     );
@@ -179,20 +196,62 @@ export function WeatherWidget({
   const tmin = data?.daily?.temperature_2m_min?.[0];
   const deg = (v: number | undefined) => (v != null ? `${Math.round(v)}°` : '—');
 
+  if (editingCity && !preview && onPatchSettings) {
+    return (
+      <div className={`hw-weather hw-weather-setup hw-size-${size}`}>
+        <div
+          className="hw-weather-setup-inner"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <WeatherCityField
+            location={location}
+            autoFocus
+            onChange={(next) => {
+              onPatchSettings({
+                location: next.location,
+                lat: next.lat,
+                lon: next.lon,
+              });
+              setEditingCity(false);
+              if (!next.location.trim()) {
+                setData(null);
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="hw-btn"
+            onClick={() => setEditingCity(false)}
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`hw-weather hw-weather-ios hw-size-${size}`}>
       <div className="hw-weather-top">
-        <span className="hw-weather-city">{data?.place?.name || location}</span>
+        <button
+          type="button"
+          className="hw-weather-city"
+          title={t('widgets.ui.weather.changeCity')}
+          disabled={preview || !onPatchSettings}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => {
+            if (!preview && onPatchSettings) setEditingCity(true);
+          }}
+        >
+          {data?.place?.name || location}
+        </button>
         {!preview && (
           <button
             type="button"
             className="hw-weather-refresh"
             title={t('widgets.ui.weather.changeCity')}
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => {
-              onPatchSettings?.({ location: '', lat: undefined, lon: undefined });
-              setData(null);
-            }}
+            onClick={() => setEditingCity(true)}
           >
             <RefreshCw size={12} />
           </button>

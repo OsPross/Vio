@@ -338,7 +338,7 @@ export function Select({
               left: box.left,
               top: box.top,
               minWidth: box.minWidth,
-              zIndex: 90,
+              zIndex: 10060,
               transformOrigin: 'top center',
             }}
             onKeyDown={onMenuKeyDown}
