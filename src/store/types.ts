@@ -253,6 +253,8 @@ export type Settings = {
   homeShowClock: boolean;
   homeShowDate: boolean;
   homeShowApps: boolean;
+  /** Middle-column search bar on the home page */
+  homeShowSearch: boolean;
   homeShowRecent: boolean;
   homeShowBangs: boolean;
   homeShowBrand: boolean;

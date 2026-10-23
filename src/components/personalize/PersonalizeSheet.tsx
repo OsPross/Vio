@@ -10,8 +10,9 @@ import { LookTab } from './tabs/LookTab';
 import { LayoutTab } from './tabs/LayoutTab';
 import { WidgetsTab } from './tabs/WidgetsTab';
 import { ClockSearchTab } from './tabs/ClockSearchTab';
+import { SoundsTab } from './tabs/SoundsTab';
 
-type TabId = 'look' | 'layout' | 'widgets' | 'clock';
+type TabId = 'look' | 'layout' | 'widgets' | 'clock' | 'sounds';
 
 export function PersonalizeSheet({
   open,
@@ -36,6 +37,7 @@ export function PersonalizeSheet({
       { id: 'layout' as const, label: t('home.personalize.tabLayout') },
       { id: 'widgets' as const, label: t('home.personalize.tabWidgets') },
       { id: 'clock' as const, label: t('home.personalize.tabClock') },
+      { id: 'sounds' as const, label: t('home.personalize.tabSounds') },
     ],
     [t],
   );
@@ -104,6 +106,7 @@ export function PersonalizeSheet({
                         <WidgetsTab onEditOnPage={onEditOnPage} reduced={reduced} />
                       )}
                       {tab === 'clock' && <ClockSearchTab reduced={reduced} />}
+                      {tab === 'sounds' && <SoundsTab />}
                     </motion.div>
                   </AnimatePresence>
                 </div>

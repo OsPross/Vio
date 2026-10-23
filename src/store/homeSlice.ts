@@ -42,7 +42,7 @@ const SIZE_W_CELLS: Record<HomeWidgetSize, number> = { S: 28, M: 38, L: 58 }; //
 const SIZE_H_CELLS: Record<HomeWidgetSize, number> = { S: 18, M: 20, L: 22 };
 /** Spotify — szersza / niższa karta (landscape), bez pustego dołu. */
 const SPOTIFY_W_CELLS: Record<HomeWidgetSize, number> = { S: 34, M: 44, L: 58 }; // ~272/352/464
-const SPOTIFY_H_CELLS: Record<HomeWidgetSize, number> = { S: 17, M: 19, L: 23 }; // ~136/152/184
+const SPOTIFY_H_CELLS: Record<HomeWidgetSize, number> = { S: 22, M: 24, L: 28 }; // ~176/192/224 — Odśwież/Wyloguj fit
 
 export function widgetSizeCells(size: HomeWidgetSize, type?: HomeWidgetType) {
   if (type === 'spotify') return { w: SPOTIFY_W_CELLS[size], h: SPOTIFY_H_CELLS[size] };
@@ -159,15 +159,15 @@ export function normalizeHomeChrome(raw: unknown): HomeChromeItem[] {
 }
 
 export function chromeSizeToPx(id: HomeChromeId): { w: number; h: number } {
-  /* One axis width for clock / search / shortcuts (content column, not viewport). */
-  const w = 580;
+  /* Search / clock column — wider than the shortcuts icon row. */
+  const w = 540;
   switch (id) {
     case 'clock':
       return { w, h: 168 };
     case 'search':
       return { w, h: 72 };
     case 'shortcuts':
-      return { w, h: 104 };
+      return { w: 480, h: 104 };
     default:
       return { w: 400, h: 120 };
   }

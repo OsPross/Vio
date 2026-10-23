@@ -364,6 +364,7 @@ export function WidgetStrip({
         const key = `chrome:${c.id}`;
         if (key === excludeKey) continue;
         if (c.id === 'clock' && !settings.homeShowClock && !settings.homeShowDate) continue;
+        if (c.id === 'search' && settings.homeShowSearch === false) continue;
         if (c.id === 'shortcuts' && !settings.homeShowApps) continue;
         boxes.push(chromeToPx(c, m));
       }
@@ -373,7 +374,14 @@ export function WidgetStrip({
       }
       return boxes;
     },
-    [chrome, widgets, settings.homeShowClock, settings.homeShowDate, settings.homeShowApps],
+    [
+      chrome,
+      widgets,
+      settings.homeShowClock,
+      settings.homeShowDate,
+      settings.homeShowSearch,
+      settings.homeShowApps,
+    ],
   );
 
   const clearDragVisual = (key: string) => {
@@ -565,6 +573,7 @@ export function WidgetStrip({
   const visibleChrome = chrome.filter((c) => {
     if (c.id === 'clock')
       return settings.homeShowClock || settings.homeShowDate || settings.homeShowGreeting;
+    if (c.id === 'search') return settings.homeShowSearch !== false;
     if (c.id === 'shortcuts') return settings.homeShowApps;
     return true;
   });
@@ -645,12 +654,16 @@ export function WidgetStrip({
           const label = chromeLabel(c.id);
           const key = `chrome:${c.id}`;
           const dim = chromeSizeToPx(c.id);
-          let style: CSSProperties = { width: '100%', maxWidth: 'var(--home-chrome-w, 580px)' };
+          let style: CSSProperties = { width: '100%', maxWidth: 'var(--home-chrome-w, 540px)' };
           let box: PlaceBox = { left: 0, top: 0, width: dim.w, height: dim.h };
           if (!flexFallback) {
             box = restingBox(key, c, 'chrome');
+            const chromeW = c.id === 'search' ? Math.min(540, Math.round(typeof window !== 'undefined' ? window.innerWidth * 0.9 : 540)) : dim.w;
             style = {
-              ...placeCssVars(c.anchor, c.x, c.y, dim.w, dim.h),
+              ...placeCssVars(c.anchor, c.x, c.y, chromeW, dim.h),
+              width: chromeW,
+              maxWidth: '90vw',
+              minWidth: c.id === 'search' ? Math.min(540, chromeW) : undefined,
               zIndex: draggingKey === key ? 8 : selectedKey === key ? 4 : 2,
             } as CSSProperties;
           }
@@ -676,9 +689,8 @@ export function WidgetStrip({
                 title={label}
                 icon={Icon}
                 bare
-                editMode={editMode}
+                editMode={false}
                 locked={locked}
-                onOpenSettings={(el) => openSettings({ kind: 'chrome', id: c.id }, el)}
               >
                 {c.id === 'clock' && <ClockWidget reduced={reduced} />}
                 {c.id === 'search' && (

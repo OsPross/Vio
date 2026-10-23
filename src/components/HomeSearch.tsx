@@ -79,7 +79,7 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
         `home-align-${settings.homeAlign}`,
         `home-density-${settings.homeDensity}`,
         settings.uiGlass ? 'home-glass' : '',
-        customize || editMode ? 'is-customizing' : '',
+        customize ? 'is-customizing' : '',
         editMode ? 'is-editing-widgets' : '',
       ]
         .filter(Boolean)
@@ -113,21 +113,10 @@ export function HomeSearch({ onGo }: { onGo: (url: string, query?: string) => vo
         <button
           type="button"
           className={`home-fab ${customize ? 'on' : ''}`}
-          onClick={() => {
-            if (settings.homeLayoutLock) {
-              setCustomize(true);
-              return;
-            }
-            setEditMode(true);
-          }}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setCustomize(true);
-          }}
+          onClick={() => setCustomize(true)}
           title={t('home.customize')}
           aria-label={t('home.customize')}
-          aria-expanded={customize || editMode}
+          aria-expanded={customize}
         >
           <LayoutGrid size={15} strokeWidth={1.75} />
         </button>

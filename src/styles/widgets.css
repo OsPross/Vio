@@ -4,7 +4,7 @@
   --hw-radius: 14px;
   --hw-gap: 16px;
   /* Shared column for clock / search / shortcuts — center of .hw-canvas (content area), not the window */
-  --home-chrome-w: 580px;
+  --home-chrome-w: 540px;
 }
 
 .home-widgets-band {
@@ -61,7 +61,7 @@
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: var(--home-chrome-w, 580px);
+  max-width: var(--home-chrome-w, 540px);
   margin-inline: auto;
   gap: 14px;
   text-align: center;
@@ -72,7 +72,7 @@
   text-align: left;
   margin-inline: 0;
   margin-left: 12%;
-  max-width: var(--home-chrome-w, 580px);
+  max-width: var(--home-chrome-w, 540px);
 }
 
 .home-align-left .home-header-stack .hw-clock,
@@ -88,7 +88,7 @@
 .home-align-left .home-header-stack .home-search,
 .home-align-left .home-header-stack .home-dock {
   width: 100%;
-  max-width: var(--home-chrome-w, 580px);
+  max-width: var(--home-chrome-w, 540px);
   margin-left: 0;
   margin-right: 0;
   justify-content: flex-start;
@@ -128,7 +128,7 @@
 .home-header-stack .home-search,
 .home-header-stack .home-dock {
   width: 100%;
-  max-width: var(--home-chrome-w, 580px);
+  max-width: var(--home-chrome-w, 540px);
   margin-left: auto;
   margin-right: auto;
   justify-content: center;
@@ -221,15 +221,16 @@
 .home.is-editing-widgets .hw-canvas,
 .home.is-editing-widgets .hw-strip {
   min-height: 360px;
+  overflow: visible;
+}
+.home.is-editing-widgets .hw-card.editable {
+  overflow: visible;
 }
 
-.home.is-editing-widgets::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: color-mix(in srgb, #000 18%, transparent);
-  pointer-events: none;
-  z-index: 0;
+.home.is-editing-widgets::before,
+.home.is-customizing::before {
+  content: none !important;
+  display: none !important;
 }
 
 .hw-guide {
@@ -259,27 +260,21 @@
   box-sizing: border-box;
 }
 .hw-bare-edit {
-  outline: 1px dashed color-mix(in srgb, var(--accent) 40%, transparent);
-  outline-offset: 4px;
-  border-radius: var(--hw-radius, 14px);
-  padding: 28px 8px 8px;
+  /* No dashed frames / section labels on clock · search · shortcuts */
+  outline: none !important;
+  padding: 0;
   position: relative;
   box-sizing: border-box;
 }
-/* Section labels sit in reserved padding — never cover clock/search content */
-.hw-bare-edit > .hw-frame-head {
-  position: absolute;
-  top: 6px;
-  left: 8px;
-  right: 8px;
-  margin-bottom: 0;
-  z-index: 2;
-  pointer-events: auto;
+.hw-bare-edit-label,
+.hw-ios-gear,
+.hw-chrome .hw-ios-minus,
+.hw-chrome .hw-ios-size-pill {
+  display: none !important;
 }
-/* In edit mode, nudge chrome blocks down so labels clear siblings (e.g. greeting) */
 .home.is-editing-widgets .hw-canvas > .hw-chrome.hw-place {
-  top: calc(var(--hw-y) + 28px);
-  height: calc(var(--hw-h) + 20px);
+  top: var(--hw-y);
+  height: var(--hw-h);
 }
 .hw-bare-edit .hw-frame-edit-chrome {
   display: flex;
@@ -290,10 +285,25 @@
 .hw-chrome .hw-frame-head {
   margin-bottom: 6px;
 }
+.hw-canvas > .hw-chrome-search.hw-place,
+.hw-chrome-search {
+  width: min(540px, 90vw) !important;
+  max-width: min(540px, 90vw) !important;
+  min-width: min(540px, 90vw) !important;
+}
+.hw-chrome-search .hw-bare,
 .hw-chrome-search .home-search,
+.hw-chrome-search .home-search-inner {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0;
+  box-sizing: border-box;
+}
 .hw-chrome-shortcuts .home-dock {
   width: 100%;
   max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .hw-chrome-search,
 .hw-chrome-search .hw-bare,
@@ -317,7 +327,7 @@
   box-sizing: border-box;
 }
 .hw-canvas > .hw-chrome.hw-place {
-  width: min(var(--hw-w, var(--home-chrome-w, 580px)), calc(100% - 16px));
+  width: min(var(--hw-w, var(--home-chrome-w, 540px)), calc(100% - 16px));
 }
 .hw-canvas > .hw-card.hw-place-center {
   left: clamp(
@@ -483,7 +493,7 @@
   border-radius: 22px;
   box-sizing: border-box;
   padding: 16px 16px 14px;
-  overflow: hidden;
+  overflow: visible;
   border: 0;
   background: color-mix(in srgb, var(--bg-elev, #fff) 55%, transparent);
   backdrop-filter: blur(28px) saturate(180%);
@@ -542,9 +552,9 @@ html:not([data-theme='paper']) .hw-card.hw-style-solid .hw-frame {
 
 .hw-ios-minus {
   position: absolute;
-  top: -6px;
-  left: -6px;
-  z-index: 6;
+  top: 8px;
+  left: 8px;
+  z-index: 8;
   width: 24px;
   height: 24px;
   border: 0;
@@ -555,11 +565,13 @@ html:not([data-theme='paper']) .hw-card.hw-style-solid .hw-frame {
   font-weight: 500;
   line-height: 1;
   color: #3a3a3c;
-  background: color-mix(in srgb, #e8e8ed 88%, transparent);
+  background: color-mix(in srgb, #e8e8ed 92%, transparent);
   backdrop-filter: blur(12px);
   box-shadow: 0 2px 8px rgba(15, 15, 25, 0.16);
   cursor: pointer;
   padding: 0;
+  overflow: visible;
+  flex-shrink: 0;
 }
 .hw-ios-minus:hover {
   background: #ff3b30;
@@ -570,18 +582,27 @@ html:not([data-theme='paper']) .hw-ios-minus {
   color: #f2f2f7;
 }
 
+.hw-frame.is-edit {
+  padding-bottom: 42px;
+}
+.hw-frame.is-edit .hw-frame-body {
+  overflow: hidden;
+  border-radius: calc(var(--hw-radius, 22px) - 2px);
+  min-height: 0;
+}
 .hw-ios-size-pill {
   position: absolute;
-  right: 8px;
+  right: 10px;
   bottom: 8px;
-  z-index: 6;
+  z-index: 8;
   display: inline-flex;
   gap: 2px;
   padding: 2px;
   border-radius: 999px;
-  background: color-mix(in srgb, #fff 72%, transparent);
+  background: color-mix(in srgb, #fff 82%, transparent);
   backdrop-filter: blur(12px);
   box-shadow: 0 2px 10px rgba(15, 15, 25, 0.12);
+  pointer-events: auto;
 }
 html:not([data-theme='paper']) .hw-ios-size-pill {
   background: color-mix(in srgb, #2c2c2e 80%, transparent);
@@ -1645,10 +1666,28 @@ html[data-theme='paper'] .hw-notes-ctx {
 .hw-resources {
   display: flex;
   align-items: center;
-  justify-content: space-evenly;
-  gap: 8px;
+  justify-content: center;
+  width: 100%;
+  flex: 1 1 auto;
+  align-self: stretch;
   height: 100%;
   min-height: 0;
+  box-sizing: border-box;
+}
+.hw-resources-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  width: 100%;
+  margin: 0 auto;
+}
+.hw-card.hw-type-resources .hw-frame-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  flex: 1;
 }
 .hw-res-ring {
   position: relative;
@@ -1737,20 +1776,34 @@ html[data-theme='paper'] .hw-notes-ctx {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
+  height: 100%;
   text-align: center;
-  padding: 8px 4px 4px;
+  padding: 10px 8px 12px;
+  box-sizing: border-box;
+  overflow: visible;
+}
+.hw-spotify-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  width: 100%;
+  flex-shrink: 0;
+  padding-bottom: 2px;
 }
 .hw-spotify-badge {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   color: #1db954;
   background: color-mix(in srgb, #1db954 14%, var(--bg-elev, var(--elev)));
   border: 1px solid color-mix(in srgb, #1db954 28%, transparent);
+  flex-shrink: 0;
 }
 .hw-spotify-glyph {
   display: block;
@@ -1793,7 +1846,11 @@ html[data-theme='paper'] .hw-notes-ctx {
 .hw-spotify-err {
   margin: 0;
   font-size: 11px;
+  line-height: 1.3;
   color: #f87171;
+  max-width: 100%;
+  padding: 0 4px 6px;
+  word-break: break-word;
 }
 .hw-spotify-hint-msg {
   margin: 0;
@@ -1982,12 +2039,6 @@ html[data-theme='paper'] .hw-notes-ctx {
 .hw-spotify-login-btn:disabled {
   background: color-mix(in srgb, #1db954 45%, #1a1a1a) !important;
   color: color-mix(in srgb, #041 55%, transparent) !important;
-}
-.hw-spotify-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: center;
 }
 
 /* Clock centering —— */
@@ -2714,30 +2765,9 @@ html[data-theme='paper'] .hw-notes-ctx {
 }
 .hw-demo-badge { display: none !important; }
 
-.hw-bare-edit-label {
-  position: absolute;
-  top: -18px;
-  left: 0;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--fg-3);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
+.hw-bare-edit-label,
 .hw-ios-gear {
-  position: absolute;
-  top: -8px;
-  right: -4px;
-  z-index: 5;
-  border: 0;
-  background: color-mix(in srgb, #fff 80%, transparent);
-  border-radius: 999px;
-  width: 28px;
-  height: 22px;
-  font-size: 14px;
-  letter-spacing: 1px;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(15,15,25,0.12);
+  display: none !important;
 }
 
 .home.is-editing-widgets .hw-edit-bar { display: none !important; }

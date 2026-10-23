@@ -281,7 +281,7 @@
   justify-content: center;
   align-items: center;
   /* Size against the content column (.main / .stage), not viewport vw */
-  width: min(var(--home-chrome-w, 580px), 100%);
+  width: min(var(--home-chrome-w, 540px), 90vw);
   max-width: calc(100% - 48px);
   min-height: 0;
   padding: 0;
@@ -319,8 +319,8 @@
   z-index: 2;
   margin-top: 120px;
   margin-bottom: 16px;
-  width: var(--home-chrome-w, 580px);
-  max-width: var(--home-chrome-w, 580px);
+  width: var(--home-chrome-w, 540px);
+  max-width: var(--home-chrome-w, 540px);
   transform: none;
   pointer-events: none;
 }
@@ -745,6 +745,6 @@
 @media (min-width: 2400px) {
   .home-shell-ios,
   .home-shell {
-    width: min(var(--home-chrome-w, 580px), 100%);
+    width: min(var(--home-chrome-w, 540px), 90vw);
   }
 }

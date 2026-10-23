@@ -7,9 +7,10 @@
   border: 0;
   padding: 0;
   cursor: default;
-  background: color-mix(in srgb, #000 52%, transparent);
-  backdrop-filter: blur(10px) saturate(1.05);
-  -webkit-backdrop-filter: blur(10px) saturate(1.05);
+  /* Soft veil — no heavy grey wash over the home page */
+  background: color-mix(in srgb, #000 22%, transparent);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .pz-sheet {
@@ -1217,42 +1218,66 @@
   color: var(--fg);
 }
 
-.pz-rec-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-.pz-rec-card {
+.pz-widget-catalog {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  gap: 10px;
 }
-.pz-rec-preview {
-  height: 88px;
-  overflow: hidden;
-  border-radius: 8px;
-  pointer-events: none;
+.pz-widget-cat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  background: color-mix(in srgb, var(--bg-elev, var(--elev)) 55%, transparent);
 }
-.pz-rec-card strong {
-  font-size: 12px;
+.pz-widget-cat-card.on {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.pz-widget-cat-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pz-widget-cat-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.pz-widget-cat-copy strong {
+  font-size: 13.5px;
   font-weight: 600;
-  text-align: center;
-}
-.pz-rec-add {
-  height: 28px;
-  border-radius: 7px;
-  border: 0;
-  background: color-mix(in srgb, var(--fg) 8%, transparent);
   color: var(--fg);
-  font: inherit;
+}
+.pz-widget-cat-copy span {
   font-size: 12px;
-  font-weight: 550;
-  cursor: pointer;
+  color: var(--fg-3);
+  line-height: 1.35;
+}
+.pz-widget-cat-size {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.pz-widget-cat-size > span {
+  font-size: 12px;
+  color: var(--fg-3);
+  flex-shrink: 0;
+}
+.pz-primary-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.pz-slider-val {
+  font-size: 12px;
+  color: var(--fg-3);
+  min-width: 36px;
+  text-align: right;
 }
 
 .home-layout-minimal .home-shell-ios,

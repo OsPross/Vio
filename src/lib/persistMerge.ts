@@ -150,6 +150,7 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
     s.homeClockStyle = 'thin';
   }
   if (typeof s.homeShowSeconds !== 'boolean') s.homeShowSeconds = false;
+  if (typeof s.homeShowSearch !== 'boolean') s.homeShowSearch = true;
   if (
     s.homeDensity !== 'compact' &&
     s.homeDensity !== 'comfortable' &&

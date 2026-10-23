@@ -112,6 +112,11 @@ export function ClockSearchTab({ reduced }: { reduced: boolean }) {
         />
         <div className="ui-settings-group" style={{ marginTop: 12 }}>
           <SettingsRow
+            label={t('home.personalize.searchBar')}
+            on={settings.homeShowSearch !== false}
+            onChange={(homeShowSearch) => patchSettings({ homeShowSearch })}
+          />
+          <SettingsRow
             label={t('home.personalize.engineIcon')}
             on={settings.homeShowEngine}
             onChange={(homeShowEngine) => patchSettings({ homeShowEngine })}

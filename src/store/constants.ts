@@ -267,6 +267,7 @@ export const DEFAULT_SETTINGS: Settings = {
   homeShowClock: true,
   homeShowDate: true,
   homeShowApps: true,
+  homeShowSearch: true,
   homeShowRecent: false,
   homeShowBangs: false,
   homeShowBrand: false,

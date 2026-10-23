@@ -35,8 +35,10 @@ export function ResourcesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; prev
   if (preview) {
     return (
       <div className={`hw-resources hw-size-${size}`}>
-        <Ring value={34} label="CPU" />
-        <Ring value={58} label="RAM" />
+        <div className="hw-resources-inner">
+          <Ring value={34} label="CPU" />
+          <Ring value={58} label="RAM" />
+        </div>
       </div>
     );
   }
@@ -44,8 +46,10 @@ export function ResourcesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; prev
   if (!data) {
     return (
       <div className={`hw-resources hw-resources-skel hw-size-${size}`}>
-        <div className="hw-skeleton hw-skel-ring" />
-        <div className="hw-skeleton hw-skel-ring" />
+        <div className="hw-resources-inner">
+          <div className="hw-skeleton hw-skel-ring" />
+          <div className="hw-skeleton hw-skel-ring" />
+        </div>
       </div>
     );
   }
@@ -55,8 +59,10 @@ export function ResourcesWidget({ size, preview }: { size: 'S' | 'M' | 'L'; prev
 
   return (
     <div className={`hw-resources hw-size-${size}`}>
-      <Ring value={cpu} label="CPU" />
-      <Ring value={ram} label="RAM" />
+      <div className="hw-resources-inner">
+        <Ring value={cpu} label="CPU" />
+        <Ring value={ram} label="RAM" />
+      </div>
     </div>
   );
 }
