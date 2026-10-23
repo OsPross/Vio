@@ -303,7 +303,11 @@ export function applyThemeToDom(settings: Settings) {
     });
     // nativeTheme = prefers-color-scheme w webview; `system` → motyw Vio (Paper=light)
     void window.shell?.setNativeTheme?.(
-      nativeThemeSource(settings.pageColorScheme || 'system', settings.theme),
+      nativeThemeSource(
+        settings.pageColorScheme || 'system',
+        settings.theme,
+        settings.themeFollowSystem,
+      ),
     );
   };
 

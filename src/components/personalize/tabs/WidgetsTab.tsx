@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Pencil } from 'lucide-react';
 import {
-  layoutWidgetsInCenteredRow,
+  CalendarDays,
+  CloudSun,
+  Cpu,
+  ListChecks,
+  Move,
+  StickyNote,
+  type LucideIcon,
+} from 'lucide-react';
+import {
   normalizeHomeChrome,
   normalizeHomeWidgets,
   placeNewHomeWidget,
@@ -11,25 +18,21 @@ import {
   type HomeWidgetType,
 } from '../../../store';
 import { WIDGET_REGISTRY } from '../../../widgets/registry';
+import { SpotifyGlyph } from '../../../widgets/SpotifyGlyph';
 import { Segmented, Switch } from '../../ui';
 import { useT } from '../../../i18n';
 
-const CATALOG: HomeWidgetType[] = [
-  'weather',
-  'spotify',
-  'resources',
-  'notes',
-  'todo',
-  'calendar',
+const CATALOG: { type: HomeWidgetType; icon: LucideIcon | null; tint: string }[] = [
+  { type: 'weather', icon: CloudSun, tint: '#4da3ff' },
+  { type: 'spotify', icon: null, tint: '#1db954' },
+  { type: 'resources', icon: Cpu, tint: '#8e7cf0' },
+  { type: 'notes', icon: StickyNote, tint: '#f2b630' },
+  { type: 'todo', icon: ListChecks, tint: '#ff7a59' },
+  { type: 'calendar', icon: CalendarDays, tint: '#ff5a6e' },
 ];
 const SIZES: HomeWidgetSize[] = ['S', 'M', 'L'];
 
-export function WidgetsTab({
-  onEditOnPage,
-}: {
-  onEditOnPage: () => void;
-  reduced: boolean;
-}) {
+export function WidgetsTab({ onEditOnPage }: { onEditOnPage: () => void }) {
   const t = useT();
   const settings = useStore((s) => s.settings);
   const patchSettings = useStore((s) => s.patchSettings);
@@ -39,97 +42,85 @@ export function WidgetsTab({
     for (const w of widgets) m.set(w.type, w);
     return m;
   }, [widgets]);
-
   const [draftSize, setDraftSize] = useState<Partial<Record<HomeWidgetType, HomeWidgetSize>>>({});
 
-  const setWidgets = (next: HomeWidget[]) => {
-    patchSettings({ homeWidgets: normalizeHomeWidgets(next) });
-  };
+  const setWidgets = (next: HomeWidget[]) => patchSettings({ homeWidgets: normalizeHomeWidgets(next) });
 
   const sizeFor = (type: HomeWidgetType) =>
     draftSize[type] || byType.get(type)?.size || WIDGET_REGISTRY[type].defaultSize;
 
   const toggleType = (type: HomeWidgetType, on: boolean) => {
-    if (on) {
-      if (byType.has(type)) return;
-      const chrome = normalizeHomeChrome(settings.homeChrome);
-      setWidgets([
-        ...widgets,
-        placeNewHomeWidget(widgets, chrome, {
-          id: `w-${Math.random().toString(36).slice(2, 10)}`,
-          type,
-          size: sizeFor(type),
-          settings: {},
-        }),
-      ]);
+    if (!on) {
+      setWidgets(widgets.filter((w) => w.type !== type));
       return;
     }
-    setWidgets(widgets.filter((w) => w.type !== type));
+    if (byType.has(type)) return;
+    const chrome = normalizeHomeChrome(settings.homeChrome);
+    setWidgets([
+      ...widgets,
+      placeNewHomeWidget(widgets, chrome, {
+        id: `w-${Math.random().toString(36).slice(2, 10)}`,
+        type,
+        size: sizeFor(type),
+        settings: {},
+      }),
+    ]);
   };
 
   const setSize = (type: HomeWidgetType, size: HomeWidgetSize) => {
     setDraftSize((d) => ({ ...d, [type]: size }));
-    if (!byType.has(type)) return;
-    setWidgets(widgets.map((w) => (w.type === type ? { ...w, size } : w)));
-  };
-
-  const arrangeOnScreen = () => {
-    if (!widgets.length) return;
-    setWidgets(layoutWidgetsInCenteredRow(widgets));
-    onEditOnPage();
+    if (byType.has(type)) setWidgets(widgets.map((w) => (w.type === type ? { ...w, size } : w)));
   };
 
   return (
-    <div className="pz-tab-pane">
-      <section className="pz-section">
-        <div className="pz-section-head">
-          <h3>{t('home.personalize.widgets')}</h3>
-        </div>
-        <div className="pz-widget-catalog">
-          {CATALOG.map((type) => {
-            const meta = WIDGET_REGISTRY[type];
-            const on = byType.has(type);
-            const size = sizeFor(type);
-            return (
-              <div key={type} className={`pz-widget-cat-card${on ? ' on' : ''}`}>
-                <div className="pz-widget-cat-top">
-                  <div className="pz-widget-cat-copy">
-                    <strong>{meta.label}</strong>
-                    <span>{meta.description}</span>
-                  </div>
-                  <Switch
-                    on={on}
-                    onChange={(v) => toggleType(type, v)}
-                    aria-label={t('home.personalize.toggleWidget', { name: meta.label })}
-                  />
-                </div>
-                <div className="pz-widget-cat-size">
-                  <span>{t('widgets.ui.size')}</span>
-                  <Segmented
-                    value={size}
-                    options={SIZES.map((s) => ({ id: s, label: s }))}
-                    onChange={(v) => setSize(type, v as HomeWidgetSize)}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
+    <>
       <button
         type="button"
-        className="pz-primary-btn"
+        className="pz-arrange"
         disabled={widgets.length === 0}
-        onClick={arrangeOnScreen}
+        onClick={onEditOnPage}
       >
-        {t('home.personalize.arrangeOnScreen')}
+        <Move size={15} strokeWidth={1.75} />
+        <span>
+          <strong>{t('home.personalize.arrangeOnScreen')}</strong>
+          <em>{t('home.personalize.arrangeHint')}</em>
+        </span>
       </button>
 
-      <button type="button" className="pz-secondary-btn" onClick={onEditOnPage}>
-        <Pencil size={14} strokeWidth={1.75} />
-        {t('home.personalize.editOnPage')}
-      </button>
-    </div>
+      <div className="pz-widgets">
+        {CATALOG.map(({ type, icon: Icon, tint }) => {
+          const meta = WIDGET_REGISTRY[type];
+          const on = byType.has(type);
+          return (
+            <div key={type} className={`pz-widget${on ? ' on' : ''}`}>
+              <div className="pz-widget-top">
+                <span className="pz-widget-ico" style={{ color: tint, background: `${tint}1f` }}>
+                  {Icon ? <Icon size={17} strokeWidth={1.75} /> : <SpotifyGlyph size={17} />}
+                </span>
+                <span className="pz-widget-copy">
+                  <strong>{meta.label}</strong>
+                  <em>{meta.description}</em>
+                </span>
+                <Switch
+                  on={on}
+                  onChange={(v) => toggleType(type, v)}
+                  aria-label={t('home.personalize.toggleWidget', { name: meta.label })}
+                />
+              </div>
+              <div className="pz-widget-size">
+                <span>{t('widgets.ui.size')}</span>
+                <Segmented
+                  size="sm"
+                  value={sizeFor(type)}
+                  options={SIZES.map((s) => ({ id: s, label: s }))}
+                  onChange={(v) => setSize(type, v as HomeWidgetSize)}
+                  aria-label={t('home.personalize.sizeAria', { name: meta.label })}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

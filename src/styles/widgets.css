@@ -896,29 +896,6 @@ html:not([data-theme='paper']) .hw-ios-edit-capsule {
   min-height: 0;
   padding: 2px 0 0;
 }
-.pz-widget-row-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
-}
-.pz-widget-row-wrap:last-child {
-  border-bottom: 0;
-}
-.pz-widget-city {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 8px 6px 36px;
-  font-size: 12px;
-  color: var(--fg-3);
-}
-.pz-widget-city .ui-input {
-  flex: 1;
-  height: 30px;
-  font-size: 12.5px;
-}
 .hw-weather-setup {
   justify-content: center;
 }

@@ -336,6 +336,10 @@ export type Settings = {
   soundTabs: boolean;
   soundUi: boolean;
   soundDownloads: boolean;
+  /** Theme follows the OS light/dark mode (Paper ↔ themeDarkPick) */
+  themeFollowSystem: boolean;
+  /** Dark theme used by the Dark / System quick switch */
+  themeDarkPick: ThemeId;
   /** Enter PiP when switching away from a tab with playing video */
   autoPipOnTabSwitch: boolean;
   /** Shift+hover link preview popover (disabled in Tor/private). */

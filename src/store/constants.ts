@@ -326,6 +326,8 @@ export const DEFAULT_SETTINGS: Settings = {
   soundTabs: true,
   soundUi: true,
   soundDownloads: true,
+  themeFollowSystem: false,
+  themeDarkPick: 'midnight',
   autoPipOnTabSwitch: false,
   linkPreviewEnabled: true,
 };

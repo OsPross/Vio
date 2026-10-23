@@ -1289,7 +1289,22 @@
       "search": "Search",
       "searchEngineAria": "Search engine",
       "engineIcon": "Engine icon in the field",
-      "shortcuts": "Shortcuts"
+      "shortcuts": "Shortcuts",
+      "mode": "Mode",
+      "modeLight": "Light",
+      "modeDark": "Dark",
+      "modeSystem": "System",
+      "removeImage": "Remove image",
+      "addImage": "Custom image",
+      "visibility": "Visibility",
+      "showClock": "Show clock",
+      "showSearch": "Show search bar",
+      "showShortcuts": "Show shortcuts",
+      "clockFormat": "Clock format",
+      "centerAll": "Center all elements",
+      "arrangeHint": "Move widgets directly on the page",
+      "soundsMaster": "Sounds on",
+      "previewSound": "Preview"
     }
   },
   "errors": {

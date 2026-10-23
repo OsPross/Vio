@@ -52,12 +52,15 @@ export function isLightChromeTheme(theme: ThemeId): boolean {
 /**
  * Mapuje ustawienie stron → Electron nativeTheme (prefers-color-scheme w webview).
  * `system` = dopasuj do motywu Vio (nie do OS) — Paper → light, reszta → dark.
+ * `followOs` (motyw Vio „Systemowy”) → `system`, żeby prefers-color-scheme czytało prawdziwy OS.
  */
 export function nativeThemeSource(
   scheme: PageColorScheme,
   chromeTheme?: ThemeId,
+  followOs = false,
 ): 'dark' | 'light' | 'system' {
   if (scheme === 'light' || scheme === 'dark') return scheme;
+  if (followOs) return 'system';
   if (chromeTheme) return isLightChromeTheme(chromeTheme) ? 'light' : 'dark';
   return 'system';
 }

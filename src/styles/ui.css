@@ -68,15 +68,7 @@
 }
 
 /* Chrome UI � no accidental text selection; inputs/notes keep selection */
-.pz-sheet,
-.pz-sheet-tabs,
-.pz-layout-card,
-.pz-theme-card,
-.pz-bg-card,
-.pz-wstyle-card,
-.pz-cstyle-card,
-.pz-radius-tile,
-.pz-widget-row,
+.pz-studio,
 .hw-edit-bar,
 .hw-frame-head,
 .hw-settings-pop,
@@ -88,8 +80,8 @@
   user-select: none;
   -webkit-user-select: none;
 }
-.pz-sheet input,
-.pz-sheet textarea,
+.pz-studio input,
+.pz-studio textarea,
 .hw-input,
 .home-search input,
 [contenteditable='true'],

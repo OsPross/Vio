@@ -1289,7 +1289,22 @@
       "search": "Wyszukiwarka",
       "searchEngineAria": "Silnik wyszukiwania",
       "engineIcon": "Ikona silnika w polu",
-      "shortcuts": "Skróty"
+      "shortcuts": "Skróty",
+      "mode": "Tryb",
+      "modeLight": "Jasny",
+      "modeDark": "Ciemny",
+      "modeSystem": "Systemowy",
+      "removeImage": "Usuń obraz",
+      "addImage": "Własny obraz",
+      "visibility": "Widoczność",
+      "showClock": "Pokaż zegar",
+      "showSearch": "Pokaż pasek wyszukiwania",
+      "showShortcuts": "Pokaż skróty",
+      "clockFormat": "Format zegara",
+      "centerAll": "Wyśrodkuj wszystkie elementy",
+      "arrangeHint": "Przesuwaj widżety bezpośrednio na stronie",
+      "soundsMaster": "Dźwięki włączone",
+      "previewSound": "Odsłuchaj"
     }
   },
   "errors": {

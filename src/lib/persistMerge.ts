@@ -8,6 +8,9 @@ export type PersistStorageLike = {
   setItem(key: string, value: string): void;
 };
 
+/** Dark entries of store THEMES (everything except Paper). */
+const DARK_THEME_IDS = ['midnight', 'graphite', 'ocean', 'forest', 'ember', 'violet', 'slate'];
+
 /** Matches store.HomeLayoutPreset (+ legacy 'search' input mapped to 'top'). */
 export type HomeLayoutPreset = 'centered' | 'top' | 'left' | 'custom';
 
@@ -219,6 +222,10 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
   }
   if (typeof s.soundVolume !== 'number' || Number.isNaN(s.soundVolume)) s.soundVolume = 55;
   else s.soundVolume = Math.max(0, Math.min(100, Math.round(s.soundVolume as number)));
+  if (typeof s.themeFollowSystem !== 'boolean') s.themeFollowSystem = false;
+  if (!DARK_THEME_IDS.includes(s.themeDarkPick as string)) {
+    s.themeDarkPick = DARK_THEME_IDS.includes(s.theme as string) ? s.theme : 'midnight';
+  }
   if (typeof s.soundTyping !== 'boolean') s.soundTyping = true;
   if (typeof s.soundTabs !== 'boolean') s.soundTabs = true;
   if (typeof s.soundUi !== 'boolean') s.soundUi = true;

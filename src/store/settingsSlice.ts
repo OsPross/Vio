@@ -107,6 +107,11 @@ export const createSettingsSlice: StateCreator<StoreState, [], [], SettingsSlice
       if ('theme' in p && p.theme && isLightChromeTheme(p.theme) && next.pageColorScheme === 'dark') {
         next.pageColorScheme = 'light';
       }
+      // Ręczny wybór motywu wyłącza „Systemowy”; ciemny wybór zapamiętujemy dla Ciemny/Systemowy
+      if ('theme' in p && p.theme) {
+        if (!('themeFollowSystem' in p)) next.themeFollowSystem = false;
+        if (!isLightChromeTheme(p.theme)) next.themeDarkPick = p.theme;
+      }
       return { settings: next };
     }),
   pushHistory: (q) => {
