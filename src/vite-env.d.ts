@@ -452,6 +452,7 @@ declare global {
           meta?: boolean;
         }) => void,
       ) => () => void;
+      onGuestKey: (cb: (payload: { key?: string; code?: string }) => void) => () => void;
       onBrowserNav: (cb: (payload: { dir?: string; source?: string; handled?: boolean }) => void) => () => void;
       onPasswordsLocked: (cb: () => void) => () => void;
       onMetrics: (cb: (payload: Record<string, unknown>) => void) => () => void;

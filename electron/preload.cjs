@@ -269,6 +269,11 @@ contextBridge.exposeInMainWorld('shell', {
     ipcRenderer.on('shell:shortcut', handler);
     return () => ipcRenderer.removeListener('shell:shortcut', handler);
   },
+  onGuestKey: (cb) => {
+    const handler = (_e, payload) => cb(payload || {});
+    ipcRenderer.on('shell:guest-key', handler);
+    return () => ipcRenderer.removeListener('shell:guest-key', handler);
+  },
   onBrowserNav: (cb) => {
     const handler = (_e, payload) => cb(payload || {});
     ipcRenderer.on('shell:browser-nav', handler);

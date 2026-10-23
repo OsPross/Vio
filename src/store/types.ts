@@ -114,6 +114,7 @@ export type ThemeId =
 export type UiDensity = 'comfortable' | 'compact';
 /** Wygląd stron WWW (prefers-color-scheme) — osobno od motywu chrome UI */
 export type PageColorScheme = 'system' | 'light' | 'dark';
+export type SoundProfile = 'ios' | 'tactile' | 'minimal';
 export type HomeAppsStyle = 'icons' | 'list';
 export type PerfMode = 'balanced' | 'performance' | 'saver';
 
@@ -320,10 +321,19 @@ export type Settings = {
   /** Ciemne paski przewijania w treści stron (webview) */
   darkPageScrollbars: boolean;
   /**
-   * Kolorystyka stron (nie chrome).
-   * `system` = jak OS; nie wiązać z motywem UI — inaczej ciemny chrome psuje jasne strony.
+   * Kolorystyka stron (prefers-color-scheme w webview).
+   * `system` = jak motyw Vio (Paper → light); `light`/`dark` = wymuszenie.
    */
   pageColorScheme: PageColorScheme;
+  /** Dźwięki interfejsu (Web Audio) */
+  uiSoundsEnabled: boolean;
+  soundProfile: SoundProfile;
+  /** 0–100 */
+  soundVolume: number;
+  soundTyping: boolean;
+  soundTabs: boolean;
+  soundUi: boolean;
+  soundDownloads: boolean;
   /** Enter PiP when switching away from a tab with playing video */
   autoPipOnTabSwitch: boolean;
   /** Shift+hover link preview popover (disabled in Tor/private). */

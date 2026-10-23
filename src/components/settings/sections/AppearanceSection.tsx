@@ -1,15 +1,30 @@
 import { Check } from 'lucide-react';
 import { useT } from '../../../i18n';
+import { playSample } from '../../../hooks/useUiSounds';
+import { configureSounds } from '../../../utils/soundEffects';
 import { ColorPicker, Segmented } from '../../ui';
 import {
   THEMES,
   useStore,
   type BookmarksBarMode,
   type PageColorScheme,
+  type Settings,
+  type SoundProfile,
   type ThemeId,
   type UiDensity,
 } from '../../../store';
 import { Row, SettingsGroup, SliderRow, Toggle } from '../SettingsControls';
+
+function configureSoundsForPreview(settings: Settings) {
+  configureSounds({
+    profile: (settings.soundProfile || 'ios') as SoundProfile,
+    volume: typeof settings.soundVolume === 'number' ? settings.soundVolume : 55,
+    typing: true,
+    tabs: true,
+    ui: true,
+    downloads: true,
+  });
+}
 
 export function AppearanceSection() {
   const t = useT();
@@ -124,7 +139,7 @@ export function AppearanceSection() {
       </SettingsGroup>
 
       <SettingsGroup title={t('settings.look.pages')}>
-        <Row label={t('settings.look.pageAppearance')}>
+        <Row label={t('settings.look.pageAppearance')} desc={t('settings.look.pageAppearanceDesc')}>
           <Segmented
             value={settings.pageColorScheme || 'system'}
             options={[
@@ -139,6 +154,67 @@ export function AppearanceSection() {
           label={t('settings.look.darkScrollbars')}
           on={settings.darkPageScrollbars}
           onChange={(v) => patchSettings({ darkPageScrollbars: v })}
+        />
+      </SettingsGroup>
+
+      <SettingsGroup title={t('settings.look.sounds')}>
+        <Toggle
+          label={t('settings.look.soundsEnable')}
+          hint={t('settings.look.soundsEnableHint')}
+          on={!!settings.uiSoundsEnabled}
+          onChange={(v) => patchSettings({ uiSoundsEnabled: v })}
+        />
+        <Row label={t('settings.look.soundProfile')}>
+          <Segmented
+            value={settings.soundProfile || 'ios'}
+            options={[
+              { id: 'ios', label: t('settings.look.soundIos') },
+              { id: 'tactile', label: t('settings.look.soundTactile') },
+              { id: 'minimal', label: t('settings.look.soundMinimal') },
+            ]}
+            onChange={(v) => patchSettings({ soundProfile: v as SoundProfile })}
+          />
+        </Row>
+        <Row label={t('settings.look.soundPreview')}>
+          <button
+            type="button"
+            className="sbtn"
+            onClick={() => {
+              configureSoundsForPreview(settings);
+              playSample();
+            }}
+          >
+            {t('settings.look.soundPreviewBtn')}
+          </button>
+        </Row>
+        <SliderRow
+          label={t('settings.look.soundVolume')}
+          value={`${Math.round(settings.soundVolume ?? 55)}%`}
+          min={0}
+          max={100}
+          valueNum={Math.round(settings.soundVolume ?? 55)}
+          disabled={!settings.uiSoundsEnabled}
+          onChange={(n) => patchSettings({ soundVolume: n })}
+        />
+        <Toggle
+          label={t('settings.look.soundTyping')}
+          on={settings.soundTyping !== false}
+          onChange={(v) => patchSettings({ soundTyping: v })}
+        />
+        <Toggle
+          label={t('settings.look.soundTabs')}
+          on={settings.soundTabs !== false}
+          onChange={(v) => patchSettings({ soundTabs: v })}
+        />
+        <Toggle
+          label={t('settings.look.soundUi')}
+          on={settings.soundUi !== false}
+          onChange={(v) => patchSettings({ soundUi: v })}
+        />
+        <Toggle
+          label={t('settings.look.soundDownloads')}
+          on={settings.soundDownloads !== false}
+          onChange={(v) => patchSettings({ soundDownloads: v })}
         />
       </SettingsGroup>
 

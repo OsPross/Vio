@@ -49,6 +49,34 @@ function createWireGuest(deps) {
     }
   }
 
+  function wireGuestTypingSound(guestWc) {
+    guestWc.on('before-input-event', (_event, input) => {
+      if (!input || input.type !== 'keyDown') return;
+      if (input.isAutoRepeat || input.control || input.meta || input.alt) return;
+      const key = typeof input.key === 'string' ? input.key : '';
+      const code = typeof input.code === 'string' ? input.code : '';
+      const typing =
+        key.length === 1 ||
+        key === 'Backspace' ||
+        key === 'Enter' ||
+        key === ' ' ||
+        code === 'Space' ||
+        code === 'Backspace' ||
+        code === 'Enter' ||
+        code === 'NumpadEnter' ||
+        code.startsWith('Key') ||
+        code.startsWith('Digit');
+      if (!typing) return;
+      try {
+        const mainWindow = getMainWindow();
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        mainWindow.webContents.send('shell:guest-key', { key, code });
+      } catch {
+        /* */
+      }
+    });
+  }
+
   function wireGuestChromeShortcuts(guestWc) {
     guestWc.on('before-input-event', (event, input) => {
       if (input.type !== 'keyDown') return;
@@ -297,6 +325,7 @@ function createWireGuest(deps) {
     });
 
     wireGuestChromeShortcuts(guestWc);
+    wireGuestTypingSound(guestWc);
     try {
       const host =
         BrowserWindow.fromWebContents(guestWc) ||

@@ -205,9 +205,23 @@ export function normalizeSettingsFields(merged: Record<string, unknown>): Record
   }
   if (typeof s.darkPageScrollbars !== 'boolean') s.darkPageScrollbars = true;
   if (s.pageColorScheme !== 'system' && s.pageColorScheme !== 'light' && s.pageColorScheme !== 'dark') {
-    // Legacy: ciemny chrome wymuszał dark na stronach i psuł layout — domyślnie system
+    // `system` = match Vio chrome theme (Paper → light pages)
     s.pageColorScheme = 'system';
   }
+  // Jasny chrome + wymuszony dark na stronach = niespójność (YouTube na czarno przy Paper)
+  if (s.theme === 'paper' && s.pageColorScheme === 'dark') {
+    s.pageColorScheme = 'light';
+  }
+  if (typeof s.uiSoundsEnabled !== 'boolean') s.uiSoundsEnabled = false;
+  if (s.soundProfile !== 'ios' && s.soundProfile !== 'tactile' && s.soundProfile !== 'minimal') {
+    s.soundProfile = 'ios';
+  }
+  if (typeof s.soundVolume !== 'number' || Number.isNaN(s.soundVolume)) s.soundVolume = 55;
+  else s.soundVolume = Math.max(0, Math.min(100, Math.round(s.soundVolume as number)));
+  if (typeof s.soundTyping !== 'boolean') s.soundTyping = true;
+  if (typeof s.soundTabs !== 'boolean') s.soundTabs = true;
+  if (typeof s.soundUi !== 'boolean') s.soundUi = true;
+  if (typeof s.soundDownloads !== 'boolean') s.soundDownloads = true;
   if (typeof s.autoPipOnTabSwitch !== 'boolean') s.autoPipOnTabSwitch = false;
   if (typeof s.linkPreviewEnabled !== 'boolean') s.linkPreviewEnabled = true;
   if (s.adblockLevel !== 'standard' && s.adblockLevel !== 'strict') s.adblockLevel = 'standard';

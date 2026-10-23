@@ -318,6 +318,13 @@ export const DEFAULT_SETTINGS: Settings = {
   bookmarksBarMode: 'always' as const,
   darkPageScrollbars: true,
   pageColorScheme: 'system',
+  uiSoundsEnabled: false,
+  soundProfile: 'ios',
+  soundVolume: 55,
+  soundTyping: true,
+  soundTabs: true,
+  soundUi: true,
+  soundDownloads: true,
   autoPipOnTabSwitch: false,
   linkPreviewEnabled: true,
 };

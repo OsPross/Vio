@@ -301,8 +301,10 @@ export function applyThemeToDom(settings: Settings) {
       symbolColor: t.fg2,
       height: 32,
     });
-    // nativeTheme = prefers-color-scheme w webview — NIE motyw chrome UI
-    void window.shell?.setNativeTheme?.(nativeThemeSource(settings.pageColorScheme || 'system'));
+    // nativeTheme = prefers-color-scheme w webview; `system` → motyw Vio (Paper=light)
+    void window.shell?.setNativeTheme?.(
+      nativeThemeSource(settings.pageColorScheme || 'system', settings.theme),
+    );
   };
 
   const reduce =

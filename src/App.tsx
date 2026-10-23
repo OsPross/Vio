@@ -23,6 +23,7 @@ import { usePictureInPicture } from './hooks/usePictureInPicture';
 import { useShellEffects } from './hooks/useShellEffects';
 import { usePageActions } from './hooks/usePageActions';
 import { useAutomationBridge } from './hooks/useAutomationBridge';
+import { useUiSounds } from './hooks/useUiSounds';
 import { useT } from './i18n';
 
 /** Heavy routes / dialogs — not needed for first paint */
@@ -147,6 +148,7 @@ export function App() {
     windowMode,
   });
   useAutomationBridge(guestWc, settings.automationEnabled);
+  useUiSounds();
 
   useShellEffects({
     settings,

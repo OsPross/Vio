@@ -44,13 +44,24 @@ html::-webkit-scrollbar-corner, body::-webkit-scrollbar-corner {
 `.trim();
 }
 
-/** Mapuje ustawienie stron → Electron nativeTheme (wpływa na prefers-color-scheme w webview). */
-export function nativeThemeSource(scheme: PageColorScheme): 'dark' | 'light' | 'system' {
+/** Jasne motywy chrome Vio (Paper / Daylight). */
+export function isLightChromeTheme(theme: ThemeId): boolean {
+  return theme === 'paper';
+}
+
+/**
+ * Mapuje ustawienie stron → Electron nativeTheme (prefers-color-scheme w webview).
+ * `system` = dopasuj do motywu Vio (nie do OS) — Paper → light, reszta → dark.
+ */
+export function nativeThemeSource(
+  scheme: PageColorScheme,
+  chromeTheme?: ThemeId,
+): 'dark' | 'light' | 'system' {
   if (scheme === 'light' || scheme === 'dark') return scheme;
+  if (chromeTheme) return isLightChromeTheme(chromeTheme) ? 'light' : 'dark';
   return 'system';
 }
 
-/** @deprecated Używaj nativeThemeSource(pageColorScheme) — motyw chrome ≠ wygląd stron */
 export function nativeThemeSourceFromChromeTheme(theme: ThemeId): 'dark' | 'light' {
-  return theme === 'paper' ? 'light' : 'dark';
+  return isLightChromeTheme(theme) ? 'light' : 'dark';
 }

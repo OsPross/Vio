@@ -240,6 +240,7 @@ export type {
   Tab,
   ThemeId,
   PageColorScheme,
+  SoundProfile,
   UiDensity,
 } from './types';
 

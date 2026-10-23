@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand';
 import { DEFAULT_BANGS, type Bang } from '../lib/bangs';
 import { getDefaultBookmarkFolders } from '../lib/getDefaultBookmarkFolders';
+import { isLightChromeTheme } from '../lib/page-scrollbars';
 import {
   BOOKMARKS_BAR_FOLDER_ID,
   BOOKMARKS_OTHER_FOLDER_ID,
@@ -101,6 +102,10 @@ export const createSettingsSlice: StateCreator<StoreState, [], [], SettingsSlice
       }
       if (touchesPrivacy && !('privacyPreset' in p) && next.privacyPreset !== 'custom') {
         next.privacyPreset = 'custom';
+      }
+      // Jasny chrome Vio nie może zostawić wymuszonego ciemnego motywu stron
+      if ('theme' in p && p.theme && isLightChromeTheme(p.theme) && next.pageColorScheme === 'dark') {
+        next.pageColorScheme = 'light';
       }
       return { settings: next };
     }),
