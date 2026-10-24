@@ -289,7 +289,7 @@ app.whenReady().then(async () => {
 
   // Show shell ASAP: createWindow, attach boot-gate (no engine yet), yield the
   // event loop so ready-to-show can fire, THEN deserialize engine.bin.
-  // Boot-gate holds first guest http(s) until blocker is ready (≤1.5s).
+  // Boot-gate waits ≤1s once, then clears so guest traffic is never re-gated.
   metrics.init({
     onPush: (payload) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -382,7 +382,7 @@ app.whenReady().then(async () => {
       : Promise.race([
           adblock.init({ updateLists: true }),
           new Promise((resolve) =>
-            setTimeout(() => resolve({ ok: adblock.isReady(), timedOut: true }), 1500),
+            setTimeout(() => resolve({ ok: adblock.isReady(), timedOut: true }), 1000),
           ),
         ]);
     void ensureEngine.then((r) => {
@@ -403,7 +403,15 @@ app.whenReady().then(async () => {
           }
         }
       } else {
-        void adblock.init({ updateLists: true }).then((rr) => console.log('[adblock+]', rr));
+        // Fresh install / cache miss: build engine.bin fully in background (do not gate tabs).
+        void adblock.init({ updateLists: true }).then((rr) => {
+          console.log('[adblock+] async engine build', rr);
+          try {
+            adblock.attachToSession(ses);
+          } catch {
+            /* */
+          }
+        });
       }
       try {
         mainWindow?.webContents.send('shell:services-ready', {
@@ -471,6 +479,17 @@ app.whenReady().then(async () => {
       });
     } catch (err) {
       console.error('[perf-verify-adblock] failed to start', err);
+    }
+  } else if (!app.isPackaged && process.env.MEASURE_YT === '1') {
+    try {
+      const probe = require('../scripts/measure-yt-adblock.cjs');
+      void probe.run(() => mainWindow).then((r) => {
+        if (process.env.PERF_VERIFY_QUIT === '1') {
+          setTimeout(() => app.quit(), r?.ok ? 800 : 2500);
+        }
+      });
+    } catch (err) {
+      console.error('[measure-yt] failed to start', err);
     }
   } else if (!app.isPackaged && process.env.CAPTURE_NOTES === '1') {
     try {

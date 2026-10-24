@@ -79,6 +79,12 @@
       "scripts/perf-bench.cjs",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "resources/adblock-engine.bin",
+        "to": "adblock-engine.bin"
+      }
+    ],
     "publish": [
       {
         "provider": "github",

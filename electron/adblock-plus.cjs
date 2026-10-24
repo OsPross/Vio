@@ -340,6 +340,27 @@ function installRequestGate(b) {
         callback({});
         return;
       }
+      // YouTube video segments / thumbnails — never run full match (ads use other hosts).
+      if (shouldSkipNetworkMatch(details)) {
+        callback({});
+        return;
+      }
+      const url = String(details.url || '');
+      const cached = cachedMatchDecision(url);
+      if (cached) {
+        if (cached.redirect) {
+          callback({ redirectURL: cached.redirect });
+          return;
+        }
+        if (cached.cancel) {
+          noteFirstGuestRequest(url);
+          pushBlocked(String(details.webContentsId ?? 'global'), url);
+          callback({ cancel: true });
+          return;
+        }
+        callback({});
+        return;
+      }
       const sourceUrl = resolveSourceUrl(details);
       const request = Request.fromRawDetails({
         _originalRequestDetails: details,
@@ -347,30 +368,36 @@ function installRequestGate(b) {
         sourceUrl,
         tabId: details.webContentsId,
         type: details.resourceType || 'other',
-        url: details.url,
+        url,
       });
       if (b.config && b.config.guessRequestTypeFromUrl === true && request.type === 'other') {
         request.guessTypeOfRequest();
       }
       if (typeof request.isMainFrame === 'function' && request.isMainFrame()) {
+        rememberMatchDecision(url, { cancel: false });
         callback({});
         return;
       }
-      if (isAllowlistedUrl(details.url)) {
+      if (isAllowlistedUrl(url)) {
+        rememberMatchDecision(url, { cancel: false });
         callback({});
         return;
       }
       const result = b.match(request);
       if (result.redirect) {
-        callback({ redirectURL: result.redirect.dataUrl });
+        const redirect = result.redirect.dataUrl;
+        rememberMatchDecision(url, { cancel: false, redirect });
+        callback({ redirectURL: redirect });
         return;
       }
       if (shouldCancelMatch(request, result)) {
-        noteFirstGuestRequest(details.url);
-        pushBlocked(String(details.webContentsId ?? 'global'), details.url);
+        rememberMatchDecision(url, { cancel: true });
+        noteFirstGuestRequest(url);
+        pushBlocked(String(details.webContentsId ?? 'global'), url);
         callback({ cancel: true });
         return;
       }
+      rememberMatchDecision(url, { cancel: false });
       callback({});
     } catch (err) {
       console.warn('[adblock+] request gate', err && err.message ? err.message : err);
@@ -456,49 +483,40 @@ ytm-companion-ad-renderer {
 }
 `.trim();
 
+/**
+ * Fallback YouTube helper — only when Ghostery engine is unavailable.
+ * Light polling only (no document-wide MutationObserver — that stalled video start).
+ */
 const YOUTUBE_PAGE_SCRIPT = `
 (function () {
   if (window.__mojaYtBlock) return;
   window.__mojaYtBlock = true;
   var wasAd = false;
-
-  function killNodes(sel) {
-    document.querySelectorAll(sel).forEach(function (el) {
-      try { el.remove(); } catch (e) {}
-    });
-  }
+  var SEL = [
+    'ytd-ad-slot-renderer',
+    'ytd-promoted-sparkles-web-renderer',
+    'ytd-in-feed-ad-layout-renderer',
+    'ytd-banner-promo-renderer',
+    'ytd-action-companion-ad-renderer',
+    'ytd-display-ad-renderer',
+    'ytd-promoted-video-renderer',
+    '#masthead-ad',
+    '#player-ads'
+  ].join(',');
 
   function tick() {
-    killNodes([
-      'ytd-ad-slot-renderer',
-      'ytd-promoted-sparkles-web-renderer',
-      'ytd-promoted-sparkles-text-search-renderer',
-      'ytd-in-feed-ad-layout-renderer',
-      'ytd-banner-promo-renderer',
-      'ytd-statement-banner-renderer',
-      'ytd-action-companion-ad-renderer',
-      'ytd-display-ad-renderer',
-      'ytd-promoted-video-renderer',
-      'ytd-mealbar-promo-renderer',
-      '#masthead-ad',
-      '#player-ads'
-    ].join(','));
-
+    try {
+      document.querySelectorAll(SEL).forEach(function (el) {
+        try { el.remove(); } catch (e) {}
+      });
+    } catch (e) {}
     var skip = document.querySelector(
       '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, .ytp-ad-skip-button-container button'
     );
-    if (skip) {
-      try { skip.click(); } catch (e) {}
-    }
-    var closeOv = document.querySelector('.ytp-ad-overlay-close-button');
-    if (closeOv) {
-      try { closeOv.click(); } catch (e) {}
-    }
-
+    if (skip) { try { skip.click(); } catch (e) {} }
     var player = document.querySelector('.html5-video-player');
     var video = document.querySelector('video.html5-main-video, video');
     var showing = player && player.classList.contains('ad-showing');
-
     if (showing && video) {
       wasAd = true;
       try {
@@ -510,19 +528,59 @@ const YOUTUBE_PAGE_SCRIPT = `
       } catch (e) {}
     } else if (wasAd && video) {
       wasAd = false;
-      try {
-        video.playbackRate = 1;
-      } catch (e) {}
+      try { video.playbackRate = 1; } catch (e) {}
     }
   }
-
-  setInterval(tick, 400);
-  try {
-    new MutationObserver(tick).observe(document.documentElement, { childList: true, subtree: true });
-  } catch (e) {}
+  setInterval(tick, 900);
   tick();
 })();
 `.trim();
+
+/** @type {Map<string, { at: number, cancel: boolean, redirect?: string }>} */
+const matchDecisionCache = new Map();
+const MATCH_CACHE_TTL_MS = 45_000;
+const MATCH_CACHE_MAX = 2500;
+
+/**
+ * Skip expensive Ghostery.match for media CDNs / resource types.
+ * Ad beacons stay on doubleclick / googlesyndication / etc. (still matched).
+ * @param {Electron.OnBeforeRequestListenerDetails} details
+ */
+function shouldSkipNetworkMatch(details) {
+  const rt = String(details?.resourceType || '');
+  if (rt === 'media' || rt === 'video' || rt === 'audio') return true;
+  try {
+    const h = new URL(String(details.url || '')).hostname.toLowerCase();
+    if (!h) return false;
+    if (h === 'googlevideo.com' || h.endsWith('.googlevideo.com')) return true;
+    if (h === 'ytimg.com' || h.endsWith('.ytimg.com')) return true;
+    if (h === 'ggpht.com' || h.endsWith('.ggpht.com')) return true;
+  } catch {
+    /* */
+  }
+  return false;
+}
+
+function cachedMatchDecision(url) {
+  const hit = matchDecisionCache.get(url);
+  if (!hit) return null;
+  if (Date.now() - hit.at > MATCH_CACHE_TTL_MS) {
+    matchDecisionCache.delete(url);
+    return null;
+  }
+  return hit;
+}
+
+function rememberMatchDecision(url, decision) {
+  if (matchDecisionCache.size >= MATCH_CACHE_MAX) {
+    let n = 0;
+    for (const k of matchDecisionCache.keys()) {
+      matchDecisionCache.delete(k);
+      if (++n > Math.floor(MATCH_CACHE_MAX / 10)) break;
+    }
+  }
+  matchDecisionCache.set(url, { at: Date.now(), cancel: Boolean(decision.cancel), redirect: decision.redirect });
+}
 
 function refreshCustom() {
   customHosts = new Set();
@@ -603,11 +661,11 @@ function isReady() {
 
 /**
  * Wait until Ghostery engine is ready, or timeoutMs elapses.
- * @param {number} [timeoutMs=1500]
+ * @param {number} [timeoutMs=1000]
  */
-function whenReady(timeoutMs = 1500) {
+function whenReady(timeoutMs = 1000) {
   if (blocker) return Promise.resolve(true);
-  const ms = Math.max(0, Number(timeoutMs) || 1500);
+  const ms = Math.max(0, Number(timeoutMs) || 1000);
   return Promise.race([
     readyPromise.then(() => Boolean(blocker)),
     new Promise((resolve) => {
@@ -621,20 +679,28 @@ function whenReady(timeoutMs = 1500) {
   ]);
 }
 
+/** Optional prebuilt engine shipped with the installer (extraResources). */
+function bundledEnginePaths() {
+  /** @type {string[]} */
+  const out = [];
+  try {
+    if (process.resourcesPath) {
+      out.push(path.join(process.resourcesPath, 'adblock-engine.bin'));
+    }
+  } catch {
+    /* */
+  }
+  out.push(path.join(__dirname, 'resources', 'adblock-engine.bin'));
+  out.push(path.join(__dirname, '..', 'resources', 'adblock-engine.bin'));
+  return out;
+}
+
 /**
- * Sync deserialize of last serialized engine (ms). Call before first guest navigation.
- * @returns {{ ok: boolean, ms?: number, error?: string }}
+ * @param {string} file
+ * @param {string} label
+ * @returns {{ ok: boolean, ms?: number, error?: string, fromBundle?: boolean }}
  */
-function loadCachedEngineSync() {
-  if (blocker) {
-    markReady(true);
-    return { ok: true, ms: 0 };
-  }
-  const file = engineCachePath();
-  if (!fs.existsSync(file)) {
-    console.log('[adblock+] no engine.bin cache');
-    return { ok: false, error: 'no-cache' };
-  }
+function deserializeEngineFile(file, label) {
   const t0 = Date.now();
   try {
     const { ElectronBlocker } = require('@ghostery/adblocker-electron');
@@ -650,14 +716,46 @@ function loadCachedEngineSync() {
     const ms = Date.now() - t0;
     markReady(true);
     syncBlockingOnSessions();
-    console.log(`[adblock+] deserialized engine.bin in ${ms}ms (${buf.length} bytes)`);
+    console.log(`[adblock+] deserialized ${label} in ${ms}ms (${buf.length} bytes)`);
     return { ok: true, ms };
   } catch (err) {
     lastInitError = String(err.message || err);
-    console.warn('[adblock+] deserialize failed', lastInitError);
+    console.warn('[adblock+] deserialize failed', label, lastInitError);
     blocker = null;
     return { ok: false, error: lastInitError };
   }
+}
+
+/**
+ * Sync deserialize of last serialized engine (ms). Call before first guest navigation.
+ * On cache miss, try installer-bundled adblock-engine.bin (seed userData).
+ * @returns {{ ok: boolean, ms?: number, error?: string, fromBundle?: boolean }}
+ */
+function loadCachedEngineSync() {
+  if (blocker) {
+    markReady(true);
+    return { ok: true, ms: 0 };
+  }
+  const file = engineCachePath();
+  if (fs.existsSync(file)) {
+    return deserializeEngineFile(file, 'engine.bin');
+  }
+  for (const bundled of bundledEnginePaths()) {
+    if (!fs.existsSync(bundled)) continue;
+    const r = deserializeEngineFile(bundled, 'bundled adblock-engine.bin');
+    if (r.ok) {
+      try {
+        fs.mkdirSync(cacheDir(), { recursive: true });
+        fs.copyFileSync(bundled, file);
+        console.log('[adblock+] seeded userData engine.bin from bundle');
+      } catch (e) {
+        console.warn('[adblock+] seed engine.bin', e.message || e);
+      }
+      return { ...r, fromBundle: true };
+    }
+  }
+  console.log('[adblock+] no engine.bin cache (will build async)');
+  return { ok: false, error: 'no-cache' };
 }
 
 function saveEngineCache() {
@@ -680,15 +778,9 @@ function wireBlockerEvents() {
 }
 
 /**
- * Install a one-shot boot gate: first guest http(s) request waits for engine (≤1.5s).
- * Only used when engine.bin cache miss. Ghostery enableBlockingInSession replaces this hook.
- * @param {import('electron').Session} ses
- */
-/**
  * Electron allows only one session.webRequest.onBeforeRequest listener.
  * Boot-gate must be cleared before Ghostery enableBlockingInSession, or Ghostery
- * throws "second handler" and we used to mark the session enabled while still
- * only running the gate (which then callback({}) → 0 blocks).
+ * throws "second handler".
  * @param {import('electron').Session} [ses]
  */
 function clearBootGate(ses) {
@@ -704,12 +796,19 @@ function clearBootGate(ses) {
   }
 }
 
+/**
+ * One-shot boot gate when engine.bin is missing: wait ≤1s for engine, then ALWAYS
+ * clear the gate. Previously every subsequent request re-waited up to 1.5s while
+ * lists were downloading — that starved YouTube media on first install.
+ * @param {import('electron').Session} ses
+ */
 function installBootGate(ses) {
   if (!ses || bootGateInstalled || blocker) return;
   bootGateInstalled = true;
+  /** Shared wait so parallel first requests don't each start a full timeout. */
+  let waitPromise = null;
   try {
     ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
-      // Engine already up — hand off to Ghostery path (should be rare; clearBootGate normally runs first).
       if (blocker) {
         try {
           clearBootGate(ses);
@@ -725,14 +824,19 @@ function installBootGate(ses) {
         callback({});
         return;
       }
-      const t0 = Date.now();
-      whenReady(1500).then((ok) => {
+      if (!waitPromise) {
+        const t0 = Date.now();
+        waitPromise = whenReady(1000).then((ok) => {
+          console.log(
+            `[adblock+] boot-gate released after ${Date.now() - t0}ms ready=${ok} url=${String(details.url).slice(0, 100)}`,
+          );
+          return ok;
+        });
+      }
+      waitPromise.then((ok) => {
         noteFirstGuestRequest(details.url);
-        console.log(
-          `[adblock+] boot-gate released after ${Date.now() - t0}ms ready=${ok} url=${String(details.url).slice(0, 100)}`,
-        );
         try {
-          if (ok) {
+          if (ok && blocker) {
             clearBootGate(ses);
             enableGhostery(ses);
             if (typeof blocker.onBeforeRequest === 'function') {
@@ -743,6 +847,12 @@ function installBootGate(ses) {
         } catch {
           /* */
         }
+        // Engine still building — drop the gate so further requests are not delayed.
+        try {
+          clearBootGate(ses);
+        } catch {
+          /* */
+        }
         try {
           callback({});
         } catch {
@@ -750,7 +860,7 @@ function installBootGate(ses) {
         }
       });
     });
-    console.log('[adblock+] boot-gate installed (awaiting engine)');
+    console.log('[adblock+] boot-gate installed (awaiting engine, max 1s)');
   } catch (err) {
     console.warn('[adblock+] boot gate', err.message || err);
   }
@@ -1095,6 +1205,8 @@ function getCosmeticCss() {
  */
 function getPageScript(pageUrl) {
   if (!config.enabled || !config.cosmetic) return '';
+  // Ghostery session cosmetics handle YT when engine is up — heavy scriptlet only as fallback.
+  if (blocker) return '';
   if (!pageUrl) return '';
   try {
     const h = new URL(pageUrl).hostname.toLowerCase();
