@@ -115,6 +115,30 @@ export function SpotifyWidget({
     }
   }, [preview, t]);
 
+  const loginErrorMessage = useCallback(
+    (r: { error?: string; errorCode?: string } | null) => {
+      switch (r?.errorCode) {
+        case 'dashboard_user':
+          return t('widgets.ui.spotify.errDashboardUser');
+        case 'port_busy':
+          return t('widgets.ui.spotify.errPortBusy');
+        case 'timeout':
+          return t('widgets.ui.spotify.errTimeout');
+        case 'network':
+          return t('widgets.ui.spotify.errNetwork');
+        case 'redirect':
+          return t('widgets.ui.spotify.errRedirect');
+        case 'denied':
+          return t('widgets.ui.spotify.errDenied');
+        case 'no_client_id':
+          return t('widgets.ui.spotify.noClientId');
+        default:
+          return r?.error || t('widgets.ui.spotify.loginFailed');
+      }
+    },
+    [t],
+  );
+
   const refreshPlayback = useCallback(async () => {
     if (preview) return;
     const p = await window.shell?.spotifyPlayback?.();
@@ -130,8 +154,15 @@ export function SpotifyWidget({
         durationMs: p.durationMs || 0,
       };
     }
-    if (p.ok === false && p.error) setMsg(p.error);
-  }, [preview, scrubbing]);
+    if (p.ok === false && (p.error || (p as { errorCode?: string }).errorCode)) {
+      setMsg(
+        loginErrorMessage({
+          error: p.error,
+          errorCode: (p as { errorCode?: string }).errorCode,
+        }),
+      );
+    }
+  }, [preview, scrubbing, loginErrorMessage]);
 
   useEffect(() => {
     void refreshStatus();
@@ -192,7 +223,13 @@ export function SpotifyWidget({
         if (r.premium) setMsg(t('widgets.ui.spotify.premiumRequired'));
         else if (r.noDevice) setMsg(t('widgets.ui.spotify.noActiveDevice'));
         else if (r.restricted) setMsg(t('widgets.ui.spotify.restrictionViolated'));
-        else setMsg(r.error || t('widgets.ui.spotify.error'));
+        else
+          setMsg(
+            loginErrorMessage({
+              error: r.error,
+              errorCode: (r as { errorCode?: string }).errorCode,
+            }),
+          );
       }
       await refreshPlayback();
     } finally {
@@ -263,7 +300,7 @@ export function SpotifyWidget({
     setMsg('');
     try {
       const r = await window.shell.spotifyLogin();
-      if (!r?.ok) setMsg(r?.error || t('widgets.ui.spotify.loginFailed'));
+      if (!r?.ok) setMsg(loginErrorMessage(r));
       else {
         await refreshStatus();
         await refreshPlayback();

@@ -11,11 +11,17 @@ const path = require('node:path');
 const { URL } = require('node:url');
 const { app, safeStorage, shell } = require('electron');
 const { getLogger } = require('./lib/logger.cjs');
-const { BUILTIN_CLIENT_ID, REDIRECT_PORT } = require('./spotify-app-config.cjs');
+const {
+  BUILTIN_CLIENT_ID,
+  REDIRECT_PORT,
+  REDIRECT_PORTS,
+  redirectUriForPort,
+} = require('./spotify-app-config.cjs');
 
 const log = getLogger('spotify');
 
-const REDIRECT_URI = `http://127.0.0.1:${REDIRECT_PORT}/callback`;
+/** Default (preferred port) — actual login may use a free port from REDIRECT_PORTS. */
+const REDIRECT_URI = redirectUriForPort(REDIRECT_PORT);
 const SCOPES = [
   'user-read-currently-playing',
   'user-read-playback-state',
@@ -25,19 +31,72 @@ const SCOPES = [
 
 const AUTH_FILE = () => path.join(app.getPath('userData'), 'spotify-auth.json');
 
-/** App-wide Client ID (shipped) or optional per-user override in auth file. */
+/** App-wide Client ID (shipped in asar) or optional per-user override in auth file. */
 function resolveClientId() {
   const auth = loadAuth();
   const override = String(auth?.clientIdOverride || auth?.clientId || '').trim();
-  if (/^[a-f0-9]{32}$/i.test(override)) return override;
+  if (/^[a-f0-9]{32}$/i.test(override)) return override.toLowerCase();
   const builtin = String(BUILTIN_CLIENT_ID || '').trim();
-  if (/^[a-f0-9]{32}$/i.test(builtin)) return builtin;
+  if (/^[a-f0-9]{32}$/i.test(builtin)) return builtin.toLowerCase();
   return null;
+}
+
+/**
+ * Map Spotify / network errors to stable codes for the UI (i18n).
+ * @param {unknown} err
+ * @param {{ status?: number }} [extra]
+ */
+function classifyAuthError(err, extra = {}) {
+  const status = Number(extra.status || err?.status || 0) || 0;
+  const raw = String(err?.message || err || '');
+  const lower = raw.toLowerCase();
+  if (
+    status === 403 ||
+    /user not registered|not registered in the developer dashboard|developer dashboard/i.test(raw)
+  ) {
+    return {
+      code: 'dashboard_user',
+      error:
+        'Konto Spotify nie jest na liście aplikacji w Developer Dashboard (tryb Development). Autor Vio musi dodać to konto w panelu Spotify.',
+    };
+  }
+  if (/eaddrinuse|address already in use|port .* zajęty|wszystkie porty/i.test(lower)) {
+    return {
+      code: 'port_busy',
+      error: `Porty lokalne ${REDIRECT_PORTS.join(', ')} są zajęte — zamknij inne aplikacje używające tych portów i spróbuj ponownie.`,
+    };
+  }
+  if (/timeout|timed out/i.test(lower)) {
+    return {
+      code: 'timeout',
+      error: 'Logowanie przekroczyło limit czasu — dokończ zgodę w przeglądarce lub spróbuj ponownie.',
+    };
+  }
+  if (
+    /enotfound|econnrefused|econnreset|etimedout|network|fetch failed|getaddrinfo|offline|internet/i.test(
+      lower,
+    )
+  ) {
+    return {
+      code: 'network',
+      error: 'Brak połączenia z internetem lub Spotify jest niedostępne.',
+    };
+  }
+  if (/redirect_uri|invalid redirect|redirect uri/i.test(lower)) {
+    return {
+      code: 'redirect',
+      error: `Redirect URI nie jest zarejestrowany w Spotify Dashboard. Dodaj: ${REDIRECT_PORTS.map(redirectUriForPort).join(', ')}`,
+    };
+  }
+  if (/access_denied|user_cancelled|anulowano/i.test(lower)) {
+    return { code: 'denied', error: 'Anulowano logowanie w Spotify.' };
+  }
+  return { code: 'unknown', error: raw || 'Nie udało się zalogować do Spotify' };
 }
 
 /** @type {import('http').Server | null} */
 let authServer = null;
-/** @type {{ verifier: string, state: string, clientId: string } | null} */
+/** @type {{ verifier: string, state: string, clientId: string, redirectUri: string } | null} */
 let pendingAuth = null;
 /** Last known Spotify Connect device id (for shuffle/repeat when optional device_id helps). */
 let lastDeviceId = null;
@@ -59,10 +118,16 @@ function hasModifyScope(auth) {
 }
 
 function playerErrorPayload(err) {
+  const status = err.status || 0;
+  const classified =
+    status === 403 || /user not registered|developer dashboard/i.test(String(err.message || ''))
+      ? classifyAuthError(err, { status })
+      : null;
   return {
     ok: false,
-    error: String(err.message || err),
-    status: err.status || 0,
+    error: classified ? classified.error : String(err.message || err),
+    errorCode: classified ? classified.code : undefined,
+    status,
     reason: err.reason || '',
     premium: Boolean(err.premium),
     noDevice: Boolean(err.noDevice),
@@ -162,6 +227,7 @@ function publicStatus() {
     needsAuthorSetup: !clientId,
     displayName: auth?.displayName || null,
     redirectUri: REDIRECT_URI,
+    redirectUris: REDIRECT_PORTS.map(redirectUriForPort),
     hasModifyScope: modifyOk,
     needReconnect: hasRefresh && !modifyOk,
   };
@@ -189,22 +255,35 @@ function stopAuthServer() {
   pendingAuth = null;
 }
 
-async function exchangeToken(clientId, code, verifier) {
+async function exchangeToken(clientId, code, verifier, redirectUri) {
   const body = new URLSearchParams({
     client_id: clientId,
     grant_type: 'authorization_code',
     code,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: redirectUri || REDIRECT_URI,
     code_verifier: verifier,
   });
-  const res = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
-  });
+  let res;
+  try {
+    res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  } catch (e) {
+    const classified = classifyAuthError(e);
+    const err = new Error(classified.error);
+    err.code = classified.code;
+    throw err;
+  }
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(json.error_description || json.error || `token ${res.status}`);
+    const msg = json.error_description || json.error || `token ${res.status}`;
+    const classified = classifyAuthError(msg, { status: res.status });
+    const err = new Error(classified.error);
+    err.code = classified.code;
+    err.status = res.status;
+    throw err;
   }
   return json;
 }
@@ -499,7 +578,56 @@ function logout(opts = {}) {
 }
 
 /**
- * Start PKCE login — opens browser, waits for localhost callback.
+ * Bind loopback callback server — try preferred port, then REDIRECT_PORTS fallbacks.
+ * @returns {Promise<{ server: import('http').Server, port: number, redirectUri: string }>}
+ */
+function listenAuthServer(server) {
+  const ports = REDIRECT_PORTS.length ? [...REDIRECT_PORTS] : [REDIRECT_PORT];
+  return new Promise((resolve, reject) => {
+    let idx = 0;
+    const tryNext = () => {
+      if (idx >= ports.length) {
+        reject(new Error(`Wszystkie porty zajęte: ${ports.join(', ')}`));
+        return;
+      }
+      const port = ports[idx++];
+      const onErr = (e) => {
+        server.off('listening', onListen);
+        if (e && (e.code === 'EADDRINUSE' || /eaddrinuse/i.test(String(e.message || '')))) {
+          try {
+            server.close();
+          } catch {
+            /* */
+          }
+          tryNext();
+          return;
+        }
+        reject(e);
+      };
+      const onListen = () => {
+        server.off('error', onErr);
+        resolve({ server, port, redirectUri: redirectUriForPort(port) });
+      };
+      server.once('error', onErr);
+      server.once('listening', onListen);
+      try {
+        server.listen(port, '127.0.0.1');
+      } catch (e) {
+        server.off('error', onErr);
+        server.off('listening', onListen);
+        if (e && (e.code === 'EADDRINUSE' || /eaddrinuse/i.test(String(e.message || '')))) {
+          tryNext();
+          return;
+        }
+        reject(e);
+      }
+    };
+    tryNext();
+  });
+}
+
+/**
+ * Start PKCE login — opens system browser, waits for 127.0.0.1 callback (no client secret).
  */
 function login() {
   return new Promise((resolve) => {
@@ -507,6 +635,7 @@ function login() {
     if (!clientId) {
       resolve({
         ok: false,
+        errorCode: 'no_client_id',
         error: 'Brak Client ID Vio — autor musi raz ustawić go w electron/spotify-app-config.cjs',
       });
       return;
@@ -516,47 +645,82 @@ function login() {
     const verifier = b64url(crypto.randomBytes(32));
     const challenge = b64url(crypto.createHash('sha256').update(verifier).digest());
     const state = b64url(crypto.randomBytes(16));
-    pendingAuth = { verifier, state, clientId };
+    /** @type {{ verifier: string, state: string, clientId: string, redirectUri: string } | null} */
+    pendingAuth = { verifier, state, clientId, redirectUri: REDIRECT_URI };
 
+    let settled = false;
     const done = (result) => {
+      if (settled) return;
+      settled = true;
       stopAuthServer();
       resolve(result);
     };
 
+    const fail = (err, status) => {
+      const c = err?.code
+        ? { code: err.code, error: String(err.message || err) }
+        : classifyAuthError(err, { status });
+      done({ ok: false, errorCode: c.code, error: c.error });
+    };
+
     authServer = http.createServer(async (req, res) => {
       try {
-        const u = new URL(req.url || '/', `http://127.0.0.1:${REDIRECT_PORT}`);
+        const base = pendingAuth?.redirectUri || REDIRECT_URI;
+        const u = new URL(req.url || '/', base);
         if (u.pathname !== '/callback') {
           res.writeHead(404);
           res.end('Not found');
           return;
         }
-        const err = u.searchParams.get('error');
+        const oauthErr = u.searchParams.get('error');
         const code = u.searchParams.get('code');
         const st = u.searchParams.get('state');
-        if (err) {
+        if (oauthErr) {
           res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-          res.end(`<html><body style="font-family:system-ui;padding:2rem"><h1>Anulowano</h1><p>${err}</p><p>Możesz zamknąć tę kartę.</p></body></html>`);
-          done({ ok: false, error: err });
+          res.end(
+            `<html><body style="font-family:system-ui;padding:2rem"><h1>Anulowano</h1><p>${oauthErr}</p><p>Możesz zamknąć tę kartę.</p></body></html>`,
+          );
+          fail(oauthErr);
           return;
         }
         if (!code || !pendingAuth || st !== pendingAuth.state) {
           res.writeHead(400, { 'Content-Type': 'text/plain' });
           res.end('Bad request');
-          done({ ok: false, error: 'Nieprawidłowy callback' });
+          fail('Nieprawidłowy callback Spotify (redirect)');
           return;
         }
-        const tokens = await exchangeToken(pendingAuth.clientId, code, pendingAuth.verifier);
+        const tokens = await exchangeToken(
+          pendingAuth.clientId,
+          code,
+          pendingAuth.verifier,
+          pendingAuth.redirectUri,
+        );
         let displayName = null;
-        try {
-          const meRes = await fetch('https://api.spotify.com/v1/me', {
-            headers: { Authorization: `Bearer ${tokens.access_token}` },
-          });
-          const me = await meRes.json();
-          displayName = me.display_name || me.id || null;
-        } catch {
-          /* */
+        // Development-mode allowlist: token may succeed, /me returns 403 User not registered.
+        const meRes = await fetch('https://api.spotify.com/v1/me', {
+          headers: { Authorization: `Bearer ${tokens.access_token}` },
+        }).catch((e) => {
+          const err = new Error(String(e.message || e));
+          err.code = 'network';
+          throw err;
+        });
+        const me = await meRes.json().catch(() => ({}));
+        if (!meRes.ok) {
+          const msg =
+            (me && me.error && me.error.message) ||
+            me.error_description ||
+            `Spotify /me ${meRes.status}`;
+          const classified = classifyAuthError(msg, { status: meRes.status });
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(
+            `<html><body style="font-family:system-ui;padding:2rem;background:#121212;color:#fff"><h1 style="color:#f44336">Spotify: brak dostępu</h1><p>${classified.error}</p><p>Możesz zamknąć tę kartę.</p></body></html>`,
+          );
+          const err = new Error(classified.error);
+          err.code = classified.code;
+          err.status = meRes.status;
+          throw err;
         }
+        displayName = me.display_name || me.id || null;
         const prev = loadAuth() || {};
         saveAuth({
           ...prev,
@@ -573,33 +737,42 @@ function login() {
         log.info('spotify connected', displayName || '');
         done({ ok: true, displayName });
       } catch (e) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Error');
-        done({ ok: false, error: String(e.message || e) });
+        try {
+          if (!res.headersSent) {
+            res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end('Error');
+          }
+        } catch {
+          /* */
+        }
+        fail(e, e?.status);
       }
     });
 
-    authServer.listen(REDIRECT_PORT, '127.0.0.1', () => {
-      const params = new URLSearchParams({
-        client_id: clientId,
-        response_type: 'code',
-        redirect_uri: REDIRECT_URI,
-        scope: SCOPES,
-        state,
-        code_challenge_method: 'S256',
-        code_challenge: challenge,
-      });
-      const url = `https://accounts.spotify.com/authorize?${params}`;
-      shell.openExternal(url).catch(() => {});
-    });
-
-    authServer.on('error', (e) => {
-      done({ ok: false, error: `Port ${REDIRECT_PORT} zajęty: ${e.message}` });
-    });
+    void listenAuthServer(authServer)
+      .then(({ port, redirectUri }) => {
+        if (!pendingAuth) return;
+        pendingAuth.redirectUri = redirectUri;
+        log.info('spotify auth listen', port);
+        const params = new URLSearchParams({
+          client_id: clientId,
+          response_type: 'code',
+          redirect_uri: redirectUri,
+          scope: SCOPES,
+          state,
+          code_challenge_method: 'S256',
+          code_challenge: challenge,
+        });
+        const url = `https://accounts.spotify.com/authorize?${params}`;
+        shell.openExternal(url).catch((e) => {
+          fail(e || new Error('Nie udało się otworzyć przeglądarki'));
+        });
+      })
+      .catch((e) => fail(e));
 
     // Safety timeout 5 min
     setTimeout(() => {
-      if (pendingAuth) done({ ok: false, error: 'Timeout logowania' });
+      if (pendingAuth && !settled) fail(new Error('Timeout logowania'));
     }, 300_000);
   });
 }

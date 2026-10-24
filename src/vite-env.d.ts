@@ -743,11 +743,17 @@ declare global {
         needReconnect?: boolean;
       }>;
       spotifySetClientId: (clientId: string) => Promise<{ ok: boolean; error?: string; redirectUri?: string }>;
-      spotifyLogin: () => Promise<{ ok: boolean; error?: string; displayName?: string | null }>;
+      spotifyLogin: () => Promise<{
+        ok: boolean;
+        error?: string;
+        errorCode?: string;
+        displayName?: string | null;
+      }>;
       spotifyLogout: (opts?: { wipeClientId?: boolean }) => Promise<{ ok: boolean }>;
       spotifyPlayback: () => Promise<{
         ok: boolean;
         error?: string;
+        errorCode?: string;
         premium?: boolean;
         idle?: boolean;
         playing?: boolean;
